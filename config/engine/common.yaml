@@ -1,0 +1,14 @@
+# Flags shared by every engine cell (design spec §4.1). Frozen at W1 and copied into each run's
+# manifest.json. Per-cell files only list what differs. (Adaptation: the spec tree has no
+# common.yaml; it is added to avoid five copies of this block.)
+chunked_prefill: default_on            # vLLM V1 default
+max_num_batched_tokens: 2048           # favours ITL; W2 runs one 8192 contrast on the default precision
+max_num_seqs: default                  # start from the default; lower on preemption; frozen at W1
+gpu_memory_utilization: 0.85           # per-precision actual value recorded if BF16 does not fit
+prefix_caching: default_on             # prompts carry a nonce; hit rate is recorded to prove ~0
+kv_cache_dtype: auto                   # FP8 KV only as an optional W5 contrast
+speculative_config: null               # set by config/specdec/*.yaml
+thinking: false                        # chat-template kwargs
+env:
+  HF_HUB_OFFLINE: "1"                  # weights downloaded once, then offline
+  VLLM_CACHE_ROOT: "<wsl2 ext4 path>"  # cache and weights on ext4, not /mnt/c

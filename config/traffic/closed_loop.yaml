@@ -1,0 +1,20 @@
+# Closed-loop concurrency sweep (spec §3.3). Produces r_sat (throughput plateau) and the cap C for
+# admission policy (ii); reported in its own table, never mixed with open-loop numbers.
+name: closed_loop
+status: proposal
+headline: false
+kind: closed_loop
+concurrency: [1, 2, 4, 8, 16, 32, 64, 128]
+stage_duration_s: 180
+discard_first_s: 60
+prompt:
+  input_tokens: 108
+  output_tokens: 132
+  nonce_prefix: true
+  ignore_eos: true
+  thinking: false
+warmup_requests: 100
+outputs:
+  - r_sat            # req/s plateau; cross-checked against the open-loop rate where num_requests_waiting leaves 0
+  - capacity_C       # highest concurrency still meeting the SLO -> config/admission/cap429.yaml
+seeds: null

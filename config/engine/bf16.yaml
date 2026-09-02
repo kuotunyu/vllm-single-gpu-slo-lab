@@ -1,0 +1,6 @@
+name: bf16
+inherits: common
+model: Qwen/Qwen3-8B
+revision: null                 # pinned commit hash written to manifest.json at W1
+quantization: null             # none
+notes: smallest KV budget on the 4090; actual gpu_memory_utilization and max_num_seqs recorded per run

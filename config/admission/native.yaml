@@ -1,0 +1,5 @@
+# Policy (i): vLLM native queueing. Client talks to vLLM through the shim in pass-through mode so
+# the shim's own overhead is identical across policies (spec §3.5).
+name: native
+policy: passthrough
+engine_flags_differ: false    # engine flags are identical across the three policies

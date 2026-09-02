@@ -1,0 +1,9 @@
+# Policy (iii): bounded FIFO queue Q with wait timeout T in front of cap C. Proposal: Q = C and
+# T = 1 s (= the TTFT SLO; a request that has already waited past the SLO cannot meet it).
+name: bounded
+policy: bounded_queue
+capacity: null                # same C as cap429.yaml
+queue_limit: capacity         # Q = C (proposal)
+timeout_s: 1.0                # T (proposal)
+retry_after_s: 1
+engine_flags_differ: false

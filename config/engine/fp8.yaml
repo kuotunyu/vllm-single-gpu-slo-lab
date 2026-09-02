@@ -1,0 +1,6 @@
+name: fp8
+inherits: common
+model: Qwen/Qwen3-8B-FP8
+revision: null
+quantization: auto             # detected from the checkpoint; Ada (compute 8.9) has native W8A8
+notes: W1 item 1 confirms the FP8 kernel path from the server log; if it falls back to weight-only, the cell is relabelled and a claim ceiling is added

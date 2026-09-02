@@ -1,0 +1,62 @@
+# Secrets and local configuration - never committed (design spec §7)
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.ppk
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+known_hosts
+# Terraform-style state and variables (defensive: no Terraform exists in this repo)
+*.tfvars
+*.tfvars.json
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Scratch and per-run working directories.
+# NOTE: evidence/raw/**, evidence/runpod/** and evidence/quant/** ARE committed (evidence contract).
+runs/
+temp/
+tmp/
+
+# Model weights and caches - never in the repo
+models/
+weights/
+hf_cache/
+vllm_cache/
+.cache/
+*.safetensors
+*.gguf
+*.pt
+*.pth
+*.bin
+
+# Notebook runtime state
+.ipynb_checkpoints/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.worktrees/
+.DS_Store
+Thumbs.db

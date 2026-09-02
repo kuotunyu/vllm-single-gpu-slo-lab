@@ -1,0 +1,9 @@
+# vLLM /metrics names this lab depends on (design spec §3.3, §4.1, §4.3 item 1, §9).
+# W0: these are the names the spec references. W1 item 1 replaces this file with the exact
+# names scraped from the running server (vLLM 0.28.0) and freezes it; until then treat the
+# list as "expected", not "verified".
+#
+# name                          use
+vllm:num_requests_waiting       r_sat cross-check (rate where it stays > 0); time-to-recover (back to 0)
+vllm:prefix_cache_hits          prove the nonce defeats prefix caching (hit rate ~ 0)
+vllm:prefix_cache_queries       denominator for the hit rate above

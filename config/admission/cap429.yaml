@@ -1,0 +1,7 @@
+# Policy (ii): hard cap C in flight, HTTP 429 + Retry-After beyond it, no queue (LIBG semantics,
+# implemented independently in src/slo_lab/admission).
+name: cap429
+policy: hard_cap
+capacity: null                # C = highest closed-loop concurrency still meeting the SLO (W2 evidence)
+retry_after_s: 1
+engine_flags_differ: false

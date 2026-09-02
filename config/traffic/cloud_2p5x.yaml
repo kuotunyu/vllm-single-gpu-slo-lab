@@ -1,0 +1,22 @@
+# The deferred cloud spec's 0.5 / 2.5 / 0.5 trace (5 / 10 / 10 min). Retained verbatim for future
+# multi-replica reuse if cloud infrastructure is ever approved. NOT a headline trace here: on a
+# single card the 2.5x burst leaves a queue that outlasts the recovery stage (see burst25.yaml).
+name: cloud_2p5x
+status: retained_for_cloud_reuse
+headline: false
+kind: open_loop_multistage
+arrival: poisson
+rate_reference: r_sat
+stages:
+  - {rate_multiplier: 0.5, duration_s: 300}
+  - {rate_multiplier: 2.5, duration_s: 600}
+  - {rate_multiplier: 0.5, duration_s: 600}
+prompt:
+  input_tokens: 108
+  output_tokens: 132
+  nonce_prefix: true
+  ignore_eos: true
+  thinking: false
+warmup_requests: 100
+client_timeout_s: 300
+seeds: null

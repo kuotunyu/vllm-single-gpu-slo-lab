@@ -1,0 +1,13 @@
+# Template for config/cost.yaml (design spec §6). Copy, fill in real values with sources,
+# set status: owner_provided. Field names are fixed; do not hard-code any of these in code.
+status: owner_input_pending
+
+gpu_purchase_price_twd: 60000        # what the RTX 4090 actually cost, TWD
+purchase_date: "2024-01-01"          # YYYY-MM-DD
+amortisation_years: 3
+duty_hours_per_day: 24               # 24 = card dedicated around the clock; 8 h sensitivity is auto-reported
+electricity_twd_per_kwh: 4.0         # cite the Taipower tier in electricity_source
+electricity_source: "Taipower tariff tier, URL, date"
+twd_per_usd: 32.0
+fx_source: "FX source and date"
+input_output_price_ratio: null       # e.g. 4.0 if output tokens are priced 4x input tokens

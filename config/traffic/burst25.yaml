@@ -1,0 +1,28 @@
+# Headline 25-minute single-burst trace for the admission axis (design spec §3.3, PROPOSAL).
+#
+# Why 1.5x for 5 min instead of the cloud spec's 2.5x for 10 min: a single card has no scale-out
+# to wait for. 2.5x r_sat for 600 s leaves 1.5*r_sat*600 = 900*r_sat requests in vLLM's native
+# queue, which at 0.5*r_sat headroom needs 1800 s to drain, i.e. longer than the recovery stage.
+# 1.5x for 300 s leaves 150*r_sat requests, drained in about 300 s, so the three admission
+# policies' differences and their time-to-recover all fall inside the trace.
+name: burst25
+status: proposal              # frozen in analysis/preregistration.md at the end of W1
+headline: true
+kind: open_loop_multistage
+arrival: poisson
+rate_reference: r_sat         # per-precision closed-loop plateau, read from evidence at run time
+stages:
+  - {rate_multiplier: 0.5, duration_s: 300}
+  - {rate_multiplier: 1.5, duration_s: 300}   # burst
+  - {rate_multiplier: 0.5, duration_s: 900}   # recovery; time-to-recover is measured here
+prompt:
+  input_tokens: 108           # Google Inference Quickstart medians (memo §3(d))
+  output_tokens: 132
+  nonce_prefix: true          # defeats prefix caching; hit rate is recorded to prove it
+  ignore_eos: true            # fixed output length
+  thinking: false             # Qwen3 thinking disabled for every latency measurement
+warmup_requests: 100          # sequential; sufficiency checked at W1 (spec §3.4)
+client_timeout_s: 300         # proposal: let native queueing latency be seen, not clipped
+seeds: null                   # three seeds, frozen in preregistration.md at W1
+extra_metrics:
+  - time_to_recover_s         # burst end -> num_requests_waiting back to 0 and 1-min TTFT p95 within SLO

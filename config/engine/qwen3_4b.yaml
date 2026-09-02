@@ -1,0 +1,7 @@
+name: qwen3_4b
+inherits: common
+model: Qwen/Qwen3-4B
+revision: null
+quantization: null
+role: speculative_decoding_axis   # none / n-gram / EAGLE-3 (config/specdec/eagle3_4b.yaml)
+notes: EAGLE-3 numbers belong to Qwen3-4B only; the 8B cell has n-gram only (claim ceiling 4)

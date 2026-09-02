@@ -1,0 +1,22 @@
+# Open-loop Poisson sweep that produces the attainment-vs-rate curve and r_SLO (spec §3.3).
+# The grid and the 5 min stage length are proposals; the 60 s discard rule is from the deferred spec.
+name: open_loop_sweep
+status: proposal
+headline: true
+kind: open_loop_sweep
+arrival: poisson
+rate_reference: r_sat
+rate_multipliers: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+stage_duration_s: 300
+discard_first_s: 60
+prompt:
+  input_tokens: 108
+  output_tokens: 132
+  nonce_prefix: true
+  ignore_eos: true
+  thinking: false
+warmup_requests: 100
+client_timeout_s: 300
+seeds: null
+loadgen: inference-perf       # bare-metal mode on WSL2; multiprocess to avoid client-side M/G/1 queueing
+crosscheck: vllm_bench_serve  # one rate re-run with `vllm bench serve --burstiness 1`, recorded, not used for conclusions
