@@ -276,6 +276,87 @@ def shim(
     run(upstream, policy_from_config(cfg), host=host, port=port)
 
 
+@app.command("run-stage")
+def run_stage_cmd(
+    run_dir: Annotated[Path, typer.Option(help="Output directory for this stage.")],
+    cell: str,
+    model: str,
+    kind: Annotated[str, typer.Option(help="open_loop | closed_loop")],
+    base_url: str = "http://127.0.0.1:8013",
+    metrics_url: str = "http://127.0.0.1:8013/metrics",
+    seed: int = 1,
+    rate_rps: float | None = None,
+    duration_s: int = 300,
+    concurrency: int | None = None,
+    num_requests: int | None = None,
+    warmup_requests: int = 100,
+    discard_first_s: float = 60.0,
+    inference_perf_bin: str = "inference-perf",
+    workers: int = 4,
+    engine_flags: Annotated[
+        str | None, typer.Option(help="JSON of the server flags, copied into the manifest.")
+    ] = None,
+) -> None:
+    """Warm up, sample power and /metrics, run inference-perf, adapt records, write manifest.json."""
+    import json as _json
+
+    from slo_lab.harness.stage import run_stage
+
+    result = run_stage(
+        run_dir=run_dir,
+        cell=cell,
+        model=model,
+        base_url=base_url,
+        metrics_url=metrics_url,
+        seed=seed,
+        kind=kind,
+        rate_rps=rate_rps,
+        duration_s=duration_s,
+        concurrency=concurrency,
+        num_requests=num_requests,
+        warmup_requests=warmup_requests,
+        discard_first_s=discard_first_s,
+        inference_perf_bin=inference_perf_bin,
+        engine_flags=_json.loads(engine_flags) if engine_flags else None,
+        workers=workers,
+    )
+    keys = (
+        "cell",
+        "kind",
+        "rate_rps",
+        "concurrency",
+        "records",
+        "window_records",
+        "achieved_rps",
+        "ttft_p50_s",
+        "ttft_p95_s",
+        "tpot_p50_s",
+        "tpot_p95_s",
+        "output_tok_per_s",
+        "warmup_ttft_median_s",
+        "inference_perf_returncode",
+    )
+    typer.echo(_json.dumps({k: result.get(k) for k in keys}))
+    summary = result.get("summary") or {}
+    if summary:
+        typer.echo(
+            _json.dumps(
+                {
+                    k: summary.get(k)
+                    for k in (
+                        "offered",
+                        "met",
+                        "attainment_offered",
+                        "attainment_offered_ci95",
+                        "rejection_rate",
+                        "goodput_rps",
+                    )
+                }
+            )
+        )
+    raise typer.Exit(code=0 if result.get("records") else 1)
+
+
 @app.command("reproduce-lite")
 def reproduce_lite(
     root: Annotated[Path, typer.Option(help="Repository root.")] = Path("."),
