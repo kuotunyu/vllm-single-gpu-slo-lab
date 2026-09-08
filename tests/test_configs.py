@@ -71,11 +71,22 @@ def test_admission_configs_build_policies(name, kind):
         assert policy.queue_limit == policy.capacity and policy.timeout_s == 1.0
 
 
+def common_env_has_wsl2_switches() -> bool:
+    env = load("engine/common.yaml")["env"]
+    return (
+        env.get("VLLM_WSL2_ENABLE_PIN_MEMORY") == "1"
+        and env.get("VLLM_USE_FLASHINFER_SAMPLER") == "0"
+    )
+
+
 def test_engine_configs_name_the_spec_models():
     assert load("engine/bf16.yaml")["model"] == "Qwen/Qwen3-8B"
     assert load("engine/fp8.yaml")["model"] == "Qwen/Qwen3-8B-FP8"
     assert load("engine/awq.yaml")["model"] == "Qwen/Qwen3-8B-AWQ"
-    assert load("engine/gptq_int4.yaml")["model"] is None  # repo id + licence resolved at W1
+    gptq = load("engine/gptq_int4.yaml")
+    assert gptq["model"] == "JunHowie/Qwen3-8B-GPTQ-Int4"  # W1 decision, ADR 0003
+    assert gptq["optional"] is False
+    assert common_env_has_wsl2_switches()
     assert load("engine/qwen3_4b.yaml")["model"] == "Qwen/Qwen3-4B"
     common = load("engine/common.yaml")
     assert common["max_num_batched_tokens"] == 2048

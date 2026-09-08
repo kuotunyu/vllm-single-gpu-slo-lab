@@ -1,7 +1,7 @@
 name: gptq_int4
 inherits: common
-model: null                    # repo id and licence verified at W1 (spec §4.3 item 5)
-revision: null
+model: JunHowie/Qwen3-8B-GPTQ-Int4   # W1 decision, ADR 0003: Apache-2.0, base Qwen/Qwen3-8B, gptqmodel 4.0.0
+revision: null                        # pinned to a commit hash at W2 once the download is verified
 quantization: auto
-optional: true                 # downgraded to optional if no Apache-2.0 official weights exist
-notes: null
+optional: false                       # an Apache-2.0 third-party checkpoint exists; official Qwen GPTQ does not
+notes: third-party quantization (bits 4, group 128, desc_act false, sym); quality numbers belong to this checkpoint only (claim ceiling)

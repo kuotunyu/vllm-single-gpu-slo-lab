@@ -12,3 +12,5 @@ thinking: false                        # chat-template kwargs
 env:
   HF_HUB_OFFLINE: "1"                  # weights downloaded once, then offline
   VLLM_CACHE_ROOT: "<wsl2 ext4 path>"  # cache and weights on ext4, not /mnt/c
+  VLLM_WSL2_ENABLE_PIN_MEMORY: "1"     # W1 (ADR 0002): required on WSL2 for the 0.28 GPU runner's UVA buffers
+  VLLM_USE_FLASHINFER_SAMPLER: "0"     # W1 (ADR 0002): WSL2 has no nvcc/ninja for the FlashInfer JIT sampler

@@ -2,6 +2,6 @@ name: eagle3_4b
 method: eagle3
 speculative_config:
   method: eagle3
-  model: null                     # AngelSlim EAGLE-3 head for Qwen3-4B; repo id verified at W1 (spec §4.3 item 6)
-  num_speculative_tokens: null
+  model: AngelSlim/Qwen3-4B_eagle3   # W1, ADR 0003: 0.4 GiB head; card has no licence field, confirm before publishing weights-derived claims
+  num_speculative_tokens: 3          # proposal; W1 load test only, tuned at W4
 applies_to: [qwen3_4b]            # no 8B head exists (claim ceiling 4)
