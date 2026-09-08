@@ -1,12 +1,19 @@
 """Quiet-GPU gate (design spec §9, re-plan §3): refuse to start a run unless the GPU is idle.
 
 The 4090 is shared with a cron job that runs 00:00-08:00; this lab only measures afterwards.
-Before vLLM starts, the harness calls `snapshot()` + `decide()`: any other compute process, or
-pre-existing memory use above a threshold (proposal: 1024 MiB), blocks the run. The snapshot
-(NVML device state, compute processes, best-effort `nvidia-smi` text) is written as JSON next to
-the run's evidence so a reader can verify the card was quiet.
+Before vLLM starts, the harness calls `snapshot()` + `decide()`: any other compute process,
+pre-existing memory use above a threshold, or GPU utilization above a threshold blocks the run.
+The snapshot (NVML device state, compute processes, utilization, best-effort `nvidia-smi` text)
+is written as JSON next to the run's evidence so a reader can verify the card was quiet.
 
-`decide` is pure so it is unit-tested with injected fake process lists; NVML is imported lazily.
+W1 finding (2026-09-08, WSL2 kernel 6.6.114, driver 591.86): NVML's compute-process list is
+always empty under WSL2 even while vLLM holds 23 GiB, so the process criterion cannot detect a
+foreign job there. The memory and utilization criteria are the effective gate on that host; the
+snapshot records `process_list_trustworthy` so the evidence says which criteria actually applied.
+The idle baseline on that host is about 2,600 MiB because Windows itself holds VRAM, hence the
+default threshold below.
+
+`decide` is pure so it is unit-tested with injected fake values; NVML is imported lazily.
 """
 
 from __future__ import annotations
@@ -24,7 +31,8 @@ from pydantic import BaseModel, Field
 
 from slo_lab.nvml import init_nvml, load_pynvml
 
-DEFAULT_MEMORY_THRESHOLD_MIB = 1024.0  # proposal; frozen in preregistration at W1
+DEFAULT_MEMORY_THRESHOLD_MIB = 3072.0  # W1: idle 2,609 MiB measured on the WSL2 host, 2026-09-08
+DEFAULT_UTILIZATION_THRESHOLD_PERCENT = 5.0  # W1 proposal; NVML util is 0-1% on the idle host
 
 
 class GpuProcess(BaseModel):
@@ -44,8 +52,14 @@ def decide(
     *,
     memory_threshold_mib: float = DEFAULT_MEMORY_THRESHOLD_MIB,
     allow_pids: Collection[int] = (),
+    utilization_percent: float | None = None,
+    utilization_threshold_percent: float = DEFAULT_UTILIZATION_THRESHOLD_PERCENT,
 ) -> Decision:
-    """Allow only when no foreign compute process exists and memory use is under the threshold."""
+    """Allow only when no foreign compute process exists, memory use and utilization are low.
+
+    ``utilization_percent`` is optional so callers without NVML utilization data keep the older
+    two-criterion behaviour; when given, it is the criterion that still works on WSL2.
+    """
     reasons: list[str] = []
     for proc in processes:
         if proc.pid in allow_pids:
@@ -57,7 +71,21 @@ def decide(
             f"GPU memory already in use: {memory_used_mib:.0f} MiB > threshold "
             f"{memory_threshold_mib:.0f} MiB"
         )
+    if utilization_percent is not None and utilization_percent > utilization_threshold_percent:
+        reasons.append(
+            f"GPU busy: utilization {utilization_percent:.0f}% > threshold "
+            f"{utilization_threshold_percent:.0f}%"
+        )
     return Decision(ok=not reasons, reasons=reasons)
+
+
+def process_list_trustworthy() -> bool:
+    """False on WSL2, where NVML never lists compute processes (W1 finding, 2026-09-08)."""
+    try:
+        with open("/proc/version", encoding="utf-8") as handle:
+            return "microsoft" not in handle.read().lower()
+    except OSError:
+        return True
 
 
 def _run_nvidia_smi(args: list[str]) -> dict[str, Any]:
@@ -102,6 +130,11 @@ def snapshot(*, index: int = 0, include_nvidia_smi: bool = True) -> dict[str, An
             )
         raw_name = nv.nvmlDeviceGetName(handle)
         raw_driver = nv.nvmlSystemGetDriverVersion()
+        utilization: float | None
+        try:
+            utilization = float(nv.nvmlDeviceGetUtilizationRates(handle).gpu)
+        except Exception:
+            utilization = None
         snap: dict[str, Any] = {
             "taken_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "gpu_index": index,
@@ -111,7 +144,9 @@ def snapshot(*, index: int = 0, include_nvidia_smi: bool = True) -> dict[str, An
             else str(raw_driver),
             "memory_total_mib": mem.total / (1024.0 * 1024.0),
             "memory_used_mib": mem.used / (1024.0 * 1024.0),
+            "utilization_percent": utilization,
             "compute_processes": [p.model_dump() for p in procs],
+            "process_list_trustworthy": process_list_trustworthy(),
         }
     finally:
         with contextlib.suppress(Exception):  # best effort
@@ -126,7 +161,13 @@ def snapshot(*, index: int = 0, include_nvidia_smi: bool = True) -> dict[str, An
 
 def decide_from_snapshot(snap: dict[str, Any], **kwargs: Any) -> Decision:
     procs = [GpuProcess.model_validate(p) for p in snap.get("compute_processes", [])]
-    return decide(procs, float(snap.get("memory_used_mib", 0.0)), **kwargs)
+    utilization = snap.get("utilization_percent")
+    return decide(
+        procs,
+        float(snap.get("memory_used_mib", 0.0)),
+        utilization_percent=None if utilization is None else float(utilization),
+        **kwargs,
+    )
 
 
 def write_snapshot(path: Path, snap: dict[str, Any], decision: Decision) -> None:

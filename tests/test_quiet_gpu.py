@@ -6,6 +6,7 @@ from slo_lab.quiet_gpu import (
     GpuProcess,
     decide,
     decide_from_snapshot,
+    process_list_trustworthy,
     write_snapshot,
 )
 
@@ -24,8 +25,28 @@ def test_quiet_gpu_refuses_on_any_foreign_compute_process():
 def test_quiet_gpu_refuses_on_memory_above_threshold_even_without_processes():
     d = decide([], memory_used_mib=DEFAULT_MEMORY_THRESHOLD_MIB + 1)
     assert not d.ok
-    assert d.reasons[0].startswith("GPU memory already in use: 1025 MiB > threshold 1024 MiB")
+    assert d.reasons[0].startswith(
+        f"GPU memory already in use: {DEFAULT_MEMORY_THRESHOLD_MIB + 1:.0f} MiB > threshold "
+        f"{DEFAULT_MEMORY_THRESHOLD_MIB:.0f} MiB"
+    )
     assert decide([], memory_used_mib=DEFAULT_MEMORY_THRESHOLD_MIB).ok
+
+
+def test_quiet_gpu_refuses_on_utilization_even_when_process_list_is_empty():
+    # WSL2 never lists compute processes, so a busy card must still be caught by utilization.
+    d = decide([], memory_used_mib=300.0, utilization_percent=42.0)
+    assert not d.ok
+    assert d.reasons == ["GPU busy: utilization 42% > threshold 5%"]
+    assert decide([], memory_used_mib=300.0, utilization_percent=1.0).ok
+    assert decide([], memory_used_mib=300.0, utilization_percent=None).ok
+
+
+def test_decide_from_snapshot_uses_utilization_and_records_trust_flag():
+    snap = {"memory_used_mib": 100.0, "compute_processes": [], "utilization_percent": 30}
+    assert not decide_from_snapshot(snap).ok
+    snap["utilization_percent"] = 0
+    assert decide_from_snapshot(snap).ok
+    assert isinstance(process_list_trustworthy(), bool)
 
 
 def test_quiet_gpu_allow_list_and_custom_threshold():

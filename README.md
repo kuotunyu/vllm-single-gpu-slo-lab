@@ -42,7 +42,7 @@
 4. 不宣稱 EAGLE-3 在 Qwen3-8B 上的效果——memo §2 只找到 AngelSlim 的 4B／14B／32B head；EAGLE-3 數字只屬於 Qwen3-4B，8B 只有 n-gram。
 5. 不宣稱 TMMLU+ 分數可與他人 leaderboard 比較——ikala leaderboard README 已 12 個月未更新（memo §4）；只報自跑數字與四個精度間的配對差。
 6. 不宣稱電費為整機功耗——`nvidia-smi` 只量 GPU 板卡功耗，主機其餘功耗未量，電費項為下限（提案）。
-7. 不宣稱 WSL2 數字等於裸機 Linux——WSL2 額外開銷未分離量測（提案）。
+7. 不宣稱 WSL2 數字等於裸機 Linux——所有 4090 數字都在 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`（vLLM 自述在 WSL2 有小幅效能退化）與 torch 原生 sampler（`VLLM_USE_FLASHINFER_SAMPLER=0`，WSL2 無 nvcc/ninja 可 JIT）下量測；WSL2 額外開銷未分離量測。A1 的 RunPod L4 是唯一的非 WSL2 對照（ADR 0002）。
 8. 不宣稱 thinking 模式下的延遲——所有延遲量測關閉 Qwen3 thinking（memo §4 的 thinking toggle；提案）。
 
 ## 環境

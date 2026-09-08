@@ -173,11 +173,17 @@ def quiet_gpu_cmd(
     out: Annotated[Path | None, typer.Option(help="Write snapshot JSON here.")] = None,
     gpu_index: int = 0,
     memory_threshold_mib: float | None = None,
+    utilization_threshold_percent: float | None = None,
     allow_pid: Annotated[list[int] | None, typer.Option(help="PIDs allowed on the GPU.")] = None,
 ) -> None:
-    """Refuse (exit 1) unless the GPU has no other compute process; write the snapshot JSON."""
+    """Refuse (exit 1) unless the GPU is quiet (no foreign process, low memory, low utilization)."""
     from slo_lab.nvml import NvmlUnavailableError
-    from slo_lab.quiet_gpu import DEFAULT_MEMORY_THRESHOLD_MIB, decide_from_snapshot, snapshot
+    from slo_lab.quiet_gpu import (
+        DEFAULT_MEMORY_THRESHOLD_MIB,
+        DEFAULT_UTILIZATION_THRESHOLD_PERCENT,
+        decide_from_snapshot,
+        snapshot,
+    )
     from slo_lab.quiet_gpu import write_snapshot as _write
 
     try:
@@ -188,6 +194,11 @@ def quiet_gpu_cmd(
     decision = decide_from_snapshot(
         snap,
         memory_threshold_mib=memory_threshold_mib or DEFAULT_MEMORY_THRESHOLD_MIB,
+        utilization_threshold_percent=(
+            DEFAULT_UTILIZATION_THRESHOLD_PERCENT
+            if utilization_threshold_percent is None
+            else utilization_threshold_percent
+        ),
         allow_pids=tuple(allow_pid or ()),
     )
     if out is not None:
