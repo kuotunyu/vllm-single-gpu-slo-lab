@@ -62,11 +62,14 @@ def test_scan_text_allows_loopback_unspecified_versions_and_noreply_email():
         [
             "listen 127.0.0.1:8001 and 0.0.0.0",
             "vllm 0.28.0 torch 2.13.0+cu130 driver 591.86",
+            "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
             "61350295+kuotunyu@users.noreply.github.com",
             "someone@example.com",
         ]
     )
     assert scan_text(text) == []
+    # addresses next to punctuation are still addresses
+    assert names(scan_text(f"peer {LAN_IP}. then host={PUBLIC_IP}:8013")) == ["ipv4", "ipv4"]
 
 
 def test_runpod_key_assignment_pattern():

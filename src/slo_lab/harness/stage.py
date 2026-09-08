@@ -16,14 +16,18 @@ records, summary, power CSV, metrics CSV and manifest are what get promoted to e
 
 from __future__ import annotations
 
+import contextlib
+import csv
 import hashlib
 import json
+import math
 import os
 import platform
 import subprocess
 import threading
 import time
 import urllib.request
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,8 +35,16 @@ from typing import Any
 
 from slo_lab.harness.ipf_adapter import adapt_file, write_records_jsonl
 from slo_lab.harness.ipf_config import closed_loop_config, open_loop_config, write_config
-from slo_lab.harness.metrics_scraper import MetricsScraper, fetch_metrics
-from slo_lab.slo import DEFAULT_SLO, filter_window, summarise
+from slo_lab.harness.metrics_scraper import (
+    HISTOGRAMS,
+    MetricsScraper,
+    fetch_metrics,
+    histogram_delta,
+    histogram_quantile_bounds,
+    parse_histograms,
+    parse_metrics,
+)
+from slo_lab.slo import DEFAULT_SLO, RequestRecord, filter_window, summarise
 from slo_lab.stats import percentile
 
 
@@ -118,6 +130,101 @@ def _io_pressure() -> str | None:
         return None
 
 
+def _host_state() -> dict[str, Any]:
+    """Load average and CPU pressure; another tenant starving the API server shows up here."""
+    state: dict[str, Any] = {"loadavg": None, "cpu_pressure": None}
+    with contextlib.suppress(OSError, ValueError):
+        fields = Path("/proc/loadavg").read_text(encoding="utf-8").split()[:3]
+        state["loadavg"] = [float(x) for x in fields]
+    with contextlib.suppress(OSError):
+        text = Path("/proc/pressure/cpu").read_text(encoding="utf-8")
+        state["cpu_pressure"] = text.splitlines()[0]
+    return state
+
+
+def stage_window(
+    records: Sequence[RequestRecord], *, kind: str, discard_first_s: float, duration_s: int
+) -> tuple[list[RequestRecord], float | None]:
+    """Measurement window of a stage: records offered after the discard period, and its length.
+
+    Open-loop stages have a fixed duration, so the window is ``duration_s - discard_first_s``.
+    Closed-loop stages run until ``num_requests`` complete, so the window runs from the discard
+    point to the last completion (``offered_at + e2e``). A closed-loop stage shorter than the
+    discard period yields an empty window instead of silently reporting its start-up transient
+    (the exploratory FP8 sweep of 2026-09-09 had no discard and 60-100 s stages; ADR 0006).
+    """
+    window = filter_window(records, start_s=discard_first_s)
+    if kind == "open_loop":
+        return window, float(duration_s - discard_first_s)
+    if not window:
+        return window, None
+    t_end = max(r.offered_at_s + (r.e2e_s or 0.0) for r in records)
+    window_s = t_end - discard_first_s
+    return window, (window_s if window_s > 0 else None)
+
+
+def _server_histograms(
+    before: dict[str, Any] | None, after: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Server-side latency histograms accrued during the stage (loadgen-independent view)."""
+    if before is None or after is None:
+        return None
+
+    def bounds(delta: dict[str, Any], q: float) -> list[float | None]:
+        lo, hi = histogram_quantile_bounds(delta, q)
+        return [lo, None if math.isinf(hi) else hi]
+
+    out: dict[str, Any] = {}
+    for name in HISTOGRAMS:
+        delta = histogram_delta(before[name], after[name])
+        out[name.removeprefix("vllm:")] = {
+            "count": delta["count"],
+            "sum": delta["sum"],
+            "p50_bounds_s": bounds(delta, 0.50),
+            "p95_bounds_s": bounds(delta, 0.95),
+            "p99_bounds_s": bounds(delta, 0.99),
+            "buckets": delta["buckets"],
+        }
+    return out
+
+
+def _power_window(path: Path, *, start_s: float, output_tokens: int) -> dict[str, Any] | None:
+    """Mean draw and energy over ``power.csv`` rows with ``t_s >= start_s``.
+
+    The sampler starts a few seconds before inference-perf, so the cut is aligned with the
+    record window to within the loadgen's own start-up time.
+    """
+    if not path.exists():
+        return None
+    rows: list[tuple[float, float, dict[str, str]]] = []
+    with path.open(encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            try:
+                t, p = float(row["t_s"]), float(row["power_w"])
+            except (KeyError, ValueError):
+                continue
+            if t >= start_s:
+                rows.append((t, p, row))
+    if len(rows) < 2:
+        return None
+    span = rows[-1][0] - rows[0][0]
+    mean_w = sum(p for _, p, _ in rows) / len(rows)
+    wh = mean_w * span / 3600.0
+    temps = [float(r["temp_c"]) for _, _, r in rows if r.get("temp_c")]
+    clocks = [float(r["clocks_sm_mhz"]) for _, _, r in rows if r.get("clocks_sm_mhz")]
+    return {
+        "samples": len(rows),
+        "span_s": round(span, 1),
+        "mean_w": round(mean_w, 1),
+        "max_w": round(max(p for _, p, _ in rows), 1),
+        "wh": round(wh, 4),
+        "output_tok_per_wh": round(output_tokens / wh, 1) if wh > 0 else None,
+        "mean_temp_c": round(sum(temps) / len(temps), 1) if temps else None,
+        "max_temp_c": max(temps) if temps else None,
+        "mean_sm_mhz": round(sum(clocks) / len(clocks)) if clocks else None,
+    }
+
+
 class _PowerThread:
     """Wrap ``run_sampler`` with the NVML reader in a thread; degrades to a note without NVML."""
 
@@ -191,12 +298,14 @@ def run_stage(
         metrics_url, run_dir / "metrics.csv", interval_s=5.0, fetch=fetch_metrics
     ).start()
     metrics_before = None
+    hist_before = None
     try:
-        from slo_lab.harness.metrics_scraper import parse_metrics
-
-        metrics_before = parse_metrics(fetch_metrics(metrics_url))
+        text = fetch_metrics(metrics_url)
+        metrics_before = parse_metrics(text)
+        hist_before = parse_histograms(text)
     except Exception:
         pass
+    host_before = _host_state()
 
     # 3. inference-perf
     report_dir = run_dir / "ipf"
@@ -241,12 +350,14 @@ def run_stage(
     scraper.stop()
     power.stop()
     metrics_after = None
+    hist_after = None
     try:
-        from slo_lab.harness.metrics_scraper import parse_metrics
-
-        metrics_after = parse_metrics(fetch_metrics(metrics_url))
+        text = fetch_metrics(metrics_url)
+        metrics_after = parse_metrics(text)
+        hist_after = parse_histograms(text)
     except Exception:
         pass
+    host_after = _host_state()
 
     # 4. adapt + summarise
     per_request = report_dir / "per_request_lifecycle_metrics.json"
@@ -268,6 +379,10 @@ def run_stage(
         "io_pressure_after": _io_pressure(),
         "metrics_before": metrics_before,
         "metrics_after": metrics_after,
+        "server_histograms": _server_histograms(hist_before, hist_after),
+        "host_before": host_before,
+        "host_after": host_after,
+        "discard_first_s": discard_first_s,
         "power_rows": power.rows,
         "power_note": power.note,
         "metrics_rows": scraper.rows,
@@ -289,11 +404,8 @@ def run_stage(
     if per_request.exists():
         records = adapt_file(per_request)
         write_records_jsonl(records, run_dir / "records.jsonl")
-        window = filter_window(records, start_s=discard_first_s) if kind == "open_loop" else records
-        window_s = (
-            (duration_s - discard_first_s)
-            if kind == "open_loop"
-            else (max(r.offered_at_s for r in records) if records else None)
+        window, window_s = stage_window(
+            records, kind=kind, discard_first_s=discard_first_s, duration_s=duration_s
         )
         summary = summarise(window, DEFAULT_SLO, window_s=window_s) if window else None
         ok = [r for r in window if r.ttft_s is not None and r.e2e_s is not None]
@@ -303,7 +415,13 @@ def run_stage(
             {
                 "records": len(records),
                 "window_records": len(window),
+                "window_s": window_s,
                 "summary": summary.model_dump() if summary else None,
+                "power_window": _power_window(
+                    run_dir / "power.csv",
+                    start_s=discard_first_s,
+                    output_tokens=sum(r.output_tokens or 0 for r in ok),
+                ),
                 "ttft_p50_s": float(percentile(ttfts, 50)) if ttfts else None,
                 "ttft_p95_s": float(percentile(ttfts, 95)) if ttfts else None,
                 "tpot_p50_s": float(percentile(tpots, 50)) if tpots else None,

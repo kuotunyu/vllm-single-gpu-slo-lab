@@ -9,8 +9,16 @@ import yaml
 
 from slo_lab.harness.ipf_adapter import adapt_file, adapt_record, write_records_jsonl
 from slo_lab.harness.ipf_config import closed_loop_config, open_loop_config, write_config
-from slo_lab.harness.metrics_scraper import TRACKED, MetricsScraper, parse_metrics
-from slo_lab.slo import Outcome, read_records_jsonl, summarise
+from slo_lab.harness.metrics_scraper import (
+    TRACKED,
+    MetricsScraper,
+    histogram_delta,
+    histogram_quantile_bounds,
+    parse_histograms,
+    parse_metrics,
+)
+from slo_lab.harness.stage import stage_window
+from slo_lab.slo import Outcome, RequestRecord, read_records_jsonl, summarise
 
 SMOKE = (
     Path(__file__).resolve().parents[1]
@@ -86,6 +94,66 @@ def test_metrics_parser_collapses_labels_and_ignores_untracked() -> None:
     assert values["vllm:kv_cache_usage_perc"] == 0.42
     assert "vllm:num_requests_waiting_by_reason" not in values
     assert "vllm:time_to_first_token_seconds_bucket" not in values
+
+
+HIST_TEXT = """# TYPE vllm:time_to_first_token_seconds histogram
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.01"} 2.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.1"} 8.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="1.0"} 9.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="+Inf"} 10.0
+vllm:time_to_first_token_seconds_count{engine="0"} 10.0
+vllm:time_to_first_token_seconds_sum{engine="0"} 1.5
+vllm:request_queue_time_seconds_bucket{le="+Inf"} 10.0
+vllm:request_queue_time_seconds_count 10.0
+vllm:request_queue_time_seconds_sum 0.2
+"""
+
+
+def test_server_histograms_parse_delta_and_quantile_bounds() -> None:
+    before = parse_histograms(HIST_TEXT)
+    ttft = before["vllm:time_to_first_token_seconds"]
+    assert ttft["count"] == 10.0 and ttft["sum"] == 1.5 and ttft["buckets"]["0.1"] == 8.0
+    assert before["vllm:request_queue_time_seconds"]["buckets"] == {"+Inf": 10.0}
+    assert before["vllm:e2e_request_latency_seconds"]["count"] == 0.0
+    # 20 more requests land, 3 of them under 1 s and 17 above: the delta must not see the old 10
+    later = (
+        HIST_TEXT.replace('le="1.0"} 9.0', 'le="1.0"} 12.0')
+        .replace('le="+Inf"} 10.0', 'le="+Inf"} 30.0')
+        .replace('_count{engine="0"} 10.0', '_count{engine="0"} 30.0')
+    )
+    delta = histogram_delta(ttft, parse_histograms(later)["vllm:time_to_first_token_seconds"])
+    assert delta["count"] == 20.0
+    assert delta["buckets"] == {"0.01": 0.0, "0.1": 0.0, "1.0": 3.0, "+Inf": 20.0}
+    assert histogram_quantile_bounds(delta, 0.5) == (1.0, float("inf"))
+    assert histogram_quantile_bounds(delta, 0.1) == (0.1, 1.0)
+    assert histogram_quantile_bounds({"buckets": {}, "count": 0.0}, 0.5) == (None, float("inf"))
+
+
+def _rec(i: int, offered_at_s: float, e2e_s: float = 2.0) -> RequestRecord:
+    return RequestRecord(
+        request_id=str(i),
+        offered_at_s=offered_at_s,
+        outcome=Outcome.OK,
+        ttft_s=0.05,
+        e2e_s=e2e_s,
+        output_tokens=132,
+        input_tokens=108,
+    )
+
+
+def test_stage_window_applies_the_discard_period_to_closed_loop_stages_too() -> None:
+    recs = [_rec(i, 10.0 * i) for i in range(10)]  # offered at 0, 10, ..., 90 s
+    window, window_s = stage_window(recs, kind="closed_loop", discard_first_s=60.0, duration_s=300)
+    assert [r.offered_at_s for r in window] == [60.0, 70.0, 80.0, 90.0]
+    assert window_s == 92.0 - 60.0  # last completion at 90 + 2 s
+    ow, ows = stage_window(recs, kind="open_loop", discard_first_s=60.0, duration_s=300)
+    assert len(ow) == 4 and ows == 240.0
+    # a closed-loop stage shorter than the discard period must not report its transient
+    assert stage_window(recs[:3], kind="closed_loop", discard_first_s=60.0, duration_s=300) == (
+        [],
+        None,
+    )
+    assert stage_window(recs, kind="closed_loop", discard_first_s=0.0, duration_s=300)[1] == 92.0
 
 
 def test_metrics_scraper_writes_rows_with_injected_fetch(tmp_path: Path) -> None:

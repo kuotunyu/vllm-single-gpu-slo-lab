@@ -1,0 +1,93 @@
+{
+  "cell": "fp8",
+  "model": "Qwen/Qwen3-8B-FP8",
+  "seed": 1,
+  "kind": "closed_loop",
+  "rate_rps": null,
+  "duration_s": 300,
+  "concurrency": 128,
+  "num_requests": 2000,
+  "started_at": "2026-09-08T18:03:38+00:00",
+  "inference_perf_returncode": 0,
+  "load_wall_s": 87.7,
+  "warmup": {
+    "n": 20,
+    "ttft_s": null,
+    "median_1_100": 0.0227418590002344,
+    "median_101_200": null,
+    "median_201_300": null,
+    "wall_s": 49.8518477539983
+  },
+  "warmup_ttft_median_s": 0.0227418590002344,
+  "io_pressure_before": "some avg10=3.49 avg60=2.31 avg300=3.38 total=4043210476",
+  "io_pressure_after": "some avg10=3.30 avg60=3.01 avg300=3.23 total=4047654731",
+  "metrics_before": {
+    "vllm:num_requests_running": 0.0,
+    "vllm:num_requests_waiting": 0.0,
+    "vllm:kv_cache_usage_perc": 0.0,
+    "vllm:prefix_cache_queries_total": 513357.0,
+    "vllm:prefix_cache_hits_total": 65280.0,
+    "vllm:prompt_tokens_total": 513357.0,
+    "vllm:generation_tokens_total": 628320.0,
+    "vllm:request_success_total": 4760.0
+  },
+  "metrics_after": {
+    "vllm:num_requests_running": 0.0,
+    "vllm:num_requests_waiting": 0.0,
+    "vllm:kv_cache_usage_perc": 0.0,
+    "vllm:prefix_cache_queries_total": 729357.0,
+    "vllm:prefix_cache_hits_total": 65280.0,
+    "vllm:prompt_tokens_total": 729357.0,
+    "vllm:generation_tokens_total": 892320.0,
+    "vllm:request_success_total": 6760.0
+  },
+  "power_rows": 88,
+  "power_note": null,
+  "metrics_rows": 18,
+  "engine_flags": {
+    "model": "Qwen/Qwen3-8B-FP8",
+    "max_model_len": 4096,
+    "gpu_memory_utilization": 0.9,
+    "max_num_seqs": 256,
+    "max_num_batched_tokens": 2048,
+    "extra": ""
+  },
+  "env": {
+    "VLLM_WSL2_ENABLE_PIN_MEMORY": "1",
+    "VLLM_USE_FLASHINFER_SAMPLER": "0",
+    "HF_HUB_OFFLINE": "1"
+  },
+  "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "records": 2000,
+  "window_records": 2000,
+  "summary": {
+    "offered": 2000,
+    "admitted": 2000,
+    "met": 1841,
+    "rejected_429": 0,
+    "timeouts": 0,
+    "errors": 0,
+    "attainment_offered": 0.9205,
+    "attainment_offered_ci95": [
+      0.9078221139475915,
+      0.9315656492888746
+    ],
+    "attainment_admitted": 0.9205,
+    "rejection_rate": 0.0,
+    "goodput_rps": 30.68351809004642,
+    "window_s": 59.999638717999915,
+    "slo": {
+      "ttft_s": 1.0,
+      "tpot_s": 0.05
+    }
+  },
+  "ttft_p50_s": 0.39158133800083306,
+  "ttft_p95_s": 1.0761340492026648,
+  "tpot_p50_s": 0.026301233339683733,
+  "tpot_p95_s": 0.028762795027857623,
+  "achieved_rps": 33.33353404676417,
+  "output_tok_per_s": 4399.759825900496,
+  "raw_sha256": {
+    "per_request_lifecycle_metrics.json": "1a6c5afa3d708f9e22c7969a845c23336fd8223f5e55b448f6e4f83f3c4db68b"
+  }
+}

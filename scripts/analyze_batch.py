@@ -5,9 +5,10 @@ usage: python scripts/analyze_batch.py <batch_dir> [<batch_dir> ...] --out analy
 Reads every ``*/manifest.json`` under the given directories (one per stage). Produces:
 
 - ``closed_loop.json`` / ``.md``: per (cell, seed, concurrency) achieved rps, TTFT/TPOT p95,
-  attainment; r_sat per cell (throughput plateau: highest concurrency whose achieved rps is
-  within 5% of the maximum, reporting that maximum), and capacity C (highest concurrency whose
-  window attainment >= 95%).
+  attainment, window length, mean power and tokens per Wh; r_sat per cell (throughput plateau:
+  highest concurrency whose achieved rps is within 5% of the maximum, reporting that maximum,
+  flagged as a lower bound unless the top grid point gains < 5% over the previous one), and
+  capacity C (highest concurrency whose window attainment >= 95%).
 - ``open_loop.json`` / ``.md``: per (cell, seed, offered rate) attainment with Wilson CI, TTFT/TPOT
   p95, achieved rps; r_SLO per cell across seeds via ``slo_lab.slo.r_slo``.
 
@@ -19,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +69,13 @@ def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, 
             "rejection_rate": s.get("rejection_rate"),
             "goodput_rps": s.get("goodput_rps"),
             "warmup_ttft_median_s": m.get("warmup_ttft_median_s"),
+            "window_records": m.get("window_records"),
+            "window_s": m.get("window_s"),
+            "power_mean_w": (m.get("power_window") or {}).get("mean_w"),
+            "tok_per_wh": (m.get("power_window") or {}).get("output_tok_per_wh"),
+            "server_ttft_p95_bounds_s": (
+                (m.get("server_histograms") or {}).get("time_to_first_token_seconds") or {}
+            ).get("p95_bounds_s"),
             "path": m.get("_path"),
         }
         if m.get("kind") == "closed_loop":
@@ -77,6 +86,8 @@ def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, 
             row["offered_rps"] = m.get("rate_rps")
             open_["rows"].append(row)
             by_cell_ol[m["cell"]].append(row)
+    closed["rows"].sort(key=lambda r: (r["cell"], r["seed"], r["concurrency"]))
+    open_["rows"].sort(key=lambda r: (r["cell"], r["seed"], r["offered_rps"]))
     for cell, rows in by_cell_cl.items():
         rows.sort(key=lambda r: (r["seed"], r["concurrency"]))
         by_conc: dict[int, list[float]] = defaultdict(list)
@@ -90,11 +101,24 @@ def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, 
         r_max = max(mean_rps.values()) if mean_rps else None
         plateau = [c for c, v in sorted(mean_rps.items()) if r_max and v >= 0.95 * r_max]
         cap = [c for c, v in sorted(att_by_conc.items()) if v and min(v) >= 0.95]
+        # A plateau is only observed when the top grid point adds < 5% over the one below it;
+        # otherwise r_sat is a lower bound and the grid must be extended (W2 exploratory sweep:
+        # c=128 still +43% over c=64).
+        concs = sorted(mean_rps)
+        gain = {
+            cur: (mean_rps[cur] - mean_rps[prev]) / mean_rps[prev] if mean_rps[prev] else None
+            for prev, cur in pairwise(concs)
+        }
+        top_gain = gain.get(concs[-1]) if concs else None
+        plateau_reached = top_gain is not None and top_gain < 0.05
         closed["per_cell"][cell] = {
             "r_sat_rps": r_max,
+            "r_sat_is_lower_bound": not plateau_reached,
+            "plateau_reached": plateau_reached,
             "plateau_first_concurrency": plateau[0] if plateau else None,
             "capacity_C": max(cap) if cap else None,
             "mean_rps_by_concurrency": mean_rps,
+            "gain_vs_prev_by_concurrency": gain,
             "min_attainment_by_concurrency": {c: min(v) for c, v in att_by_conc.items()},
         }
     for cell, rows in by_cell_ol.items():
@@ -129,6 +153,8 @@ def main() -> int:
         "seed",
         "concurrency",
         "records",
+        "window_records",
+        "window_s",
         "achieved_rps",
         "output_tok_per_s",
         "ttft_p50_s",
@@ -136,6 +162,8 @@ def main() -> int:
         "tpot_p50_s",
         "tpot_p95_s",
         "attainment",
+        "power_mean_w",
+        "tok_per_wh",
     ]
     ol_cols = [
         "cell",

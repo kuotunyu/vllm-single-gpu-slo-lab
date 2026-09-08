@@ -5,6 +5,11 @@ Tracked (names frozen in ``evidence/metrics-names.txt``): ``num_requests_running
 ``prefix_cache_hits_total``, ``prompt_tokens_total``, ``generation_tokens_total``,
 ``request_success_total``. Parsing is a tiny Prometheus text-format reader restricted to
 gauge/counter sample lines; labels are ignored because the server hosts one model.
+
+``parse_histograms`` additionally reads the server-side latency histograms (TTFT, queue time,
+time per output token, e2e). A before/after delta over a stage is the loadgen-independent view
+of latency: it separates engine or API-server stalls from client artefacts (W2, 2026-09-09:
+whole batches of identical multi-second client TTFTs appeared while host disk I/O was saturated).
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ import time
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 TRACKED: tuple[str, ...] = (
     "vllm:num_requests_running",
@@ -44,6 +50,81 @@ def parse_metrics(text: str, tracked: tuple[str, ...] = TRACKED) -> dict[str, fl
             continue
         out[name] = out.get(name, 0.0) + value
     return out
+
+
+HISTOGRAMS: tuple[str, ...] = (
+    "vllm:time_to_first_token_seconds",
+    "vllm:request_queue_time_seconds",
+    "vllm:request_time_per_output_token_seconds",
+    "vllm:e2e_request_latency_seconds",
+)
+
+
+def _label(labels: str, key: str) -> str | None:
+    for item in labels.rstrip("}").split(","):
+        k, _, v = item.partition("=")
+        if k.strip() == key:
+            return v.strip().strip('"')
+    return None
+
+
+def parse_histograms(text: str, names: tuple[str, ...] = HISTOGRAMS) -> dict[str, dict[str, Any]]:
+    """Cumulative ``_bucket`` counts keyed by ``le`` plus ``_count``/``_sum`` per histogram.
+
+    Labels other than ``le`` are collapsed, as in ``parse_metrics``. Values are cumulative since
+    server start; take ``histogram_delta`` between two snapshots to isolate one stage.
+    """
+    out: dict[str, dict[str, Any]] = {
+        name: {"buckets": {}, "count": 0.0, "sum": 0.0} for name in names
+    }
+    for line in text.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        name_part, _, value_part = line.rpartition(" ")
+        full, _, labels = name_part.partition("{")
+        full = full.strip()
+        try:
+            value = float(value_part.strip())
+        except ValueError:
+            continue
+        for name in names:
+            if full == f"{name}_bucket":
+                le = _label(labels, "le")
+                if le is not None:
+                    out[name]["buckets"][le] = out[name]["buckets"].get(le, 0.0) + value
+            elif full == f"{name}_count":
+                out[name]["count"] += value
+            elif full == f"{name}_sum":
+                out[name]["sum"] += value
+            else:
+                continue
+            break
+    return out
+
+
+def histogram_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """Counts accrued between two snapshots of one histogram (buckets stay cumulative in ``le``)."""
+    b_buckets: dict[str, float] = before.get("buckets", {})
+    a_buckets: dict[str, float] = after.get("buckets", {})
+    return {
+        "buckets": {le: float(n) - float(b_buckets.get(le, 0.0)) for le, n in a_buckets.items()},
+        "count": float(after.get("count", 0.0)) - float(before.get("count", 0.0)),
+        "sum": float(after.get("sum", 0.0)) - float(before.get("sum", 0.0)),
+    }
+
+
+def histogram_quantile_bounds(delta: dict[str, Any], q: float) -> tuple[float | None, float]:
+    """(lower, upper) bucket edges enclosing quantile ``q``; upper is ``inf`` past the last edge."""
+    buckets: dict[str, float] = delta.get("buckets", {})
+    count = float(delta.get("count", 0.0))
+    if count <= 0:
+        return (None, float("inf"))
+    prev: float | None = None
+    for le, cum in sorted(((float(le), float(n)) for le, n in buckets.items()), key=lambda t: t[0]):
+        if cum >= q * count:
+            return (prev, le)
+        prev = le
+    return (prev, float("inf"))
 
 
 def fetch_metrics(url: str, timeout_s: float = 5.0) -> str:

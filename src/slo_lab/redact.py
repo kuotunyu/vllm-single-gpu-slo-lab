@@ -39,7 +39,10 @@ def _is_public_placeholder_email(addr: str) -> bool:
 PATTERNS: tuple[Pattern, ...] = (
     Pattern(
         "ipv4",
-        re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+        # Four dotted octets not embedded in a longer token: the WSL2 kernel string that
+        # `platform.platform()` writes into every manifest (`Linux-6.6.114.1-microsoft-...`)
+        # is a version; an address followed by `:port` or a full stop still counts.
+        re.compile(r"(?<![\w-])(?<!\d\.)(?:\d{1,3}\.){3}\d{1,3}(?![\w-]|\.\d)"),
         "<IP>",
         allow=_is_loopback_or_unspecified,
     ),
