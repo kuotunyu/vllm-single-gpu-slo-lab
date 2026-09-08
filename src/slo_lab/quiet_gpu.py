@@ -22,6 +22,7 @@ import contextlib
 import json
 import shutil
 import subprocess
+import time
 from collections.abc import Collection, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,7 +33,11 @@ from pydantic import BaseModel, Field
 from slo_lab.nvml import init_nvml, load_pynvml
 
 DEFAULT_MEMORY_THRESHOLD_MIB = 3072.0  # W1: idle 2,609 MiB measured on the WSL2 host, 2026-09-08
-DEFAULT_UTILIZATION_THRESHOLD_PERCENT = 5.0  # W1 proposal; NVML util is 0-1% on the idle host
+DEFAULT_UTILIZATION_THRESHOLD_PERCENT = (
+    10.0  # W2: idle host samples 0-9% (Windows desktop shares the card); mean of 5 x 1 s
+)
+UTILIZATION_SAMPLES = 5
+UTILIZATION_INTERVAL_S = 1.0
 
 
 class GpuProcess(BaseModel):
@@ -130,11 +135,19 @@ def snapshot(*, index: int = 0, include_nvidia_smi: bool = True) -> dict[str, An
             )
         raw_name = nv.nvmlDeviceGetName(handle)
         raw_driver = nv.nvmlSystemGetDriverVersion()
-        utilization: float | None
-        try:
-            utilization = float(nv.nvmlDeviceGetUtilizationRates(handle).gpu)
-        except Exception:
-            utilization = None
+        # A single utilization read is too noisy on a card shared with the Windows desktop
+        # (W2 smoke: one 9% blip refused an idle GPU); average a short burst of samples.
+        utilization_samples: list[float] = []
+        for i in range(UTILIZATION_SAMPLES):
+            try:
+                utilization_samples.append(float(nv.nvmlDeviceGetUtilizationRates(handle).gpu))
+            except Exception:
+                break
+            if i < UTILIZATION_SAMPLES - 1:
+                time.sleep(UTILIZATION_INTERVAL_S)
+        utilization = (
+            sum(utilization_samples) / len(utilization_samples) if utilization_samples else None
+        )
         snap: dict[str, Any] = {
             "taken_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "gpu_index": index,
@@ -145,6 +158,7 @@ def snapshot(*, index: int = 0, include_nvidia_smi: bool = True) -> dict[str, An
             "memory_total_mib": mem.total / (1024.0 * 1024.0),
             "memory_used_mib": mem.used / (1024.0 * 1024.0),
             "utilization_percent": utilization,
+            "utilization_samples_percent": utilization_samples,
             "compute_processes": [p.model_dump() for p in procs],
             "process_list_trustworthy": process_list_trustworthy(),
         }

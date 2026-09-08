@@ -36,8 +36,8 @@ def test_quiet_gpu_refuses_on_utilization_even_when_process_list_is_empty():
     # WSL2 never lists compute processes, so a busy card must still be caught by utilization.
     d = decide([], memory_used_mib=300.0, utilization_percent=42.0)
     assert not d.ok
-    assert d.reasons == ["GPU busy: utilization 42% > threshold 5%"]
-    assert decide([], memory_used_mib=300.0, utilization_percent=1.0).ok
+    assert d.reasons == ["GPU busy: utilization 42% > threshold 10%"]
+    assert decide([], memory_used_mib=300.0, utilization_percent=9.0).ok
     assert decide([], memory_used_mib=300.0, utilization_percent=None).ok
 
 
