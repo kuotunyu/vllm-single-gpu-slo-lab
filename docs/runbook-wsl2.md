@@ -14,12 +14,16 @@
 - 功耗與記憶體：`nvidia-smi --query-gpu` 在 WSL2 與 Windows 兩側都不支援（driver 591.86）；NVML（`nvidia-ml-py`）可讀：閒置 19.7 W／2,609 MiB（Windows 桌面本身占 VRAM），server 閒置待命 143 W／23,436 MiB。
 - **NVML 在 WSL2 列不出 compute process**（server 占 23 GiB 時 `nvmlDeviceGetComputeRunningProcesses` 仍回空）。`quiet-gpu` 因此在此主機只能靠記憶體與 utilization 兩個準則，快照會記 `process_list_trustworthy: false`；預設記憶體門檻依實測閒置基線改為 3,072 MiB、utilization 門檻 5%。
 
+## W1 結案狀態（2026-09-09）
+
+規格 §4.3 的驗證清單全部完成，細節與數字在 ADR 0002–0005。重點：五個 cell 皆可服務（ADR 0004）；inference-perf 0.6.1 裸機可跑但只接受 completion API；`vllm bench serve` 可跑；passthrough shim 在 2 rps 下無可量測中位數開銷，**埠用 8021**（8001 被本機其他服務占用）；TMMLU+ 三切片凍結、FP8 20 題 dry run 29.5 題/秒，因此 A3（Colab）取消；`evidence/metrics-names.txt` 已由 live scrape 凍結（96 個名稱）。repo 本身的 Linux 環境在 `~/vllm-slo-lab/.venv-slolab`（`UV_PROJECT_ENVIRONMENT` 指向它再 `uv sync --frozen`），與 checkout 內的 Windows `.venv` 互不干擾；load generator 在 `~/vllm-slo-lab/.venv-loadgen`。
+
 ## 每次 run 的順序（`harness/run.py` 尚未寫；W1 先手動）
 
 1. 08:00 之後才開始（00:00–08:00 是另一個 cron 工作的時段）。
 2. `uv run slo-lab quiet-gpu --out evidence/raw/<run_id>/quiet_gpu.json` — 有其他 compute process、既有記憶體占用 > 3,072 MiB、或 utilization > 5% 即退出 1，不得繼續（WSL2 上 process 準則無效，快照會標明）。
 3. 在 vLLM 環境啟動 server（旗標見 `config/engine/common.yaml` + cell 檔；`HF_HUB_OFFLINE=1`、`VLLM_WSL2_ENABLE_PIN_MEMORY=1`、`VLLM_USE_FLASHINFER_SAMPLER=0`、`VLLM_CACHE_ROOT` 在 ext4）。
-4. 若 policy 為 (ii)／(iii)：`uv run slo-lab shim --upstream http://localhost:8000 --policy hard_cap --capacity <C>`；policy (i) 亦走 `--policy passthrough` 以保持 shim 開銷一致。
+4. 若 policy 為 (ii)／(iii)：`slo-lab shim --upstream http://127.0.0.1:8013 --port 8021 --policy hard_cap --capacity <C>`；policy (i) 亦走 `--policy passthrough` 以保持 shim 開銷一致（W1 量到的中位數開銷在 ±2 ms 內）。
 5. `uv run slo-lab power-sample evidence/raw/<run_id>/power.csv --phase idle --duration-s 60`，之後 `--append --phase warmup`、`--append --phase measure`。
 6. Warm-up 100 sequential request；inference-perf 依 `config/traffic/*.yaml` 跑；scrape `/metrics`。
 7. 收集 → `records.jsonl`（adapter 未寫）→ `scripts/redact.py redact` 去敏 log → `manifest.json`。

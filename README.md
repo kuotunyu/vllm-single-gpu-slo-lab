@@ -47,7 +47,7 @@
 
 ## 環境
 
-- 量測全部在 **WSL2 Ubuntu 上的獨立 vLLM 環境**：vLLM 0.28.0、torch 2.13.0+cu130，2026-09-03 已在 RTX 4090 上驗證可載入模型並完成一次 completion。**vLLM 與 torch 不在本 repo 的 `pyproject.toml` 依賴中**：本 package 只做 CPU-side 的計算、shim 與量測工具，`make reproduce` 在無 GPU、無網路的 CI 上跑。
+- 量測全部在 **WSL2 Ubuntu 上的獨立 vLLM 環境**：vLLM 0.28.0、torch 2.13.0+cu130；2026-09-08／09 的 W1 驗證在 RTX 4090 上載入全部五個 cell 並完成 completion（ADR 0004），條件是 `VLLM_WSL2_ENABLE_PIN_MEMORY=1` 與 `VLLM_USE_FLASHINFER_SAMPLER=0`（ADR 0002）。**vLLM 與 torch 不在本 repo 的 `pyproject.toml` 依賴中**：本 package 只做 CPU-side 的計算、shim 與量測工具，`make reproduce` 在無 GPU、無網路的 CI 上跑。
 - 此 driver 下 `nvidia-smi --query-gpu` 不支援，功耗改由 **NVML**（`pynvml`，optional extra `gpu`）以 1 s 間隔取樣；`nvidia-smi` 完整輸出仍以 best-effort 方式附進 quiet-GPU 快照。
 - 4090 與另一個 00:00–08:00 的 cron 工作共用；本專案只在 08:00 之後量測，且 `slo-lab quiet-gpu` 發現任何其他 compute process 或既有記憶體占用超過門檻即拒跑，快照隨 run 提交。
 - 開發：Python 3.12 + uv；Windows 宿主只跑 CPU 測試。
@@ -66,19 +66,20 @@
 | `slo_lab/quiet_gpu.py` | 拒跑判定 + NVML／nvidia-smi 快照 JSON | 注入 fake process 清單 |
 | `slo_lab/redact.py` + `scripts/redact.py` | 去敏與 `make audit-secrets` 掃描（IP、私鑰、SSH 公鑰、RunPod key／host、HF token、email） | 動態組字串 + 掃描本 repo |
 | `config/` | cost（placeholder，標 owner input）、engine 五 cell + common、admission 三策略、traffic 四份（含 `burst25` 與保留的 `cloud_2p5x`）、specdec 三份 | YAML 解析與內容 |
-| `evidence/metrics-names.txt` | 規格引用的 vLLM metric 名（W1 以實際 scrape 凍結） | — |
+| `evidence/metrics-names.txt` | 96 個 vLLM metric 名，2026-09-09 由 live `/metrics` 凍結 | — |
+| `slo_lab/tmmluplus.py` + `scripts/tmmluplus_eval.py` | TMMLU+ 分層不重疊切片（3 × 200，seed 20260908，SHA-256 凍結於 `eval/tmmluplus/`）與離線評分（greedy、`/no_think`、Wilson CI） | 合成 CSV：不重疊、比例、決定性、雜湊 |
+| `evidence/raw/w1/` | W1 驗證證據：五 cell 載入矩陣、`vllm bench serve` 與 inference-perf smoke、shim 開銷四回合、TMMLU+ 20 題 dry run（ADR 0004、0005） | — |
 | CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（空 evidence 通過） | — |
 
 ### 還沒有
 
-- **任何量測與 evidence**（`evidence/raw/` 為空）；ledger 只有表頭；表、圖、model card、claims audit 皆空。
-- `harness/run.py` 編排、inference-perf 輸出 → `records.jsonl` 的 adapter、`/metrics` scraper、`vllm bench serve` 交叉驗證、nonce prompt 產生器。
-- TMMLU+ 分層抽樣器、離線 runner、Colab notebook。
-- `analysis/preregistration.md` 凍結（W1 結束）；warm-up 充分性檢查。
-- GPTQ-Int4 repo id／授權、AngelSlim EAGLE-3 head id、`num_speculative_tokens`（W1 核對）。
+- **任何正式量測**：`evidence/raw/` 只有 W1 的驗證證據（載入矩陣、smoke、shim 開銷、20 題 dry run），沒有任何可進入表格的 SLO／成本／品質數字；ledger 只有表頭；表、圖、model card、claims audit 皆空。
+- `harness/run.py` 編排、inference-perf 輸出 → `records.jsonl` 的 adapter、`/metrics` scraper、nonce prompt 產生器（W2）。
+- TMMLU+ 三切片與全量的正式評分（W2；A3 Colab 已取消，ADR 0005）。
+- `analysis/preregistration.md` 凍結；warm-up 充分性檢查（W1 只證明未暖機回合不可用）。
 - `config/cost.yaml` 的 owner 真實數值與來源（目前為標記 placeholder；`slo-lab cost` 會印警語）。
-- NVML 在 WSL2 是否列得出 compute process 尚未驗證（W1 清單第 9 項）。
-- A1（RunPod L4）與 A3（Colab）尚未開始；任何付費動作前逐筆先問。
+- FP8 block kernel 的 4090 tuned config 決定（W2）；BF16 cell 的 `max-num-seqs`（ADR 0004 提案 16）。
+- A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。
 
 ## Repository 佈局
 
