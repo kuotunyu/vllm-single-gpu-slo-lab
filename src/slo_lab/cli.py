@@ -279,8 +279,8 @@ def shim(
 @app.command("run-stage")
 def run_stage_cmd(
     run_dir: Annotated[Path, typer.Option(help="Output directory for this stage.")],
-    cell: str,
-    model: str,
+    cell: Annotated[str, typer.Option(help="Engine cell label, e.g. fp8.")],
+    model: Annotated[str, typer.Option(help="Model id served by vLLM.")],
     kind: Annotated[str, typer.Option(help="open_loop | closed_loop")],
     base_url: str = "http://127.0.0.1:8013",
     metrics_url: str = "http://127.0.0.1:8013/metrics",
