@@ -2,7 +2,7 @@
 # the local vLLM server. Purpose is only to prove the tool runs here and emits the metrics the
 # harness needs (TTFT / TPOT / ITL / goodput); nothing in this file is a measurement setting.
 api:
-  type: chat
+  type: completion      # inference-perf 0.6.1's synthetic datagen supports completion only (chat raises "Unsupported API type")
   streaming: true
 data:
   type: synthetic
