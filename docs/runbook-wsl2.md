@@ -23,7 +23,8 @@
 FP8 closed-loop 掃描完成（ADR 0006）：r_sat = 43.7 rps（c = 256 = `--max-num-seqs`，下界）、C = 256。正式掃描 c = 1–96 在 02:22–03:45 被本機另一個 GPU 工作分時占用（NVML util 94–98%、時脈全速、功耗卻只有 170–184 W，吞吐減半且震盪），全部作廢。**`quiet-gpu` 只在 batch 開頭把關，擋不住中途出現的租戶**，因此：
 
 - 每個 stage 的 `manifest.json` 有 `power_window.w_per_util_point`（乾淨 ≥ 2.3 且隨 concurrency 上升；污染 ≈ 1.8）與 re-warm 的單流 TPOT probe（`probe_tpot_median_s`，乾淨 18–19 ms）；`scripts/analyze_batch.py` 把可疑 stage 排除並列出 `suspect_concurrencies_excluded`。可疑 stage 一律重跑。
-- 量測只在使用者宣告本機沒有其他 GPU 工作的時段進行；規格寫的「00:00–08:00 是 SOP cron」目前並不存在（`crontab -l` 空），時段規則以當日協調為準。
+- **根因（ADR 0007）**：不是別的 compute 工作，是桌面程式把 WDDM 的 total committed VRAM 推過 24,564 MiB 實體——vLLM 拿 0.90 時桌面只剩約 0.5 GiB，dwm／Firefox／Chrome 一活動 VidMm 就分頁，`System` copy engine 就是分頁流量。**預算一律 0.82**（`GPU_MEM_UTIL`），manifest 的 `host_before/after.windows_gpu_memory.committed_mb` 超過實體即污染。Windows 端查租戶用 PowerShell 的 `GPU Engine` / `GPU Adapter Memory` / `GPU Process Memory` 計數器（`nvidia-smi.exe` 只列 C+G 程序名）。
+- 長批次前仍問一次「其他 session 有沒有在用 GPU」；規格寫的「00:00–08:00 是 SOP cron」目前並不存在（`crontab -l` 空）。
 - 磁碟飽和另有一種症狀（W1／smoke：整批 request 出現相同的 1–3 s TTFT，`/proc/pressure/io` full > 50%），`scripts/wsl/io-sampler.sh` 會每 10 s 記到批次目錄的 `io-pressure.log`。
 
 ## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
