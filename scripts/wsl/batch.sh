@@ -28,13 +28,20 @@ pkill -f ".venv/bin/vllm serve" 2>/dev/null; pkill -f "EngineCore" 2>/dev/null; 
 # shellcheck disable=SC2086
 .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port 8013 --max-model-len 4096 --gpu-memory-utilization "$GPU_MEM_UTIL" --max-num-seqs "$MAX_NUM_SEQS" --max-num-batched-tokens "$MAX_BATCHED_TOKENS" $EXTRA > "$BATCH/serve.log" 2>&1 &
 PID=$!
-for i in $(seq 1 120); do
-  curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8013/v1/models | grep -q 200 && break
+# Readiness must never use `curl … | grep -q`: grep -q exits on first match, curl takes SIGPIPE
+# (141) and `set -o pipefail` turns the whole pipeline into a failure. That race silently killed
+# the AWQ cell of 2026-09-10 after its server had answered 200. Command substitution has no pipe,
+# and the loop's own result is reused instead of probing a second time.
+# 180 polls x 5 s = 15 min: a cold post-reboot AWQ load took 6.3 min, BF16 weights are twice as big.
+READY=0
+for _ in $(seq 1 180); do
+  CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8013/v1/models 2>/dev/null || true)
+  if [ "$CODE" = "200" ]; then READY=1; break; fi
   kill -0 $PID 2>/dev/null || { echo "SERVER_EXITED_EARLY"; grep -i "error" "$BATCH/serve.log" | tail -3 | cut -c1-200; exit 1; }
   sleep 5
 done
-curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8013/v1/models | grep -q 200 || { echo "SERVER_NOT_READY"; kill $PID; exit 1; }
-echo "server ready ($CELL seed $SEED): $(grep -o 'Loading weights took [0-9.]* seconds' "$BATCH/serve.log" | tail -1) | $(grep -o 'GPU KV cache size: [0-9,]* tokens' "$BATCH/serve.log" | tail -1)"
+[ "$READY" = 1 ] || { echo "SERVER_NOT_READY after 900s (last code ${CODE:-none})"; kill $PID; exit 1; }
+echo "server ready ($CELL seed $SEED) at $(date +%H:%M:%S): $(grep -o 'Loading weights took [0-9.]* seconds' "$BATCH/serve.log" | tail -1) | $(grep -o 'GPU KV cache size: [0-9,]* tokens' "$BATCH/serve.log" | tail -1)"
 FLAGS_JSON=$(printf '{"model":"%s","max_model_len":4096,"gpu_memory_utilization":%s,"max_num_seqs":%s,"max_num_batched_tokens":%s,"extra":"%s"}' "$MODEL" "$GPU_MEM_UTIL" "$MAX_NUM_SEQS" "$MAX_BATCHED_TOKENS" "$EXTRA")
 first=1
 for spec in "$@"; do
