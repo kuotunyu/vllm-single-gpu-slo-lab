@@ -23,6 +23,7 @@ import json
 import math
 import os
 import platform
+import re
 import subprocess
 import threading
 import time
@@ -154,15 +155,67 @@ def _io_pressure() -> str | None:
         return None
 
 
+WINDOWS_POWERSHELL = Path("/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe")
+_WINDOWS_GPU_MEMORY_COMMAND = (
+    "$c=(Get-Counter -Counter '\\GPU Adapter Memory(*)\\Dedicated Usage',"
+    "'\\GPU Adapter Memory(*)\\Shared Usage','\\GPU Adapter Memory(*)\\Total Committed' "
+    "-ErrorAction Stop).CounterSamples;"
+    "$d=($c|?{$_.Path -like '*dedicated usage'}|measure CookedValue -Sum).Sum;"
+    "$s=($c|?{$_.Path -like '*shared usage'}|measure CookedValue -Sum).Sum;"
+    "$t=($c|?{$_.Path -like '*total committed'}|measure CookedValue -Sum).Sum;"
+    "'dedicated_mb={0:F0} shared_mb={1:F0} committed_mb={2:F0}' -f ($d/1MB),($s/1MB),($t/1MB)"
+)
+
+
+def parse_windows_gpu_memory(text: str) -> dict[str, float] | None:
+    """``dedicated_mb=... shared_mb=... committed_mb=...`` -> dict; None when absent."""
+    found = dict(re.findall(r"(dedicated_mb|shared_mb|committed_mb)=(-?\d+(?:\.\d+)?)", text))
+    if len(found) != 3:
+        return None
+    return {key: float(value) for key, value in found.items()}
+
+
+def windows_gpu_memory(
+    powershell: Path = WINDOWS_POWERSHELL, timeout_s: float = 20.0
+) -> dict[str, float] | None:
+    """Host-side VRAM accounting through WSL interop (best effort, None off WSL2).
+
+    NVML inside WSL2 sees only the guest; the WDDM clients on the desktop (compositor,
+    browsers) are invisible to it. When their allocations plus vLLM's budget push
+    ``committed_mb`` past the physical card, VidMm pages VRAM over PCIe and vLLM's step time
+    doubles while utilization reads ~97% (ADR 0007, 2026-09-09).
+    """
+    if not powershell.exists():
+        return None
+    try:
+        proc = subprocess.run(
+            [
+                str(powershell),
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                _WINDOWS_GPU_MEMORY_COMMAND,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return parse_windows_gpu_memory(proc.stdout)
+
+
 def _host_state() -> dict[str, Any]:
-    """Load average and CPU pressure; another tenant starving the API server shows up here."""
-    state: dict[str, Any] = {"loadavg": None, "cpu_pressure": None}
+    """Load average, CPU pressure and host-side VRAM accounting (tenancy evidence)."""
+    state: dict[str, Any] = {"loadavg": None, "cpu_pressure": None, "windows_gpu_memory": None}
     with contextlib.suppress(OSError, ValueError):
         fields = Path("/proc/loadavg").read_text(encoding="utf-8").split()[:3]
         state["loadavg"] = [float(x) for x in fields]
     with contextlib.suppress(OSError):
         text = Path("/proc/pressure/cpu").read_text(encoding="utf-8")
         state["cpu_pressure"] = text.splitlines()[0]
+    state["windows_gpu_memory"] = windows_gpu_memory()
     return state
 
 

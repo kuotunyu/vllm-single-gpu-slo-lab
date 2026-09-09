@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # W2 measurement chain for one user-declared GPU-quiet window (ADR 0006 §決策 5):
-#   1. FP8 closed-loop re-run of c = 1..96 with a 300-request warm-up (sufficiency check)
+#   1. FP8 closed-loop grid c = 1..256 at the 0.82 GPU memory budget (ADR 0007)
 #   2. FP8 open-loop Poisson sweep, 7 rates x seeds 1..3 (one server session per seed)
 #   3. TMMLU+ three frozen slices against FP8
+# GPU_MEM_UTIL (default 0.82 in batch.sh) applies to every server the chain starts.
 # Each batch gets its own io-pressure sampler and a quick analysis print (suspect flags included).
 # usage: bash scripts/wsl/w2-chain.sh [closed|open|tmmlu|all]   (default all)
 set -uo pipefail
@@ -51,7 +52,7 @@ run_tmmlu() {
   "$LABCLI" quiet-gpu --out "$out/quiet_gpu.json" || { log "TMMLU quiet-gpu refused"; return 2; }
   pkill -f ".venv/bin/vllm serve" 2>/dev/null; sleep 3
   .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port 8013 --max-model-len 4096 \
-    --gpu-memory-utilization 0.90 --max-num-seqs 256 --max-num-batched-tokens 2048 > "$out/serve.log" 2>&1 &
+    --gpu-memory-utilization "${GPU_MEM_UTIL:-0.82}" --max-num-seqs 256 --max-num-batched-tokens 2048 > "$out/serve.log" 2>&1 &
   local pid=$!
   wait_ready "$out/serve.log" "$pid" || { log "TMMLU server not ready"; kill "$pid" 2>/dev/null; return 1; }
   log "TMMLU server ready"
@@ -65,8 +66,9 @@ run_tmmlu() {
 }
 
 if [ "$STEP" = all ] || [ "$STEP" = closed ]; then
-  run_batch closed-loop-rerun "$ROOT/closed-loop-rerun" 300 1 \
-    cl:1:90 cl:2:200 cl:4:400 cl:8:780 cl:16:1550 cl:32:2800 cl:64:4700 cl:96:5800
+  # full grid at the 0.82 memory budget (ADR 0007); warm-up 100 (sufficiency shown 2026-09-09: 3.0%)
+  run_batch closed-loop-v3 "$ROOT/closed-loop-v3" 100 1 \
+    cl:1:90 cl:2:200 cl:4:400 cl:8:780 cl:16:1550 cl:32:2800 cl:64:4700 cl:96:5800 cl:128:6700 cl:192:8000 cl:256:9000
 fi
 if [ "$STEP" = all ] || [ "$STEP" = open ]; then
   rates=""

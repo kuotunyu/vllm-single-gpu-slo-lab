@@ -17,7 +17,12 @@ from slo_lab.harness.metrics_scraper import (
     parse_histograms,
     parse_metrics,
 )
-from slo_lab.harness.stage import _power_window, stage_window
+from slo_lab.harness.stage import (
+    _power_window,
+    parse_windows_gpu_memory,
+    stage_window,
+    windows_gpu_memory,
+)
 from slo_lab.slo import Outcome, RequestRecord, read_records_jsonl, summarise
 
 SMOKE = (
@@ -172,6 +177,17 @@ def test_power_window_reports_energy_and_tenancy_signature(tmp_path: Path) -> No
     assert pw["mean_util_pct"] == 75.0 and pw["w_per_util_point"] == 4.0
     assert pw["output_tok_per_wh"] == 12000.0  # 59,000 tokens over 300 W x 59 s
     assert _power_window(tmp_path / "missing.csv", start_s=0.0, output_tokens=1) is None
+
+
+def test_windows_gpu_memory_parser_and_missing_powershell(tmp_path: Path) -> None:
+    text = "\r\ndedicated_mb=24068 shared_mb=414 committed_mb=25263\r\n"
+    assert parse_windows_gpu_memory(text) == {
+        "dedicated_mb": 24068.0,
+        "shared_mb": 414.0,
+        "committed_mb": 25263.0,
+    }
+    assert parse_windows_gpu_memory("Get-Counter : failed") is None
+    assert windows_gpu_memory(powershell=tmp_path / "missing.exe") is None
 
 
 def test_metrics_scraper_writes_rows_with_injected_fetch(tmp_path: Path) -> None:
