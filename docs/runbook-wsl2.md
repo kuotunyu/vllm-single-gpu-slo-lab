@@ -29,6 +29,8 @@ FP8 完成：closed-loop（ADR 0006／0007：r_sat = 41.4 rps at 0.82，下界�
 
 ## 整夜無人值守（`scripts/wsl/w2-night.sh`，2026-09-09 起）
 
+執行計畫（逐步、含失敗處置與收尾）：`docs/superpowers/plans/2026-09-10-w2-overnight-run.md`。起跑前 `scripts/wsl/preflight.sh`，停止一切 `scripts/wsl/stop-chain.sh`。
+
 ```bash
 MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w2-night.sh     # DRY=1 只印計畫
 ```
