@@ -136,6 +136,78 @@ def test_open_loop_sensitivity_grid_recomputes_r_slo_from_records(tmp_path: Path
     assert all("_dir" not in r for r in open_["rows"])
 
 
+def test_served_rps_counts_completions_not_offers(tmp_path: Path) -> None:
+    from slo_lab.batch_analysis import served_rps
+    from slo_lab.slo import Outcome, RequestRecord, write_records_jsonl
+
+    def rec(i: int, offered: float, e2e: float, outcome: Outcome = Outcome.OK) -> RequestRecord:
+        return RequestRecord(
+            request_id=str(i),
+            offered_at_s=offered,
+            outcome=outcome,
+            ttft_s=0.05 if outcome is Outcome.OK else None,
+            e2e_s=e2e if outcome is Outcome.OK else None,
+            output_tokens=132 if outcome is Outcome.OK else None,
+            input_tokens=108,
+        )
+
+    path = tmp_path / "records.jsonl"
+    write_records_jsonl(
+        path,
+        # offered inside the discard period but finishing inside the window: these are service
+        [rec(i, 10.0 + i, 100.0) for i in range(10)]
+        # offered inside the window and finishing inside it
+        + [rec(100 + i, 100.0 + i, 2.0) for i in range(20)]
+        # offered inside the window but finishing after it: the overload case, not counted
+        + [rec(200 + i, 200.0 + i, 500.0) for i in range(30)]
+        # a failure never counts as served
+        + [rec(300, 150.0, 0.0, Outcome.ERROR)],
+    )
+    # window is [60, 300): 10 + 20 completions land inside it, the 30 long ones do not
+    assert served_rps(path, discard_first_s=60.0, window_end_s=300.0) == 30 / 240.0
+    # a window that ends before anything completes serves nothing
+    assert served_rps(path, discard_first_s=60.0, window_end_s=61.0) == 0.0
+    assert served_rps(tmp_path / "missing.jsonl", discard_first_s=60.0, window_end_s=300.0) is None
+    assert served_rps(path, discard_first_s=300.0, window_end_s=300.0) is None
+
+
+def test_open_loop_rows_carry_served_rps(tmp_path: Path) -> None:
+    from slo_lab.batch_analysis import OPEN_COLS
+    from slo_lab.slo import Outcome, RequestRecord, write_records_jsonl
+
+    def rec(i: int, offered: float, e2e: float) -> RequestRecord:
+        return RequestRecord(
+            request_id=str(i),
+            offered_at_s=offered,
+            outcome=Outcome.OK,
+            ttft_s=0.05,
+            e2e_s=e2e,
+            output_tokens=132,
+            input_tokens=108,
+        )
+
+    d = tmp_path / "ol-rate-80.00"
+    d.mkdir()
+    write_records_jsonl(
+        d / "records.jsonl",
+        # 900 finish inside the [60, 300) window
+        [rec(i, 70.0 + i * 0.2, 5.0) for i in range(900)]
+        # 500 are still running when the window closes (the overload tail)
+        + [rec(1000 + i, 100.0 + i * 0.1, 400.0) for i in range(500)]
+        # 100 finished before the discard period ended
+        + [rec(2000 + i, i * 0.1, 1.0) for i in range(100)],
+    )
+    m = _manifest(0, 80.0, 0.5, kind="open_loop", rate=80.0)
+    m["duration_s"] = 300
+    m["_dir"] = str(d)
+    _, open_ = analyze([m])
+    row = open_["rows"][0]
+    assert row["offered_rps"] == 80.0
+    # 1,500 offers, but only the 900 that finished inside the window count as served
+    assert row["served_rps"] == 900 / 240.0
+    assert "served_rps" in OPEN_COLS
+
+
 def test_open_loop_r_slo_skips_suspect_rates() -> None:
     manifests = [
         _manifest(0, 10.0, 1.0, kind="open_loop", rate=10.0),

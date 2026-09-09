@@ -67,6 +67,7 @@ OPEN_COLS = [
     "offered_rps",
     "records",
     "achieved_rps",
+    "served_rps",
     "ttft_p50_s",
     "ttft_p95_s",
     "tpot_p50_s",
@@ -104,6 +105,37 @@ def signature_from_power_csv(path: Path, start_s: float) -> dict[str, float | No
         "mean_util_pct": round(mean_util, 1),
         "w_per_util_point": round(mean_w / mean_util, 2) if mean_util else None,
     }
+
+
+def served_rps(records_path: Path, *, discard_first_s: float, window_end_s: float) -> float | None:
+    """Completions per second inside the measurement window (open-loop service rate).
+
+    ``achieved_rps`` counts a record at the moment it was *offered*, so an overloaded open-loop
+    stage reports the load generator's rate: the FP8 2 x r_sat point of 2026-09-09 reads
+    "87.5 rps achieved" while the server was actually finishing about 43 per second and the
+    queue grew without bound. This counts a record when it *finished*, which is what the server
+    delivered. Requests offered during the discard period but completing inside the window count,
+    because they are service performed inside it; requests still running at the end do not.
+    Closed-loop stages do not need this: a new request is only offered when one completes, so
+    offered and served rates coincide by construction.
+    """
+    if not records_path.exists() or window_end_s <= discard_first_s:
+        return None
+    served = 0
+    with records_path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if record.get("outcome") != "ok":
+                continue
+            e2e = record.get("e2e_s")
+            if e2e is None:
+                continue
+            finished = float(record["offered_at_s"]) + float(e2e)
+            if discard_first_s <= finished < window_end_s:
+                served += 1
+    return served / (window_end_s - discard_first_s)
 
 
 def _physical_vram_mib(stage_dir: Path) -> float | None:
@@ -247,6 +279,16 @@ def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, 
             by_cell_cl[m["cell"]].append(row)
         elif m.get("kind") == "open_loop":
             row["offered_rps"] = m.get("rate_rps")
+            stage_dir = m.get("_dir")
+            row["served_rps"] = (
+                served_rps(
+                    Path(stage_dir) / "records.jsonl",
+                    discard_first_s=float(m.get("discard_first_s") or 0.0),
+                    window_end_s=float(m.get("duration_s") or 0.0),
+                )
+                if stage_dir
+                else None
+            )
             open_["rows"].append(row)
             by_cell_ol[m["cell"]].append(row)
     closed["rows"].sort(key=lambda r: (r["cell"], r["seed"], r["concurrency"]))
