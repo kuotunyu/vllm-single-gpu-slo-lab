@@ -394,6 +394,19 @@ rm -f .git/index.lock && git add -A && GIT_ASK_YESNO=false git -c user.name=kuot
 
 Slips: each quarantined stage costs 6–12 min; a paging incident that forces a stop costs the current stage plus a 4-minute server restart.
 
+## Run log (appended during execution)
+
+| time | event |
+|---|---|
+| 04:09 | Task 0 pre-flight passed: machine rebooted 00:32, GPU 1,049 MiB idle, quiet-gpu ok, four weight dirs cached, 332 GB free, `full.jsonl` 19,680 items, no leftovers. Windows committed 1,276 MB (desktop only). Host disk pressure elevated (io avg10 69 %) from post-reboot activity, not a no-go. |
+| 04:11 | Chain launched. AWQ server started. |
+| 04:18 | AWQ server ready: weights 136.2 s (cold), KV cache 91,088 tokens (FP8 at the same budget: 76,112). |
+| 04:17:52 | **AWQ cell lost.** `batch.sh` answered `GET /v1/models` with 200 and then killed its own server via the `SERVER_NOT_READY` branch. Root cause: the readiness probe `curl … \| grep -q 200` under `set -o pipefail` — `grep -q` exits on the first match, the producer takes SIGPIPE (141), and pipefail turns a successful probe into a failed pipeline. Non-deterministic: GPTQ passed the same code minutes later (two `GET /v1/models` lines in its log; AWQ has one). Reproduced the mechanism in `scratchpad/sigpipe-repro.sh` (long producer: rc=141 every time; 3-byte producer: passes, i.e. a race). The cell chain then found no manifests, could not read r_sat, exited 1, and the night chain moved on to GPTQ. |
+| 04:28 | Chain stopped at a stage boundary (`stop-chain.sh`). GPTQ kept its four finished closed-loop stages (c = 1, 2, 4, 16); its in-flight stage has no manifest and will re-run. |
+| 04:33 | Fix committed (`dc3a755`): readiness uses command substitution (no pipe, no SIGPIPE), reuses the loop's own result instead of probing twice, caps curl at 5 s, and raises the budget from 120 to 180 polls (15 min) because a cold post-reboot AWQ load took 6.3 min and BF16 weights are twice as big. No other driver had the same pattern. |
+| 04:33 | Second harness defect fixed: the chain's log was piped through `tr`/`grep`/`tee` on the Windows side, which block-buffered and lost every line, so the AWQ failure had to be reconstructed from manifests and server logs. `w2-night-logged.sh` now captures the log on ext4; `watch-night.sh` streams progress and failure signatures to an external monitor. |
+| 04:35 | Chain relaunched with the fixed driver. AWQ restarts from scratch, GPTQ resumes from four stages. |
+
 ## Self-review
 
 - Spec coverage: closed-loop, open-loop × 3 seeds, TMMLU+ slices + full, contrast cell, cross-check, suspects handling, evidence promotion, tables/reproduce, ADR, README, claims audit, preregistration row, ledger, memory, dashboard, report — each has a task. Cost table and W3/W4 are explicitly out of scope (owner input / later windows).
