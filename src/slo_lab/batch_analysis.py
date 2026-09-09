@@ -51,6 +51,7 @@ CLOSED_COLS = [
     "mean_util_pct",
     "w_per_util_point",
     "probe_tpot_median_s",
+    "windows_committed_mb",
     "suspect",
 ]
 OPEN_COLS = [
@@ -98,6 +99,18 @@ def signature_from_power_csv(path: Path, start_s: float) -> dict[str, float | No
     }
 
 
+def _physical_vram_mib(stage_dir: Path) -> float | None:
+    """Physical card size from the batch's ``quiet_gpu.json`` (NVML ``memory_total_mib``)."""
+    for candidate in (stage_dir.parent / "quiet_gpu.json", stage_dir / "quiet_gpu.json"):
+        if candidate.exists():
+            try:
+                total = json.loads(candidate.read_text(encoding="utf-8")).get("memory_total_mib")
+                return float(total) if total else None
+            except (OSError, ValueError):
+                return None
+    return None
+
+
 def load_manifests(dirs: list[Path]) -> list[dict[str, Any]]:
     """Every ``manifest.json`` below the given directories, in a deterministic order."""
     out: list[dict[str, Any]] = []
@@ -112,8 +125,19 @@ def load_manifests(dirs: list[Path]) -> list[dict[str, Any]]:
                     path.parent / "power.csv", float(m.get("discard_first_s") or 0.0)
                 )
                 m["power_window"] = {**pw, **sig, "signature_source": "power.csv (fallback)"}
+            m["_physical_vram_mib"] = _physical_vram_mib(path.parent)
             out.append(m)
     return out
+
+
+def _committed_vram_mb(m: dict[str, Any]) -> float | None:
+    """Largest Windows-side ``committed_mb`` seen around the stage (host_before / host_after)."""
+    values = [
+        float(((m.get(key) or {}).get("windows_gpu_memory") or {}).get("committed_mb"))
+        for key in ("host_before", "host_after")
+        if ((m.get(key) or {}).get("windows_gpu_memory") or {}).get("committed_mb") is not None
+    ]
+    return max(values) if values else None
 
 
 def flag_suspects(rows: list[dict[str, Any]]) -> None:
@@ -128,6 +152,12 @@ def flag_suspects(rows: list[dict[str, Any]]) -> None:
         w = r.get("w_per_util_point")
         if w is not None and w < W_PER_UTIL_MIN:
             reasons.append(f"W per util point {w} < {W_PER_UTIL_MIN}")
+        committed, physical = r.get("windows_committed_mb"), r.get("physical_vram_mib")
+        if committed is not None and physical is not None and committed > physical:
+            reasons.append(
+                f"Windows committed VRAM {committed:.0f} MB > physical {physical:.0f} MiB "
+                "(VidMm paging, ADR 0007)"
+            )
         r["suspect"] = bool(reasons)
         r["suspect_reasons"] = reasons
 
@@ -158,6 +188,8 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
         "mean_util_pct": pw.get("mean_util_pct"),
         "w_per_util_point": pw.get("w_per_util_point"),
         "probe_tpot_median_s": m.get("probe_tpot_median_s"),
+        "windows_committed_mb": _committed_vram_mb(m),
+        "physical_vram_mib": m.get("_physical_vram_mib"),
         "server_ttft_p95_bounds_s": hist.get("p95_bounds_s"),
         "path": m.get("_path"),
     }

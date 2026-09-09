@@ -64,6 +64,15 @@ def test_flag_suspects_uses_probe_drift_and_power_signature() -> None:
     assert [r["suspect"] for r in rows] == [False, True, True, False]
     assert rows[1]["suspect_reasons"][0].startswith("probe TPOT 27.0 ms > best 19.0 ms")
     assert rows[2]["suspect_reasons"] == ["W per util point 1.8 < 2.0"]
+    # desktop VRAM oversubscription (ADR 0007): committed past the physical card
+    paged = [
+        {"windows_committed_mb": 25263.0, "physical_vram_mib": 24564.0},
+        {"windows_committed_mb": 23183.0, "physical_vram_mib": 24564.0},
+        {"windows_committed_mb": 25263.0, "physical_vram_mib": None},
+    ]
+    flag_suspects(paged)
+    assert [r["suspect"] for r in paged] == [True, False, False]
+    assert paged[0]["suspect_reasons"][0].startswith("Windows committed VRAM 25263 MB > physical")
 
 
 def test_analyze_excludes_suspects_and_flags_lower_bound_r_sat() -> None:
@@ -113,11 +122,15 @@ def test_load_manifests_falls_back_to_power_csv_and_run_is_deterministic(tmp_pat
         lines = ["timestamp_iso,t_s,power_w,util_gpu_pct,mem_used_mib,clocks_sm_mhz,temp_c,phase"]
         lines += [f"x,{t},{w},{util},24000,2500,60,measure" for t in range(0, 130)]
         (d / "power.csv").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (batch / "seed-1" / "quiet_gpu.json").write_text(
+        json.dumps({"memory_total_mib": 24564.0}), encoding="utf-8"
+    )
     sig = signature_from_power_csv(batch / "seed-1" / "cl-conc-16" / "power.csv", 60.0)
     assert sig == {"mean_util_pct": 97.0, "w_per_util_point": 1.8}
     loaded = load_manifests([batch])
     assert [m["power_window"]["w_per_util_point"] for m in loaded] == [1.8, 2.63]
     assert loaded[0]["_path"] == "closed-loop/seed-1/cl-conc-16/manifest.json"
+    assert loaded[0]["_physical_vram_mib"] == 24564.0
 
     index = tmp_path / "analysis" / "tables" / "index.json"
     index.parent.mkdir(parents=True)
