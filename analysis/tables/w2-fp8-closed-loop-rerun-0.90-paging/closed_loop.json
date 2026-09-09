@@ -1,0 +1,97 @@
+{
+  "rows": [
+    {
+      "cell": "fp8",
+      "seed": 1,
+      "records": 90,
+      "achieved_rps": 0.3356677191027079,
+      "output_tok_per_s": 44.303202631570635,
+      "ttft_p50_s": 0.02617116800001895,
+      "ttft_p95_s": 0.03424546095000096,
+      "tpot_p50_s": 0.02294715033206242,
+      "tpot_p95_s": 0.024802533540077255,
+      "attainment": 1.0,
+      "attainment_ci95": [
+        0.9465286634799296,
+        1.0
+      ],
+      "rejection_rate": 0.0,
+      "goodput_rps": 0.3356677191027079,
+      "warmup_ttft_median_s": 0.022852068499958023,
+      "window_records": 68,
+      "window_s": 202.58129134900014,
+      "power_mean_w": 205.1,
+      "tok_per_wh": 700.3,
+      "mean_util_pct": 97.3,
+      "w_per_util_point": 2.11,
+      "probe_tpot_median_s": 0.0192206747366412,
+      "windows_committed_mb": null,
+      "physical_vram_mib": 24564.0,
+      "server_ttft_p95_bounds_s": [
+        0.02,
+        0.04
+      ],
+      "path": "closed-loop-rerun-0.90-paging/seed-1/cl-conc-1/manifest.json",
+      "concurrency": 1,
+      "suspect": false,
+      "suspect_reasons": []
+    },
+    {
+      "cell": "fp8",
+      "seed": 1,
+      "records": 200,
+      "achieved_rps": 0.658658623736447,
+      "output_tok_per_s": 86.95138267454095,
+      "ttft_p50_s": 0.0527878894999958,
+      "ttft_p95_s": 0.08711649400004262,
+      "tpot_p50_s": 0.017607517545800748,
+      "tpot_p95_s": 0.02812541062022781,
+      "attainment": 0.9871794871794872,
+      "attainment_ci95": [
+        0.9544651890044474,
+        0.9964770829283277
+      ],
+      "rejection_rate": 0.0,
+      "goodput_rps": 0.6502142824064925,
+      "warmup_ttft_median_s": 0.02088301699996009,
+      "window_records": 156,
+      "window_s": 236.84499735999998,
+      "power_mean_w": 200.6,
+      "tok_per_wh": 1508.5,
+      "mean_util_pct": 97.8,
+      "w_per_util_point": 2.05,
+      "probe_tpot_median_s": 0.01871898175190853,
+      "windows_committed_mb": null,
+      "physical_vram_mib": 24564.0,
+      "server_ttft_p95_bounds_s": [
+        0.08,
+        0.1
+      ],
+      "path": "closed-loop-rerun-0.90-paging/seed-1/cl-conc-2/manifest.json",
+      "concurrency": 2,
+      "suspect": false,
+      "suspect_reasons": []
+    }
+  ],
+  "per_cell": {
+    "fp8": {
+      "r_sat_rps": 0.658658623736447,
+      "r_sat_is_lower_bound": true,
+      "plateau_reached": false,
+      "plateau_first_concurrency": 2,
+      "capacity_C": 2,
+      "suspect_concurrencies_excluded": [],
+      "mean_rps_by_concurrency": {
+        "1": 0.3356677191027079,
+        "2": 0.658658623736447
+      },
+      "gain_vs_prev_by_concurrency": {
+        "2": 0.9622340375688916
+      },
+      "min_attainment_by_concurrency": {
+        "1": 1.0,
+        "2": 0.9871794871794872
+      }
+    }
+  }
+}
