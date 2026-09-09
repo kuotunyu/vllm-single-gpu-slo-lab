@@ -409,6 +409,26 @@ Slips: each quarantined stage costs 6–12 min; a paging incident that forces a 
 | 04:40 | AWQ ready under the fixed probe: weights 84.0 s (warm), **KV cache 98,400 tokens** — the same cell reported 91,088 tokens at 04:18. vLLM sizes the KV cache from free VRAM at profiling time, so on a desktop-shared card it is not deterministic: the earlier attempt profiled while the compositor held more VRAM. Record the per-run value from each `serve.log`; never quote one cell's KV size as a constant. |
 | 04:47 | **Protocol deviation to record in ADR 0009.** The closed-loop `num_requests` table is calibrated on FP8 rates, so faster cells finish a point sooner and get a shorter measurement window: AWQ c = 1 offered 90 requests at 0.893 rps (FP8: 0.384) and the window after the 60 s discard held 34 records over ~38 s, against the frozen "≥ 180 s per point". Keeping the counts uniform is the deliberate choice: every cell is offered exactly the same work at every concurrency, which is what makes the four-precision table comparable; scaling counts per cell would make the cells differ in offered load instead. The cost is precision, not bias — report `window_s` and `window_records` in every row and state the minimum window per cell. |
 
+## Results as they land (raw notes for ADR 0009)
+
+**AWQ closed-loop, seed 1, finished 05:21** (`runs-w2/closed-loop-cells/awq/seed-1`, all 11 points clean: probe TPOT 7.74–7.84 ms, W/util 2.65 → 3.83, Windows committed 22.9 GB):
+
+| c | window | rps | tok/s | TTFT p95 | TPOT p95 | attainment | W | tok/Wh |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 38 s | 0.89 | 118 | 0.099 s | 8.2 ms | 1.000 | 251 | 804 |
+| 8 | 54 s | 6.73 | 888 | 0.084 | 8.7 | 1.000 | 262 | 9,818 |
+| 32 | 84 s | 19.33 | 2,551 | 0.347 | 12.1 | 1.000 | 298 | 23,844 |
+| 64 | 124 s | 25.35 | 3,345 | 0.541 | 18.3 | 1.000 | 311 | 30,062 |
+| 96 | 156 s | 26.77 | 3,533 | 0.638 | 26.0 | 0.996 | 319 | 31,510 |
+| 128 | 172 s | 28.52 | 3,763 | 0.663 | 32.8 | 0.997 | 316 | 33,697 |
+| 192 | 207 s | 29.38 | 3,877 | 0.808 | 46.3 | 0.980 | 312 | 35,495 |
+| 256 | 235 s | **30.15** | 3,980 | 0.724 | **60.5** | **0.017** | 317 | 36,118 |
+
+- **r_sat(AWQ) = 30.15 rps, a real plateau** (192 → 256 gains 2.6 % < 5 %), unlike FP8 whose 41.4 rps is still a lower bound at the engine's `--max-num-seqs` ceiling.
+- **C(AWQ) = 192**: at c = 256 TPOT p95 crosses 50 ms and attainment collapses to 0.017 while throughput barely moves. AWQ runs out of SLO headroom before it runs out of throughput.
+- **The precision reversal is the story.** AWQ is 2.3× faster single-stream (0.89 vs 0.38 rps; probe TPOT 7.8 vs 18.6–19.6 ms) but saturates 27 % *lower* than FP8 (30.2 vs 41.4 rps) and is 17 % less energy-efficient at its own maximum (36.1k vs 43.7k tok/Wh). Weight-only 4-bit wins when decode is memory-bound at small batches and loses when large batches make dequantization compute-bound, while FP8 uses the Ada W8A8 tensor cores. AWQ also pays on prefill: at c = 64 its TTFT p95 is 0.541 s against FP8's 0.334 s.
+- Open-loop grid for AWQ therefore runs 7.54 … 60.30 rps (0.25 … 2.0 × 30.15), started 05:22.
+
 ## Self-review
 
 - Spec coverage: closed-loop, open-loop × 3 seeds, TMMLU+ slices + full, contrast cell, cross-check, suspects handling, evidence promotion, tables/reproduce, ADR, README, claims audit, preregistration row, ledger, memory, dashboard, report — each has a task. Cost table and W3/W4 are explicitly out of scope (owner input / later windows).
