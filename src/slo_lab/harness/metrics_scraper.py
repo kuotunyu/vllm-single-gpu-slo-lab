@@ -157,7 +157,7 @@ class MetricsScraper:
     def _run(self) -> None:
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         with self.out_path.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.writer(handle)
+            writer = csv.writer(handle, lineterminator="\n")
             writer.writerow(["t_unix", *[name.removeprefix("vllm:") for name in TRACKED]])
             while not self._stop.is_set():
                 stamp = self._clock()

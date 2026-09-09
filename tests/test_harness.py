@@ -17,7 +17,7 @@ from slo_lab.harness.metrics_scraper import (
     parse_histograms,
     parse_metrics,
 )
-from slo_lab.harness.stage import stage_window
+from slo_lab.harness.stage import _power_window, stage_window
 from slo_lab.slo import Outcome, RequestRecord, read_records_jsonl, summarise
 
 SMOKE = (
@@ -154,6 +154,24 @@ def test_stage_window_applies_the_discard_period_to_closed_loop_stages_too() -> 
         None,
     )
     assert stage_window(recs, kind="closed_loop", discard_first_s=0.0, duration_s=300)[1] == 92.0
+
+
+def test_power_window_reports_energy_and_tenancy_signature(tmp_path: Path) -> None:
+    cols = "timestamp_iso,t_s,power_w,util_gpu_pct,mem_used_mib,clocks_sm_mhz,temp_c,phase"
+    lines = [cols]
+    for t in range(0, 120):
+        # first minute idle-ish (discarded), second minute steady 300 W at 75% util
+        w, u = (100.0, 20.0) if t < 60 else (300.0, 75.0)
+        lines.append(f"x,{t},{w},{u},24000,2100,70,measure")
+    path = tmp_path / "power.csv"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    pw = _power_window(path, start_s=60.0, output_tokens=59_000)
+    assert pw is not None
+    assert pw["samples"] == 60 and pw["span_s"] == 59.0 and pw["mean_w"] == 300.0
+    assert pw["wh"] == round(300.0 * 59.0 / 3600.0, 4)
+    assert pw["mean_util_pct"] == 75.0 and pw["w_per_util_point"] == 4.0
+    assert pw["output_tok_per_wh"] == 12000.0  # 59,000 tokens over 300 W x 59 s
+    assert _power_window(tmp_path / "missing.csv", start_s=0.0, output_tokens=1) is None
 
 
 def test_metrics_scraper_writes_rows_with_injected_fetch(tmp_path: Path) -> None:

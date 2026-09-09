@@ -1,23 +1,25 @@
-# Preregistration（草稿；W1 結束時凍結，W2 起不得更動）
+# Preregistration（2026-09-09 凍結；W2 起不得更動，例外列於下）
 
-狀態：**未凍結**。本檔在 W1 清單 10 項全過後填入定值並以 commit 凍結；之後任何變更都要在 `docs/decisions/` 留 ADR。
+狀態：**已凍結**（commit 於 ADR 0006 同批），例外兩項：warm-up 充分性檢查待乾淨時段重做（暫用 100）；AWQ／GPTQ／BF16 的 `--max-num-seqs` 於各自 closed-loop 掃描後補上。之後任何變更都要在 `docs/decisions/` 留 ADR。
 
-將凍結的項目（來源：設計規格 §3；標「提案」者為規格自行設計）：
-
-| 項目 | 規格值 | W1 定值 |
+| 項目 | 規格值 | 定值（來源） |
 |---|---|---|
-| SLO | TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（re-plan §4） | — |
-| Attainment 分母 | offered（429／timeout／5xx 皆計未達；提案） | — |
-| r_SLO 規則 | 所有 seed attainment ≥ 95% 的最高 offered rate，自最低 rate 連續向上（提案） | — |
-| SLO 敏感度網格 | TTFT ∈ {0.5, 1, 2} s × TPOT ∈ {30, 50, 100} ms（提案） | — |
-| Open-loop 網格 | {0.25 … 2.0} × r_sat，每點 5 min，前 60 s 不計 | — |
-| Closed-loop 網格 | concurrency {1 … 128}，每點 3 min（提案） | — |
-| Admission trace | `config/traffic/burst25.yaml`（提案） | — |
-| C、Q、T | C = closed-loop 仍守 SLO 的最大 concurrency；Q = C；T = 1 s（提案） | — |
-| Warm-up | 100 sequential；101–200 vs 201–300 TTFT 中位數差 ≤ 5% 否則 200（提案） | — |
-| Seeds | 3 個，paired | — |
-| Bootstrap | B = 1000，percentile bootstrap，95%（提案） | — |
-| Client timeout | 300 s（提案） | — |
-| Quiet-GPU 記憶體門檻 | 1024 MiB（提案） | — |
-| `--max-num-seqs` | 預設起，preemption 即下調 | — |
-| Spec-decode `num_speculative_tokens` | 依安裝版本文件 | — |
+| SLO | TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（re-plan §4） | 同規格；`slo_lab.slo.DEFAULT_SLO` |
+| Attainment 分母 | offered（429／timeout／5xx 皆計未達；提案） | 同規格 |
+| r_SLO 規則 | 所有 seed attainment ≥ 95% 的最高 offered rate，自最低 rate 連續向上（提案） | 同規格；`slo_lab.slo.r_slo` |
+| SLO 敏感度網格 | TTFT ∈ {0.5, 1, 2} s × TPOT ∈ {30, 50, 100} ms（提案） | 同規格 |
+| Open-loop 網格 | {0.25 … 2.0} × r_sat，每點 5 min，前 60 s 不計 | r_sat（FP8）= 43.7 rps → offered ∈ {10.9, 21.8, 32.7, 43.7, 54.6, 65.5, 87.3} rps；其他精度以各自 r_sat 換算；5 min、丟棄 60 s（ADR 0006） |
+| Closed-loop 網格 | concurrency {1 … 128}，每點 3 min（提案） | {1, 2, 4, 8, 16, 32, 64, 96, 128, 192, 256}；每點 `num_requests` 依上一輪 rps 取 ≥ 180 s；**丟棄前 60 s**；256 = `--max-num-seqs`（ADR 0006） |
+| r_sat 定義 | closed-loop 吞吐平台 | 網格內最大平均 rps；最後一格增幅 ≥ 5% 時標「下界」；不得為追平台把 `--max-num-seqs` 推進 preemption 區（ADR 0006） |
+| Admission trace | `config/traffic/burst25.yaml`（提案） | 0.5·r_sat 5 min → 1.5·r_sat 5 min → 0.5·r_sat 15 min；FP8：21.8 / 65.5 / 21.8 rps |
+| C、Q、T | C = closed-loop 仍守 SLO 的最大 concurrency；Q = C；T = 1 s（提案） | FP8：C = 256（乾淨點 attainment ≥ 0.9998 直到引擎上限；TPOT p95 41.5 ms）；Q = 256；T = 1 s |
+| Warm-up | 100 sequential；101–200 vs 201–300 TTFT 中位數差 ≤ 5% 否則 200（提案） | **暫用 100** + 各 stage 間 20 筆 re-warm；充分性檢查第一次（300 筆）被共用租戶污染而無效，須在乾淨時段重做；warm-up 同時記單流 TPOT 作租戶 probe |
+| 租戶污染排除（新增） | — | 每 stage `w_per_util_point` < 2.0 或 probe TPOT 偏離同批最佳值 > 15% 即標可疑，排除於 r_sat／C／r_SLO，且必須重跑；門檻為 4090 校準值（ADR 0006） |
+| Seeds | 3 個，paired | 1、2、3 |
+| Bootstrap | B = 1000，percentile bootstrap，95%（提案） | 同規格；attainment 另附 Wilson 95% |
+| Client timeout | 300 s（提案） | 同規格（inference-perf `request_timeout: 300`） |
+| Quiet-GPU 門檻 | 1024 MiB（提案） | 記憶體 3,072 MiB（WSL2 閒置基線 2.6 GiB）＋ utilization 10%（5 × 1 s 平均）；WSL2 上 process 準則無效（ADR 0002） |
+| `--max-num-seqs` | 預設起，preemption 即下調 | FP8：256（c = 256 時 KV 67.5%，無 preemption）；BF16 提案 16（ADR 0004）；AWQ／GPTQ 待定 |
+| 其他引擎旗標 | — | `--max-model-len 4096 --gpu-memory-utilization 0.90 --max-num-batched-tokens 2048`；`VLLM_WSL2_ENABLE_PIN_MEMORY=1`、`VLLM_USE_FLASHINFER_SAMPLER=0`、`HF_HUB_OFFLINE=1`（ADR 0002） |
+| Prompt 形狀 | 108 / 132 tokens、nonce、`ignore_eos`、thinking 關閉 | 同規格；inference-perf synthetic，completion API（chat 不支援，ADR 0005） |
+| Spec-decode `num_speculative_tokens` | 依安裝版本文件 | EAGLE-3：3；n-gram：依 `config/specdec/ngram.yaml` |

@@ -176,10 +176,15 @@ def test_shim_command_requires_capacity_for_cap_policies():
     assert result.exit_code == 1
 
 
-def test_reproduce_lite_on_skeleton_passes_with_zero_runs():
+def test_reproduce_lite_on_the_repo_rebuilds_the_indexed_tables():
     result = runner.invoke(app, ["reproduce-lite", "--root", str(REPO)])
     assert result.exit_code == 0, result.output
-    assert "evidence runs with records: 0" in result.output
+    # W2 evidence is nested (raw/w2/<cell>/<batch>/seed-N/<stage>/records.jsonl)
+    assert "raw/w2/fp8/closed-loop/seed-1/cl-conc-256: offered=" in result.output
+    assert "evidence runs with records: 0" not in result.output
+    assert "tables rebuilt from evidence: w2-fp8-closed-loop, w2-fp8-closed-loop-exploratory" in (
+        result.output
+    )
     assert "cost config status: owner_input_pending" in result.output
 
 
@@ -198,3 +203,4 @@ def test_reproduce_lite_rebuilds_attainment_for_a_run(tmp_path):
     assert result.exit_code == 0, result.output
     assert "raw/2026-09-03-fp8-native-r1-s0: offered=15" in result.output
     assert "evidence runs with records: 1" in result.output
+    assert "tables rebuilt" not in result.output  # no analysis/tables/index.json in this tree

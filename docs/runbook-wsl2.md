@@ -12,16 +12,39 @@
 - **載入時間不是證據**：同一份 FP8 權重，page cache 溫熱時 64 s；在 30 GB 下載剛把 cache 沖掉、且 WSL 虛擬磁碟被其他工作（Docker、掃描）競爭時，AWQ 5.8 GB 光讀第一個 shard 就 106 s（io pressure 50–60%，EngineCore 停在 `folio_wait_bit_common`）。冷啟動分段記帳（規格 §5.5）只能用「第二次載入」或明確標示 cache 狀態的量測；每個 run 的 manifest 記錄 `/proc/pressure/io` 與載入前是否預熱。
 - FP8 警告：`Using default W8A8 Block FP8 kernel config. Performance might be sub-optimal!`（4090 沒有 tuned config）。這會影響 FP8 cell 的吞吐，屬於**可調參數而非缺陷**；W2 決定是否為 4090 產生 kernel config，並在證據中標明用的是預設或調過的 config。
 - 功耗與記憶體：`nvidia-smi --query-gpu` 在 WSL2 與 Windows 兩側都不支援（driver 591.86）；NVML（`nvidia-ml-py`）可讀：閒置 19.7 W／2,609 MiB（Windows 桌面本身占 VRAM），server 閒置待命 143 W／23,436 MiB。
-- **NVML 在 WSL2 列不出 compute process**（server 占 23 GiB 時 `nvmlDeviceGetComputeRunningProcesses` 仍回空）。`quiet-gpu` 因此在此主機只能靠記憶體與 utilization 兩個準則，快照會記 `process_list_trustworthy: false`；預設記憶體門檻依實測閒置基線改為 3,072 MiB、utilization 門檻 5%。
+- **NVML 在 WSL2 列不出 compute process**（server 占 23 GiB 時 `nvmlDeviceGetComputeRunningProcesses` 仍回空）。`quiet-gpu` 因此在此主機只能靠記憶體與 utilization 兩個準則，快照會記 `process_list_trustworthy: false`；預設記憶體門檻依實測閒置基線改為 3,072 MiB、utilization 門檻 10%（5 × 1 s 取樣平均；單次讀值在閒置桌面上會出現 9% 的假警報）。
 
 ## W1 結案狀態（2026-09-09）
 
 規格 §4.3 的驗證清單全部完成，細節與數字在 ADR 0002–0005。重點：五個 cell 皆可服務（ADR 0004）；inference-perf 0.6.1 裸機可跑但只接受 completion API；`vllm bench serve` 可跑；passthrough shim 在 2 rps 下無可量測中位數開銷，**埠用 8021**（8001 被本機其他服務占用）；TMMLU+ 三切片凍結、FP8 20 題 dry run 29.5 題/秒，因此 A3（Colab）取消；`evidence/metrics-names.txt` 已由 live scrape 凍結（96 個名稱）。repo 本身的 Linux 環境在 `~/vllm-slo-lab/.venv-slolab`（`UV_PROJECT_ENVIRONMENT` 指向它再 `uv sync --frozen`），與 checkout 內的 Windows `.venv` 互不干擾；load generator 在 `~/vllm-slo-lab/.venv-loadgen`。
 
-## 每次 run 的順序（`harness/run.py` 尚未寫；W1 先手動）
+## W2 狀態（2026-09-09）與 4090 共用租戶
 
-1. 08:00 之後才開始（00:00–08:00 是另一個 cron 工作的時段）。
-2. `uv run slo-lab quiet-gpu --out evidence/raw/<run_id>/quiet_gpu.json` — 有其他 compute process、既有記憶體占用 > 3,072 MiB、或 utilization > 5% 即退出 1，不得繼續（WSL2 上 process 準則無效，快照會標明）。
+FP8 closed-loop 掃描完成（ADR 0006）：r_sat = 43.7 rps（c = 256 = `--max-num-seqs`，下界）、C = 256。正式掃描 c = 1–96 在 02:22–03:45 被本機另一個 GPU 工作分時占用（NVML util 94–98%、時脈全速、功耗卻只有 170–184 W，吞吐減半且震盪），全部作廢。**`quiet-gpu` 只在 batch 開頭把關，擋不住中途出現的租戶**，因此：
+
+- 每個 stage 的 `manifest.json` 有 `power_window.w_per_util_point`（乾淨 ≥ 2.3 且隨 concurrency 上升；污染 ≈ 1.8）與 re-warm 的單流 TPOT probe（`probe_tpot_median_s`，乾淨 18–19 ms）；`scripts/analyze_batch.py` 把可疑 stage 排除並列出 `suspect_concurrencies_excluded`。可疑 stage 一律重跑。
+- 量測只在使用者宣告本機沒有其他 GPU 工作的時段進行；規格寫的「00:00–08:00 是 SOP cron」目前並不存在（`crontab -l` 空），時段規則以當日協調為準。
+- 磁碟飽和另有一種症狀（W1／smoke：整批 request 出現相同的 1–3 s TTFT，`/proc/pressure/io` full > 50%），`scripts/wsl/io-sampler.sh` 會每 10 s 記到批次目錄的 `io-pressure.log`。
+
+## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
+
+```bash
+# 在 Windows 端呼叫（路徑用 /mnt/c、/mnt/d；MSYS_NO_PATHCONV=1 避免 Git Bash 改寫路徑）
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- env WARMUP=100 MAX_NUM_SEQS=256 RUN_ROOT=/home/<user>/vllm-slo-lab/runs-w2/closed-loop \
+  bash /mnt/d/.../vllm-single-gpu-slo-lab/scripts/wsl/batch.sh fp8 Qwen/Qwen3-8B-FP8 1 "" \
+  cl:1:90 cl:2:200 cl:4:400 cl:8:780 cl:16:1550 cl:32:2800 cl:64:4700 cl:96:5800 cl:128:6700 cl:192:8000 cl:256:9000
+# open-loop 一點：ol:<rate_rps>:<duration_s>；驅動會先 quiet-gpu，再起 server，逐 stage 呼叫 `slo-lab run-stage`，最後關 server
+bash scripts/wsl/io-sampler.sh <batch dir>          # 同時在背景跑，記 I/O／CPU 壓力
+bash scripts/wsl/promote-w2.sh <batch dir> fp8/closed-loop/seed-1   # 搬進 evidence/raw/w2/（去 home 路徑、redact log、不搬 10+ MB 的 per-request JSON）
+uv run python scripts/analyze_batch.py evidence/raw/w2/fp8/closed-loop --out analysis/tables/w2-fp8-closed-loop
+```
+
+closed-loop 的 `num_requests` 依上一輪的 rps 取 ≥ 180 s（丟棄前 60 s 後仍有 ≥ 2 min 窗）；每個 stage 的前 60 s 一律丟棄（closed-loop 的起步同步效應會把 c = 128 的 TTFT p95 推到 1 s 以上，60 s 後只剩 0.39 s）。
+
+## 手動順序（對照用）
+
+1. 只在協調過的 GPU 空閒時段開始。
+2. `uv run slo-lab quiet-gpu --out evidence/raw/<run_id>/quiet_gpu.json` — 有其他 compute process、既有記憶體占用 > 3,072 MiB、或 utilization（5 × 1 s 平均）> 10% 即退出 1，不得繼續（WSL2 上 process 準則無效，快照會標明）。
 3. 在 vLLM 環境啟動 server（旗標見 `config/engine/common.yaml` + cell 檔；`HF_HUB_OFFLINE=1`、`VLLM_WSL2_ENABLE_PIN_MEMORY=1`、`VLLM_USE_FLASHINFER_SAMPLER=0`、`VLLM_CACHE_ROOT` 在 ext4）。
 4. 若 policy 為 (ii)／(iii)：`slo-lab shim --upstream http://127.0.0.1:8013 --port 8021 --policy hard_cap --capacity <C>`；policy (i) 亦走 `--policy passthrough` 以保持 shim 開銷一致（W1 量到的中位數開銷在 ±2 ms 內）。
 5. `uv run slo-lab power-sample evidence/raw/<run_id>/power.csv --phase idle --duration-s 60`，之後 `--append --phase warmup`、`--append --phase measure`。

@@ -1,12 +1,12 @@
 # Closed-loop concurrency sweep (spec §3.3). Produces r_sat (throughput plateau) and the cap C for
 # admission policy (ii); reported in its own table, never mixed with open-loop numbers.
 name: closed_loop
-status: proposal
+status: frozen            # 2026-09-09, ADR 0006
 headline: false
 kind: closed_loop
-concurrency: [1, 2, 4, 8, 16, 32, 64, 128]
-stage_duration_s: 180
-discard_first_s: 60
+concurrency: [1, 2, 4, 8, 16, 32, 64, 96, 128, 192, 256]   # 256 = --max-num-seqs (FP8)
+stage_duration_s: 180     # realised via num_requests >= 180 s x previous-pass rps (concurrent mode counts requests)
+discard_first_s: 60       # applies to closed-loop too: the lock-step start inflates TTFT p95 (ADR 0006)
 prompt:
   input_tokens: 108
   output_tokens: 132

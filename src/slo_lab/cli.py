@@ -393,24 +393,34 @@ def reproduce_lite(
         base = root / "evidence" / area
         if not base.exists():
             continue
-        for run_dir in sorted(p for p in base.iterdir() if p.is_dir()):
-            records = run_dir / "records.jsonl"
-            if not records.exists():
-                continue
+        for records in sorted(base.rglob("records.jsonl")):
             n_runs += 1
             recs = filter_window(read_records_jsonl(records), 60.0)
             if not recs:
-                problems.append(f"{records}: no records after the 60 s warm-up window")
+                # An exploratory stage shorter than the discard period is still evidence (it
+                # carries its own manifest); it just contributes nothing to the windowed tables.
+                typer.echo(
+                    f"warning: {records.parent.relative_to(base).as_posix()}: "
+                    "no records after the 60 s discard window"
+                )
                 continue
             s = summarise(recs)
             typer.echo(
-                f"{area}/{run_dir.name}: offered={s.offered} attainment={s.attainment_offered:.3f} "
+                f"{area}/{records.parent.relative_to(base).as_posix()}: offered={s.offered} "
+                f"attainment={s.attainment_offered:.3f} "
                 f"[{s.attainment_offered_ci95[0]:.3f}, {s.attainment_offered_ci95[1]:.3f}] "
                 f"rejection={s.rejection_rate:.3f}"
             )
     typer.echo(f"evidence runs with records: {n_runs}")
     if n_runs == 0:
         typer.echo("nothing to rebuild yet (W0 skeleton) - tables/plots/ledgers unchanged")
+
+    index_path = root / "analysis" / "tables" / "index.json"
+    if index_path.exists():
+        from slo_lab.batch_analysis import rebuild_from_index
+
+        rebuilt = rebuild_from_index(root, index_path)
+        typer.echo(f"tables rebuilt from evidence: {', '.join(rebuilt) or '(none)'}")
     if problems:
         for p in problems:
             typer.echo(f"problem: {p}", err=True)

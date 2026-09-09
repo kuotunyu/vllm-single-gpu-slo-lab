@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W0 skeleton, no results yet。** 目前只有可測試的計算核心（SLO attainment、r_SLO、bootstrap／Wilson CI、成本公式、admission shim、NVML 功耗取樣、quiet-GPU gate）、設定骨架、evidence contract 與 CI。**尚無任何量測數字**；本文出現的數值全是規格門檻或設定值，不是結果。
+> **狀態：W2 進行中（2026-09-09）。** W1 驗證清單結案（ADR 0002–0005）；W2 第一步 FP8 closed-loop 掃描完成（ADR 0006）：**r_sat = 43.7 req/s（下界，c = 256 = `--max-num-seqs`）、C = 256**，單 seed、單次；同批 c = 1–96 因 4090 被本機另一個 GPU 工作分時占用而作廢，正在等乾淨時段重測。**尚無 open-loop（r_SLO）、成本、TMMLU+ 數字**；本文其餘數值仍是規格門檻或設定值。
 
 ## 一句話
 
@@ -69,14 +69,17 @@
 | `evidence/metrics-names.txt` | 96 個 vLLM metric 名，2026-09-09 由 live `/metrics` 凍結 | — |
 | `slo_lab/tmmluplus.py` + `scripts/tmmluplus_eval.py` | TMMLU+ 分層不重疊切片（3 × 200，seed 20260908，SHA-256 凍結於 `eval/tmmluplus/`）與離線評分（greedy、`/no_think`、Wilson CI） | 合成 CSV：不重疊、比例、決定性、雜湊 |
 | `evidence/raw/w1/` | W1 驗證證據：五 cell 載入矩陣、`vllm bench serve` 與 inference-perf smoke、shim 開銷四回合、TMMLU+ 20 題 dry run（ADR 0004、0005） | — |
+| `slo_lab/harness/` | `run-stage`：warm-up（TTFT／TPOT probe）→ NVML 功耗 1 s + `/metrics` 5 s 背景取樣 → inference-perf → `records.jsonl` → 量測窗（open／closed-loop 皆丟棄前 60 s）→ manifest（伺服器端 TTFT／queue／TPOT／e2e 直方圖差分、功耗窗與 tok/Wh、主機負載、I/O 壓力、raw sha256） | adapter、直方圖、窗、功耗窗 |
+| `scripts/analyze_batch.py` + `scripts/wsl/` | 批次彙整（r_sat 含平台旗標、C、r_SLO）與租戶污染標記（W／util 指紋、probe 漂移）；WSL2 批次驅動、I/O 取樣、證據搬移腳本 | 以真實 manifest 跑過 |
+| `evidence/raw/w2/fp8/closed-loop*/` | **W2 第一步**：FP8 closed-loop 探索性（c = 1–128，無丟棄）與正式（c = 1–256，3 min／點）掃描，seed 1；乾淨點給 r_sat = 43.7 rps（下界）、C = 256；正式掃描 c = 1–96 因共用租戶作廢（ADR 0006） | — |
 | CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（空 evidence 通過） | — |
 
 ### 還沒有
 
-- **任何正式量測**：`evidence/raw/` 只有 W1 的驗證證據（載入矩陣、smoke、shim 開銷、20 題 dry run），沒有任何可進入表格的 SLO／成本／品質數字；ledger 只有表頭；表、圖、model card、claims audit 皆空。
-- `harness/run.py` 編排、inference-perf 輸出 → `records.jsonl` 的 adapter、`/metrics` scraper、nonce prompt 產生器（W2）。
+- **open-loop 量測**：r_SLO、attainment-vs-rate 曲線、n ≥ 3、成本表；ledger 只有表頭；圖、model card、claims audit 皆空。
+- FP8 closed-loop c = 1–96 的乾淨重測與 warm-up 充分性檢查（第一次被共用租戶污染，ADR 0006）；AWQ／GPTQ／BF16 的 closed-loop。
 - TMMLU+ 三切片與全量的正式評分（W2；A3 Colab 已取消，ADR 0005）。
-- `analysis/preregistration.md` 凍結；warm-up 充分性檢查（W1 只證明未暖機回合不可用）。
+- `analysis/preregistration.md` 除 warm-up 充分性外已凍結（2026-09-09）；`harness/run.py` 的 Python 編排仍由 `scripts/wsl/batch.sh` 代行。
 - `config/cost.yaml` 的 owner 真實數值與來源（目前為標記 placeholder；`slo-lab cost` 會印警語）。
 - FP8 block kernel 的 4090 tuned config 決定（W2）；BF16 cell 的 `max-num-seqs`（ADR 0004 提案 16）。
 - A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。

@@ -56,12 +56,21 @@ class WarmupResult:
     median_101_200: float | None
     median_201_300: float | None
     wall_s: float
+    tpot_s: list[float] | None = None
+    tpot_median_s: float | None = None
 
 
 def _stream_ttft(
     base_url: str, model: str, prompt: str, max_tokens: int, timeout_s: float = 120.0
 ) -> float:
     """One streaming completion; returns TTFT in seconds (first SSE data line)."""
+    return _stream_request(base_url, model, prompt, max_tokens, timeout_s)[0]
+
+
+def _stream_request(
+    base_url: str, model: str, prompt: str, max_tokens: int, timeout_s: float = 120.0
+) -> tuple[float, float, int]:
+    """One streaming completion; returns (TTFT, e2e, data chunks) in seconds / count."""
     body = json.dumps(
         {
             "model": model,
@@ -80,26 +89,39 @@ def _stream_ttft(
     )
     start = time.perf_counter()
     ttft: float | None = None
+    chunks = 0
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:
         for raw in resp:
             line = raw.decode("utf-8", errors="replace").strip()
-            if ttft is None and line.startswith("data:") and "[DONE]" not in line:
-                ttft = time.perf_counter() - start
+            if line.startswith("data:") and "[DONE]" not in line:
+                chunks += 1
+                if ttft is None:
+                    ttft = time.perf_counter() - start
+    e2e = time.perf_counter() - start
     if ttft is None:
         raise RuntimeError("stream ended without a data chunk")
-    return ttft
+    return ttft, e2e, chunks
 
 
 def warm_up(base_url: str, model: str, *, n: int = 100, output_tokens: int = 132) -> WarmupResult:
-    """``n`` sequential requests with distinct nonce prompts; TTFT per request is kept."""
+    """``n`` sequential requests with distinct nonce prompts; TTFT and TPOT per request are kept.
+
+    The TPOT of these single-stream requests doubles as a tenancy probe: on an otherwise idle
+    card it is a stable per-host constant (18-19 ms for Qwen3-8B-FP8 on the 4090), so a re-warm
+    probe that drifts by more than ~15% says another GPU tenant appeared (W2, 2026-09-09).
+    """
     started = time.perf_counter()
     ttfts: list[float] = []
+    tpots: list[float] = []
     for i in range(n):
         prompt = (
             f"warmup nonce {i:05d} {hashlib.sha256(str(i).encode()).hexdigest()[:16]} "
             + "the quick brown fox " * 20
         )
-        ttfts.append(_stream_ttft(base_url, model, prompt, output_tokens))
+        ttft, e2e, chunks = _stream_request(base_url, model, prompt, output_tokens)
+        ttfts.append(ttft)
+        if chunks > 1:
+            tpots.append((e2e - ttft) / (chunks - 1))
 
     def med(lo: int, hi: int) -> float | None:
         block = ttfts[lo:hi]
@@ -112,6 +134,8 @@ def warm_up(base_url: str, model: str, *, n: int = 100, output_tokens: int = 132
         median_101_200=med(100, 200),
         median_201_300=med(200, 300),
         wall_s=time.perf_counter() - started,
+        tpot_s=tpots,
+        tpot_median_s=float(percentile(tpots, 50)) if tpots else None,
     )
 
 
@@ -212,6 +236,8 @@ def _power_window(path: Path, *, start_s: float, output_tokens: int) -> dict[str
     wh = mean_w * span / 3600.0
     temps = [float(r["temp_c"]) for _, _, r in rows if r.get("temp_c")]
     clocks = [float(r["clocks_sm_mhz"]) for _, _, r in rows if r.get("clocks_sm_mhz")]
+    utils = [float(r["util_gpu_pct"]) for _, _, r in rows if r.get("util_gpu_pct")]
+    mean_util = sum(utils) / len(utils) if utils else None
     return {
         "samples": len(rows),
         "span_s": round(span, 1),
@@ -222,6 +248,12 @@ def _power_window(path: Path, *, start_s: float, output_tokens: int) -> dict[str
         "mean_temp_c": round(sum(temps) / len(temps), 1) if temps else None,
         "max_temp_c": max(temps) if temps else None,
         "mean_sm_mhz": round(sum(clocks) / len(clocks)) if clocks else None,
+        "mean_util_pct": round(mean_util, 1) if mean_util is not None else None,
+        # Tenancy signature: a second GPU context time-slicing the card keeps NVML utilization
+        # near 100% while vLLM's own work (and hence power) halves. Clean stages on the 4090
+        # sit at >= 2.3 W per utilization point and rise with concurrency; contaminated stages
+        # of 2026-09-09 sat at 1.8 (ADR 0006).
+        "w_per_util_point": round(mean_w / mean_util, 2) if mean_util else None,
     }
 
 
@@ -373,8 +405,9 @@ def run_stage(
         "started_at": started_at,
         "inference_perf_returncode": proc.returncode,
         "load_wall_s": round(t_load_end - t_load_start, 2),
-        "warmup": asdict(warm) | {"ttft_s": None} if warm else None,
+        "warmup": asdict(warm) | {"ttft_s": None, "tpot_s": None} if warm else None,
         "warmup_ttft_median_s": (float(percentile(warm.ttft_s, 50)) if warm else None),
+        "probe_tpot_median_s": warm.tpot_median_s if warm else None,
         "io_pressure_before": io_before,
         "io_pressure_after": _io_pressure(),
         "metrics_before": metrics_before,
@@ -399,7 +432,8 @@ def run_stage(
     }
     if warm:
         (run_dir / "warmup-ttft.json").write_text(
-            json.dumps({"ttft_s": warm.ttft_s}, indent=0) + "\n", encoding="utf-8"
+            json.dumps({"ttft_s": warm.ttft_s, "tpot_s": warm.tpot_s}, indent=0) + "\n",
+            encoding="utf-8",
         )
     if per_request.exists():
         records = adapt_file(per_request)

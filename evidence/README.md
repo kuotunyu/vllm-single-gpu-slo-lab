@@ -16,4 +16,4 @@
 
 排除：權重、`VLLM_CACHE_ROOT`、`.env`、SSH 金鑰、未去敏 log、任何含 IP／pod id／hostname 的原始輸出。`make audit-secrets` 在 CI 與 pre-commit 掃描。
 
-目前狀態：**W0，沒有任何 run**。
+目前狀態（2026-09-09）：`raw/w1/` 為驗證證據；`raw/w2/fp8/closed-loop-exploratory/seed-1/` 與 `raw/w2/fp8/closed-loop/seed-1/` 為 W2 第一步的兩次 closed-loop 掃描（每 stage 一個目錄：`manifest.json`、`records.jsonl`、`power.csv`／`power-warmup.csv`、`metrics.csv`、`warmup-ttft.json`、`inference-perf.yaml`／`.log`、`ipf/{config,summary,stage_0}`；批次層 `quiet_gpu.json`、`vllm.log`、`io-pressure.log`）。10+ MB 的 `per_request_lifecycle_metrics.json` 不提交，manifest 記其 sha256，`records.jsonl` 是由它轉出的 canonical 形式。正式掃描 c = 1–96 的 stage 被共用租戶污染，保留但由分析器標記排除（ADR 0006）。
