@@ -26,7 +26,14 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
-from slo_lab.slo import SweepCell, r_slo
+from slo_lab.slo import (
+    SweepCell,
+    SweepRun,
+    grid_markdown,
+    r_slo,
+    read_records_jsonl,
+    sensitivity_grid,
+)
 
 PROBE_DRIFT_MAX = 0.15  # re-warm TPOT more than 15% above the batch's best probe -> suspect
 W_PER_UTIL_MIN = 2.0  # host-calibrated (RTX 4090, ADR 0006): clean >= 2.3, foreign tenant ~1.8
@@ -126,8 +133,38 @@ def load_manifests(dirs: list[Path]) -> list[dict[str, Any]]:
                 )
                 m["power_window"] = {**pw, **sig, "signature_source": "power.csv (fallback)"}
             m["_physical_vram_mib"] = _physical_vram_mib(path.parent)
+            m["_dir"] = str(path.parent)
             out.append(m)
     return out
+
+
+def _sensitivity(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """r_SLO for the TTFT x TPOT threshold grid, recomputed from the raw records of every
+    non-suspect open-loop stage (spec §3.6: zero-cost re-analysis of the same evidence)."""
+    runs: list[SweepRun] = []
+    window_start = 0.0
+    for r in rows:
+        if r["suspect"] or not r.get("_dir"):
+            continue
+        records_path = Path(r["_dir"]) / "records.jsonl"
+        if not records_path.exists():
+            continue
+        runs.append(
+            SweepRun(
+                offered_rate=r["offered_rps"],
+                seed=r["seed"],
+                records=read_records_jsonl(records_path),
+            )
+        )
+        window_start = float(r.get("discard_first_s") or 0.0)
+    if not runs:
+        return None
+    grid = sensitivity_grid(runs, window_start_s=window_start)
+    return {
+        "r_slo_by_threshold": {f"ttft_s={t:g}|tpot_s={p:g}": v for (t, p), v in grid.items()},
+        "markdown": grid_markdown(grid),
+        "runs": len(runs),
+    }
 
 
 def _committed_vram_mb(m: dict[str, Any]) -> float | None:
@@ -191,7 +228,9 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
         "windows_committed_mb": _committed_vram_mb(m),
         "physical_vram_mib": m.get("_physical_vram_mib"),
         "server_ttft_p95_bounds_s": hist.get("p95_bounds_s"),
+        "discard_first_s": m.get("discard_first_s"),
         "path": m.get("_path"),
+        "_dir": m.get("_dir"),
     }
 
 
@@ -260,7 +299,10 @@ def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, 
         open_["per_cell"][cell] = {
             **(result.model_dump() if result else {}),
             "suspect_rates_excluded": sorted({r["offered_rps"] for r in rows if r["suspect"]}),
+            "sensitivity": _sensitivity(rows),
         }
+    for row in closed["rows"] + open_["rows"]:
+        row.pop("_dir", None)  # filesystem detail, not evidence
     return closed, open_
 
 
@@ -294,8 +336,22 @@ def write_tables(out: Path, closed: dict[str, Any], open_: dict[str, Any]) -> No
         + "\n\n# Open-loop\n\n"
         + md_table(open_["rows"], OPEN_COLS)
         + "\n"
-        + json.dumps(open_["per_cell"], indent=2, default=str)
+        + json.dumps(
+            {
+                k: {kk: vv for kk, vv in v.items() if kk != "sensitivity"}
+                for k, v in open_["per_cell"].items()
+            },
+            indent=2,
+            default=str,
+        )
         + "\n"
+        + "".join(
+            f"\n## SLO sensitivity: {cell} (r_SLO per TTFT x TPOT threshold, {v['sensitivity']['runs']} runs)\n\n"
+            + v["sensitivity"]["markdown"]
+            + "\n"
+            for cell, v in open_["per_cell"].items()
+            if v.get("sensitivity")
+        )
     )
     (out / "tables.md").write_text(md, encoding="utf-8", newline="\n")
 

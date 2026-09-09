@@ -99,6 +99,43 @@ def test_analyze_excludes_suspects_and_flags_lower_bound_r_sat() -> None:
     assert cell["plateau_first_concurrency"] == 32
 
 
+def test_open_loop_sensitivity_grid_recomputes_r_slo_from_records(tmp_path: Path) -> None:
+    from slo_lab.slo import Outcome, RequestRecord, write_records_jsonl
+
+    def stage(rate: float, ttft: float, tpot: float) -> dict:
+        d = tmp_path / f"ol-rate-{rate}"
+        d.mkdir()
+        recs = [
+            RequestRecord(
+                request_id=str(i),
+                offered_at_s=60.0 + i,
+                outcome=Outcome.OK,
+                ttft_s=ttft,
+                e2e_s=ttft + tpot * 131,
+                output_tokens=132,
+                input_tokens=108,
+            )
+            for i in range(20)
+        ]
+        write_records_jsonl(d / "records.jsonl", recs)
+        m = _manifest(0, rate, 1.0, kind="open_loop", rate=rate)
+        m["_dir"] = str(d)
+        return m
+
+    # 10 rps: fast; 20 rps: TPOT 40 ms (fails a 30 ms bound, passes 50); 30 rps: TTFT 1.5 s
+    manifests = [stage(10.0, 0.05, 0.02), stage(20.0, 0.08, 0.04), stage(30.0, 1.5, 0.045)]
+    _, open_ = analyze(manifests)
+    sens = open_["per_cell"]["fp8"]["sensitivity"]
+    assert sens["runs"] == 3
+    grid = sens["r_slo_by_threshold"]
+    assert grid["ttft_s=1|tpot_s=0.05"] == 20.0
+    assert grid["ttft_s=1|tpot_s=0.03"] == 10.0
+    assert grid["ttft_s=2|tpot_s=0.05"] == 30.0
+    assert grid["ttft_s=2|tpot_s=0.1"] == 30.0
+    assert "| TTFT \\ TPOT |" in sens["markdown"]
+    assert all("_dir" not in r for r in open_["rows"])
+
+
 def test_open_loop_r_slo_skips_suspect_rates() -> None:
     manifests = [
         _manifest(0, 10.0, 1.0, kind="open_loop", rate=10.0),
