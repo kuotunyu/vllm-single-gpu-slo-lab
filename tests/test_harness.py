@@ -212,6 +212,8 @@ def test_config_generation_pins_prompt_geometry_and_seed(tmp_path: Path) -> None
         {"rate": 2.5, "duration": 300}
     ]
     assert cfg["load"]["base_seed"] == 11 and cfg["load"]["request_timeout"] == 300.0
+    # the client must never be the queue: 2 x r_sat piles up ~13k in-flight requests (ADR 0006)
+    assert cfg["load"]["worker_max_concurrency"] == 4096
     assert cfg["server"]["ignore_eos"] is True and "_seed" not in cfg
     closed = closed_loop_config(
         model="m", base_url="u", report_dir="r", concurrency=16, num_requests=800, seed=11

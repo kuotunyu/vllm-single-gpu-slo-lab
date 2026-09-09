@@ -5,6 +5,8 @@
 #               cl:<concurrency>:<num_requests> (closed-loop)
 #   env: WARMUP (default 100), RUN_ROOT (default ~/vllm-slo-lab/runs), MAX_NUM_SEQS (default 64)
 set -uo pipefail
+# open-loop at 2x r_sat keeps ~13k requests in flight; the default 1024 fds would turn them into client errors
+ulimit -n 65536 2>/dev/null || true
 export PATH="$HOME/.local/bin:$PATH"
 export HF_HUB_OFFLINE=1
 export VLLM_WSL2_ENABLE_PIN_MEMORY=1

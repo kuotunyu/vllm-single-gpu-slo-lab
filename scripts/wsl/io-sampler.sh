@@ -8,7 +8,7 @@ for i in $(seq 1 480); do
   cpus=$(awk '/^some/{print $2}' /proc/pressure/cpu | cut -d= -f2); la=$(cut -d' ' -f1 /proc/loadavg)
   run=$(curl -s -m 2 http://127.0.0.1:8013/metrics 2>/dev/null | awk '/^vllm:num_requests_running/{print $2}' | head -1)
   echo "$(date -Is) $ios $iof $cpus $la ${run:-NA}" >> "$out"
-  [ $i -gt 6 ] && { pgrep -f "wsl-batch.sh" >/dev/null || { echo "driver gone at sample $i"; exit 0; }; }
+  [ $i -gt 6 ] && { pgrep -f "wsl/batch.sh|wsl-batch.sh" >/dev/null || { echo "driver gone at sample $i"; exit 0; }; }
   sleep 10
 done
 echo "sampler timeout (70 min)"

@@ -59,7 +59,12 @@ def open_loop_config(
     seed: int,
     workers: int = 4,
     timeout_s: float = 300.0,
+    worker_max_concurrency: int = 4096,
 ) -> dict[str, Any]:
+    """Poisson stage. ``worker_max_concurrency`` is high on purpose: at 2 x r_sat the server's
+    native queue holds ~13k requests and the client must keep offering at the Poisson rate,
+    otherwise client-side queueing would hide the server latency the sweep is meant to show
+    (spec §3.3, client timeout 300 s); the batch driver raises the fd limit to match."""
     cfg = _common(
         model=model, base_url=base_url, report_dir=report_dir, seed=seed, timeout_s=timeout_s
     )
@@ -68,7 +73,7 @@ def open_loop_config(
         "interval": 1.0,
         "stages": [{"rate": float(rate_rps), "duration": int(duration_s)}],
         "num_workers": workers,
-        "worker_max_concurrency": 256,
+        "worker_max_concurrency": int(worker_max_concurrency),
         "request_timeout": cfg.pop("_timeout"),
         "base_seed": cfg.pop("_seed"),
     }
@@ -85,6 +90,7 @@ def closed_loop_config(
     seed: int,
     workers: int = 4,
     timeout_s: float = 300.0,
+    worker_max_concurrency: int = 4096,
 ) -> dict[str, Any]:
     cfg = _common(
         model=model, base_url=base_url, report_dir=report_dir, seed=seed, timeout_s=timeout_s
@@ -93,7 +99,7 @@ def closed_loop_config(
         "type": "concurrent",
         "stages": [{"num_requests": int(num_requests), "concurrency_level": int(concurrency)}],
         "num_workers": workers,
-        "worker_max_concurrency": 256,
+        "worker_max_concurrency": int(worker_max_concurrency),
         "request_timeout": cfg.pop("_timeout"),
         "base_seed": cfg.pop("_seed"),
     }
