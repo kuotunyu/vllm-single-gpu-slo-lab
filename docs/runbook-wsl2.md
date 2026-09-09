@@ -27,6 +27,14 @@ FP8 完成：closed-loop（ADR 0006／0007：r_sat = 41.4 rps at 0.82，下界�
 - 長批次前仍問一次「其他 session 有沒有在用 GPU」；規格寫的「00:00–08:00 是 SOP cron」目前並不存在（`crontab -l` 空）。
 - 磁碟飽和另有一種症狀（W1／smoke：整批 request 出現相同的 1–3 s TTFT，`/proc/pressure/io` full > 50%），`scripts/wsl/io-sampler.sh` 會每 10 s 記到批次目錄的 `io-pressure.log`。
 
+## 整夜無人值守（`scripts/wsl/w2-night.sh`，2026-09-09 起）
+
+```bash
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w2-night.sh     # DRY=1 只印計畫
+```
+
+`w2-night.sh` 依序呼叫 `w2-cell-chain.sh <cell> <model> <max_num_seqs> "<closed grid>"`：closed-loop → 由分析取 r_sat → open-loop 11 個 rate × seeds 1–3 → 可疑 stage 隔離到 `runs-w2/*/quarantine/` 並重跑（最多兩輪）→ TMMLU+ 三切片與全集（`eval/tmmluplus/full.jsonl`，19,680 題）→ 搬進 `evidence/raw/w2/<cell>/`。已有 manifest 的 stage 一律跳過，所以中斷後重跑同一指令就是續跑。BF16 的 KV 在 0.82 只剩約 1.7 GiB（≈ 11.7k tokens），網格到 40、`--max-num-seqs 40`。FP8 的 `--max-num-batched-tokens 8192` 對照 cell 只跑 open-loop seed 1。整夜約 22 小時 GPU；桌面可照常使用，但其他 GPU 工作會讓 stage 被標可疑而重跑。
+
 ## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
 
 ```bash
