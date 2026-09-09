@@ -26,29 +26,51 @@ from slo_lab.tmmluplus import Item, parse_letter, read_slice, slice_digest
 async def _ask(
     session: aiohttp.ClientSession, base_url: str, model: str, item: Item, sem: asyncio.Semaphore
 ) -> dict:
+    """Score one item. Never raises: a failure becomes a record carrying the exception name.
+
+    The full test set is 19,680 items per cell and ``asyncio.gather`` cancels every sibling when
+    one coroutine raises, so a single transient connection error 25 minutes in would discard the
+    whole cell's quality result. An errored item is recorded as unparsed (and therefore counted
+    against accuracy); ``errors`` in the summary says how many there were, so a run with any
+    error can be spotted and re-run rather than quietly published.
+    """
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": item.prompt() + " /no_think"}],
         "max_tokens": 8,
         "temperature": 0,
     }
-    async with sem:
-        start = time.perf_counter()
-        async with session.post(f"{base_url}/v1/chat/completions", json=payload) as resp:
-            body = await resp.json()
-        elapsed = time.perf_counter() - start
-    text = body["choices"][0]["message"]["content"] if resp.status == 200 else ""
+    base = {"subject": item.subject, "index": item.index, "answer": item.answer}
+    try:
+        async with sem:
+            start = time.perf_counter()
+            async with session.post(f"{base_url}/v1/chat/completions", json=payload) as resp:
+                body = await resp.json()
+                status = resp.status
+            elapsed = time.perf_counter() - start
+        text = body["choices"][0]["message"]["content"] if status == 200 else ""
+        completion_tokens = (body.get("usage") or {}).get("completion_tokens")
+    except Exception as exc:  # any failure must stay local to this item, never cancel the run
+        return {
+            **base,
+            "predicted": None,
+            "correct": False,
+            "raw": "",
+            "status": 0,
+            "latency_s": None,
+            "completion_tokens": None,
+            "error": type(exc).__name__,
+        }
     predicted = parse_letter(text or "")
     return {
-        "subject": item.subject,
-        "index": item.index,
-        "answer": item.answer,
+        **base,
         "predicted": predicted,
         "correct": predicted == item.answer,
         "raw": (text or "")[:40],
-        "status": resp.status,
+        "status": status,
         "latency_s": round(elapsed, 4),
-        "completion_tokens": (body.get("usage") or {}).get("completion_tokens"),
+        "completion_tokens": completion_tokens,
+        "error": None,
     }
 
 
@@ -80,6 +102,7 @@ async def main_async(args: argparse.Namespace) -> int:
         "wilson95": [low, high],
         "unparsed": sum(1 for r in records if r["predicted"] is None),
         "non_200": sum(1 for r in records if r["status"] != 200),
+        "errors": sum(1 for r in records if r.get("error")),
         "wall_s": round(wall, 2),
         "items_per_s": round(len(records) / wall, 3),
         "decoding": {"temperature": 0, "max_tokens": 8, "thinking": False},
@@ -99,6 +122,7 @@ async def main_async(args: argparse.Namespace) -> int:
                     "wilson95",
                     "unparsed",
                     "non_200",
+                    "errors",
                     "wall_s",
                     "items_per_s",
                 )
