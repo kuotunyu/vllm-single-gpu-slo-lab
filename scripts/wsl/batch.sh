@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Batch driver for one engine cell on the 4090 (WSL2): quiet-GPU gate -> server -> stages -> stop.
-# usage: wsl-batch.sh <cell> <model> <seed> <extra vllm flags or ''> <stage spec>...
+# usage: batch.sh <cell> <model> <seed> <extra vllm flags or ''> <stage spec>...
 #   stage spec: ol:<rate_rps>:<duration_s>   (open-loop Poisson)
 #               cl:<concurrency>:<num_requests> (closed-loop)
 #   env: WARMUP (default 100), RUN_ROOT (default ~/vllm-slo-lab/runs), MAX_NUM_SEQS (default 64)

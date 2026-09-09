@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vllm bench serve closed-loop cross-check at one concurrency (completion API, same token shape).
 # usage: wsl-bench-serve-cl.sh <concurrency> <num_prompts> <out-dir> [seed]
-# Expects a vLLM server already on 127.0.0.1:8013 (start it with wsl-batch.sh style flags).
+# Expects a vLLM server already on 127.0.0.1:8013 (start it with batch.sh style flags).
 set -uo pipefail
 C="$1"; N="$2"; OUT="$3"; SEED="${4:-1}"
 mkdir -p "$OUT"; cd "$HOME/vllm-slo-lab" || exit 1

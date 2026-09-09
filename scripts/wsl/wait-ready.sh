@@ -8,7 +8,7 @@ for i in $(seq 1 45); do
     grep -o -E "Loading weights took [0-9.]+ seconds|Model loading took [0-9.]+ GiB and [0-9.]+ seconds|GPU KV cache size: [0-9,]+ tokens|Maximum concurrency for [0-9,]+ tokens per request: [0-9.]+x" "$log"
     exit 0
   fi
-  if ! pgrep -f "wsl-batch.sh" >/dev/null; then echo "DRIVER_GONE at poll $i"; tail -5 "$log" | cut -c1-200; exit 2; fi
+  if ! pgrep -f "wsl/batch.sh|wsl-batch.sh" >/dev/null; then echo "DRIVER_GONE at poll $i"; tail -5 "$log" | cut -c1-200; exit 2; fi
   if ! pgrep -f ".venv/bin/vllm serve" >/dev/null; then echo "SERVER_GONE at poll $i"; grep -iE "error|Traceback" "$log" | tail -5 | cut -c1-200; exit 3; fi
   sleep 20
 done
