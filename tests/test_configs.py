@@ -50,7 +50,21 @@ def test_cloud_2p5x_trace_is_retained_not_headline():
 
 def test_open_and_closed_loop_grids():
     open_loop = load("traffic/open_loop_sweep.yaml")
-    assert open_loop["rate_multipliers"] == [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    # 7 preregistered multipliers plus the 0.55-0.70 refinement of ADR 0008
+    assert open_loop["rate_multipliers"] == [
+        0.25,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        1.0,
+        1.25,
+        1.5,
+        2.0,
+    ]
+    assert open_loop["status"] == "frozen"
     assert open_loop["stage_duration_s"] == 300 and open_loop["discard_first_s"] == 60
     closed = load("traffic/closed_loop.yaml")
     # frozen 2026-09-09 (ADR 0006): grid extended to the FP8 --max-num-seqs of 256

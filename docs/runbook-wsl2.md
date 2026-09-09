@@ -20,7 +20,7 @@
 
 ## W2 狀態（2026-09-09）與 4090 共用租戶
 
-FP8 closed-loop 掃描完成（ADR 0006）：r_sat = 43.7 rps（c = 256 = `--max-num-seqs`，下界）、C = 256。正式掃描 c = 1–96 在 02:22–03:45 被本機另一個 GPU 工作分時占用（NVML util 94–98%、時脈全速、功耗卻只有 170–184 W，吞吐減半且震盪），全部作廢。**`quiet-gpu` 只在 batch 開頭把關，擋不住中途出現的租戶**，因此：
+FP8 完成：closed-loop（ADR 0006／0007：r_sat = 41.4 rps at 0.82，下界；C = 256）、open-loop 11 點 × 3 seeds（ADR 0008：r_SLO = 26.2 rps；膝點 26–31 rps，32.75 rps 起 attainment 崩到 0.1–0.6，43.7 rps 起 0）、TMMLU+ 三切片（366/600 = 0.610）。一次 FP8 全套（closed 11 點 + open 11 點 × 3 + TMMLU+）約 6 小時 GPU；open-loop 過載點（≥ 1.25 × r_sat）每點 10–12 分鐘，其中一半是 inference-perf 對 1.5–2.6 萬筆 request 的收尾（純 CPU、GPU 閒置）。`scripts/wsl/w2-chain.sh`、`w2-refine.sh`（只跑缺的 rate，可續跑）、`w2-followup.sh` 是實際用過的驅動。正式掃描 c = 1–96 在 02:22–03:45 被本機另一個 GPU 工作分時占用（NVML util 94–98%、時脈全速、功耗卻只有 170–184 W，吞吐減半且震盪），全部作廢。**`quiet-gpu` 只在 batch 開頭把關，擋不住中途出現的租戶**，因此：
 
 - 每個 stage 的 `manifest.json` 有 `power_window.w_per_util_point`（乾淨 ≥ 2.3 且隨 concurrency 上升；污染 ≈ 1.8）與 re-warm 的單流 TPOT probe（`probe_tpot_median_s`，乾淨 18–19 ms）；`scripts/analyze_batch.py` 把可疑 stage 排除並列出 `suspect_concurrencies_excluded`。可疑 stage 一律重跑。
 - **根因（ADR 0007）**：不是別的 compute 工作，是桌面程式把 WDDM 的 total committed VRAM 推過 24,564 MiB 實體——vLLM 拿 0.90 時桌面只剩約 0.5 GiB，dwm／Firefox／Chrome 一活動 VidMm 就分頁，`System` copy engine 就是分頁流量。**預算一律 0.82**（`GPU_MEM_UTIL`），manifest 的 `host_before/after.windows_gpu_memory.committed_mb` 超過實體即污染。Windows 端查租戶用 PowerShell 的 `GPU Engine` / `GPU Adapter Memory` / `GPU Process Memory` 計數器（`nvidia-smi.exe` 只列 C+G 程序名）。

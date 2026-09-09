@@ -47,6 +47,26 @@
 - 每百萬 output token 在 c = 256 約 22.9 Wh（43,710 tok/Wh）。
 - Open-loop 網格沿用 preregistration 凍結的絕對 rate {10.9 … 87.3} rps（= 0.26–2.11 × 41.4）；不因 r_sat 微調而重排。
 
-## 補記 2（open-loop × 3 seeds、TMMLU+）
+## 補記 2：FP8 open-loop × 3 seeds 與 TMMLU+（2026-09-09 13:46–18:49，0.82，桌面照常使用）
 
-（chain 完成後填入。）
+`evidence/raw/w2/fp8/open-loop/seed-{1,2,3}/`（每 seed 11 個 rate，每點 5 min、丟棄前 60 s）、表 `analysis/tables/w2-fp8-open-loop/`；33 個 stage 全部乾淨（probe 18.6–19.4 ms、W／util 2.8–4.2、Windows committed 22.6–23.7 GB < 24.5 GB）。
+
+| offered rps | × r_sat | attainment（seed 1 / 2 / 3） | TTFT p95（s） | TPOT p95（ms） | mean W | tok/Wh |
+|---|---|---|---|---|---|---|
+| 10.92 | 0.25 | 1.000 / 1.000 / 1.000 | 0.06 | 18–19 | 263 | 17,400 |
+| 21.84 | 0.50 | 1.000 / 1.000 / 1.000 | 0.09 | 24–25 | 293 | 29,300 |
+| 24.02 | 0.55 | 1.000 / 1.000 / 1.000 | 0.09–0.10 | 26 | 307 | 30,500 |
+| **26.20** | 0.60 | 1.000 / 1.000 / 1.000 | 0.11 | 29–31 | 316 | 32,100 |
+| 28.39 | 0.65 | **0.910** / 1.000 / 1.000 | 0.95 / 0.11 / 0.13 | 51 / 31 / 38 | 322 | 33,900 |
+| 30.57 | 0.70 | 0.950 / 1.000 / 0.997 | 0.16–0.17 | 48–50 | 321 | 35,300 |
+| 32.75 | 0.75 | 0.103 / 0.209 / 0.608 | 1.0–2.4 | 58–60 | 330 | 36,900 |
+| 43.67 | 1.00 | 0 / 0 / 0 | 81–89 | 58 | — | — |
+| 54.59–65.5 | 1.25–1.5 | 0 | 161–248 | 53–58 | — | — |
+| 87.34 | 2.00 | 0（timeout 23–25%） | 283 | 49–50 | 335–350 | 33,100（以 offer 時間計，見下） |
+
+- **r_SLO（FP8，TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms，3 seeds，凍結規則）= 26.2 req/s**，= 0.63 × r_sat(41.4)。上一格 28.39 只有 seed 1 掉到 0.910（TTFT p95 0.95 s、TPOT p95 50.9 ms，其餘兩個 seed 1.000），30.57 三個 seed 都 ≥ 0.95；規則「第一個 < 95% 即停」因此取 26.2，保守但依預註冊。
+- **膝點是 TPOT，不是排隊**：26–31 rps 之間 TPOT p95 從 30 ms 爬到 50 ms 而 TTFT p95 仍 < 0.2 s；32.75 rps 起 attainment 崩到 0.1–0.6，43.7 rps 起佇列無界（TTFT p50 50–56 s），87 rps 有 23–25% 的 request 撞到 300 s client timeout。伺服器端直方圖（`server_histograms`）與 client 同桶，排除 loadgen 假象。
+- **SLO 敏感度**（同一份 raw 重算，`analysis/tables/w2-fp8-open-loop/tables.md`）：TPOT 30 ms → 24.0 rps；TPOT 50 或 100 ms → 26.2；只有 TTFT 2 s ∧ TPOT 100 ms 才到 30.6。r_SLO 對 TTFT 門檻（0.5–2 s）不敏感，對 TPOT 門檻敏感——這張卡的容量是 decode 步長決定的。
+- **能耗**：r_SLO 點 316 W、32,100 output tok/Wh ≈ 31 Wh／百萬 output token；比 closed-loop c = 256 的 43,700 tok/Wh 低 27%（守 SLO 的代價）。
+- 注意：open-loop 表裡的 `achieved_rps` 與 `output_tok_per_s` 以「offer 時間落在量測窗」計，過載點（≥ 32.75 rps）的完成時間拖到窗外，這兩欄在過載段不代表服務速率（W3 改為以完成時間計的 served_rps）。
+- **TMMLU+（FP8，三個 200 題切片，greedy、`/no_think`）**：122／119／125 正確 → 0.610／0.595／0.625（Wilson 95%：0.54–0.68、0.53–0.66、0.56–0.69），合計 366/600 = 0.610。`evidence/raw/w2/fp8/tmmluplus/`。這只是 FP8 的絕對值；規格要的是四精度的配對差，等 AWQ／GPTQ／BF16。

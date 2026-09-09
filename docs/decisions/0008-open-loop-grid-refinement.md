@@ -36,6 +36,10 @@ r_SLO 規則（所有 seed attainment ≥ 95% 的最高 offered rate，連續向
 
 膝點在 26–31 rps 之間，TPOT p95 在 50 ms 附近徘徊（28.39 為 50.9、30.57 為 49.8），attainment 因此非單調（0.910 → 0.950）；這是 SLO 門檻剛好切在分布尾端的自然結果，不是量測錯誤（伺服器端直方圖同桶、probe 18.7–18.9 ms、W／util 3.9、Windows committed 23.3–23.5 GB）。依凍結規則（自最低 rate 連續向上、第一個 < 95% 即停），**seed 1 的 r_SLO = 26.2 rps（0.60 × r_sat；0.63 × 0.82 預算下的 41.4）**；三個 seed 的最終值取 min attainment。SLO 敏感度網格（TPOT 30／50／100 ms）會顯示膝點對門檻的敏感程度。
 
+## 三個 seed 定案（2026-09-09 18:43）
+
+min attainment by rate：10.92–26.2 → 1.000；28.39 → 0.910（seed 1；seeds 2／3 = 1.000）；30.57 → 0.950（0.950／1.000／0.997）；32.75 → 0.103（0.103／0.209／0.608）；≥ 43.67 → 0。**r_SLO = 26.2 rps**（凍結規則）。細節與敏感度網格見 ADR 0007 補記 2。
+
 ## 教訓
 
 規格 §3.3 的網格是照「膝點靠近 r_sat」的直覺設計的；在單卡 FP8 上 TPOT p95 才是先破的約束，膝點落在 0.5–0.75 × r_sat。這條記進 claim ceiling：「rps at SLO」與「rps at saturation」差了將近一倍，而且差距來自 decode 與 prefill 的互相干擾，不是佇列。

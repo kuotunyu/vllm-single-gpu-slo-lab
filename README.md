@@ -2,7 +2,17 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 進行中（2026-09-09）。** W1 驗證清單結案（ADR 0002–0005）；W2 第一步 FP8 closed-loop 掃描完成（ADR 0006）：**r_sat = 43.7 req/s（下界，c = 256 = `--max-num-seqs`）、C = 256**，單 seed、單次；同批 c = 1–96 因 4090 被本機另一個 GPU 工作分時占用而作廢，正在等乾淨時段重測。**尚無 open-loop（r_SLO）、成本、TMMLU+ 數字**；本文其餘數值仍是規格門檻或設定值。
+> **狀態：W2 FP8 完成（2026-09-09）；AWQ／GPTQ／BF16、admission、成本表未做。** W1 驗證清單結案（ADR 0002–0005）。FP8 首批數字（單卡 4090、WSL2、vLLM 0.28.0、`--gpu-memory-utilization 0.82`，證據與 ADR 0006–0008 在 repo）：
+>
+> | 量 | 值 | 條件 |
+> |---|---|---|
+> | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | **26.2 req/s** | open-loop Poisson，108→132 tokens，3 seeds × 11 rates，每點 5 min；凍結規則（所有 seed ≥ 95%，連續向上） |
+> | r_sat（closed-loop 飽和吞吐） | 41.4 req/s（下界） | c = 256 = `--max-num-seqs`，192→256 仍 +7%；夜間 0.90 預算 43.7 |
+> | 膝點 | 26–31 rps，TPOT 先破 50 ms | 32.75 rps 起 attainment 0.1–0.6；43.7 rps 起 0（佇列無界） |
+> | 能耗 | 31 Wh／百萬 output token @ r_SLO | 316 W、32,100 tok/Wh；c = 256 時 43,700 tok/Wh |
+> | TMMLU+（FP8） | 366 / 600 = 0.610 | 三個 200 題切片 0.610／0.595／0.625，Wilson 95% 各約 ±0.07 |
+>
+> 這些數字**只對 FP8、這組旗標、這張與 Windows 桌面共用的 4090 成立**；精度對照、admission 策略、$/M token 要等 W2 其餘 cell 與 W3。
 
 ## 一句話
 
@@ -10,7 +20,7 @@
 
 ## 30 秒結論（目標讀者：台灣 LLM／AI infra 用人主管）
 
-*（下面是本專案**要證明**的事；W0 尚未完成任何一項。）*
+*（下面是本專案**要證明**的事；截至 2026-09-09 只完成 FP8 的容量、能耗與 TMMLU+ 切片，見上方狀態表。）*
 
 這個人把單張 GPU 上的 vLLM 當成一個必須守 SLO 的服務來量，而不是跑一次 throughput 截圖。同一條 Poisson trace、同一組 seed，報出每個精度在 SLO 下的容量與 $/M token；證明 admission control（原生排隊 vs 硬上限 429 vs 有界佇列）在同一張卡上對 SLO attainment、goodput、拒絕率的三維取捨；成本用實測功耗與實測 utilisation 算，並附 utilisation-naive 值的 1/U 警語；量化品質用自跑的 TMMLU+ 而非過期 leaderboard；全部從 raw JSON 一鍵重建，且明寫哪些結論**不能**外推。
 
@@ -71,15 +81,18 @@
 | `evidence/raw/w1/` | W1 驗證證據：五 cell 載入矩陣、`vllm bench serve` 與 inference-perf smoke、shim 開銷四回合、TMMLU+ 20 題 dry run（ADR 0004、0005） | — |
 | `slo_lab/harness/` | `run-stage`：warm-up（TTFT／TPOT probe）→ NVML 功耗 1 s + `/metrics` 5 s 背景取樣 → inference-perf → `records.jsonl` → 量測窗（open／closed-loop 皆丟棄前 60 s）→ manifest（伺服器端 TTFT／queue／TPOT／e2e 直方圖差分、功耗窗與 tok/Wh、主機負載、I/O 壓力、raw sha256） | adapter、直方圖、窗、功耗窗 |
 | `scripts/analyze_batch.py` + `scripts/wsl/` | 批次彙整（r_sat 含平台旗標、C、r_SLO）與租戶污染標記（W／util 指紋、probe 漂移）；WSL2 批次驅動、I/O 取樣、證據搬移腳本 | 以真實 manifest 跑過 |
-| `evidence/raw/w2/fp8/closed-loop*/` | **W2 第一步**：FP8 closed-loop 探索性（c = 1–128，無丟棄）與正式（c = 1–256，3 min／點）掃描，seed 1；乾淨點給 r_sat = 43.7 rps（下界）、C = 256；正式掃描 c = 1–96 因共用租戶作廢（ADR 0006） | — |
+| `evidence/raw/w2/fp8/closed-loop*/` | FP8 closed-loop：夜間 0.90 探索性（c = 1–128）與正式（c = 1–256）掃描（ADR 0006；正式 c = 1–96 被桌面 VRAM 分頁污染）、白天 0.90 分頁證據、**0.82 的 v3（c = 1–256 全乾淨：r_sat 41.4 rps 下界、C = 256）**（ADR 0007） | 表由 `make reproduce` 重建 |
+| `evidence/raw/w2/fp8/open-loop/seed-{1,2,3}/` | **FP8 open-loop 11 rates × 3 seeds**（0.25–2.0 × r_sat 加 0.55–0.70 細化，ADR 0008）：r_SLO 26.2 rps、膝點 26–31 rps、SLO 敏感度網格、過載段的佇列與 timeout | 同上 |
+| `evidence/raw/w2/fp8/tmmluplus/` | FP8 三切片逐題輸出與分數（366/600） | — |
+| `evidence/raw/w2/fp8/win-vram-2026-09-09.log` | Windows 端 VRAM（dedicated／shared／committed、桌面程序）每 30 s 取樣，整個 W2 白天量測期間 | — |
 | CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（空 evidence 通過） | — |
 
 ### 還沒有
 
-- **open-loop 量測**：r_SLO、attainment-vs-rate 曲線、n ≥ 3、成本表；ledger 只有表頭；圖、model card、claims audit 皆空。
-- FP8 closed-loop c = 1–96 的乾淨重測與 warm-up 充分性檢查（第一次被共用租戶污染，ADR 0006）；AWQ／GPTQ／BF16 的 closed-loop。
-- TMMLU+ 三切片與全量的正式評分（W2；A3 Colab 已取消，ADR 0005）。
-- `analysis/preregistration.md` 除 warm-up 充分性外已凍結（2026-09-09）；`harness/run.py` 的 Python 編排仍由 `scripts/wsl/batch.sh` 代行。
+- AWQ／GPTQ-Int4／BF16 的 closed-loop、open-loop 與 TMMLU+（同一套 11 點網格），以及 2048 vs 8192 `--max-num-batched-tokens` 對照；成本表（`config/cost.yaml` 仍是 placeholder）、圖、model card；ledger 只有表頭。
+- TMMLU+ 全量（W4）；`vllm bench serve` 交叉驗證（`scripts/wsl/crosscheck.sh` 已備、未跑）。
+- open-loop 過載段的 served_rps（以完成時間計；目前 `achieved_rps` 以 offer 時間計，過載段不代表服務速率）。
+- `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - `config/cost.yaml` 的 owner 真實數值與來源（目前為標記 placeholder；`slo-lab cost` 會印警語）。
 - FP8 block kernel 的 4090 tuned config 決定（W2）；BF16 cell 的 `max-num-seqs`（ADR 0004 提案 16）。
 - A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。

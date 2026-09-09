@@ -8,7 +8,7 @@
 | Attainment 分母 | offered（429／timeout／5xx 皆計未達；提案） | 同規格 |
 | r_SLO 規則 | 所有 seed attainment ≥ 95% 的最高 offered rate，自最低 rate 連續向上（提案） | 同規格；`slo_lab.slo.r_slo` |
 | SLO 敏感度網格 | TTFT ∈ {0.5, 1, 2} s × TPOT ∈ {30, 50, 100} ms（提案） | 同規格 |
-| Open-loop 網格 | {0.25 … 2.0} × r_sat，每點 5 min，前 60 s 不計 | r_sat（FP8）= 43.7 rps → offered ∈ {10.9, 21.8, 32.7, 43.7, 54.6, 65.5, 87.3} rps；其他精度以各自 r_sat 換算；5 min、丟棄 60 s（ADR 0006） |
+| Open-loop 網格 | {0.25 … 2.0} × r_sat，每點 5 min，前 60 s 不計 | r_sat（FP8）= 43.7 rps → offered ∈ {10.9, 21.8, 32.7, 43.7, 54.6, 65.5, 87.3} rps；其他精度以各自 r_sat 換算；5 min、丟棄 60 s（ADR 0006）。**增補（ADR 0008）**：{0.55, 0.60, 0.65, 0.70} × r_sat = {24.0, 26.2, 28.4, 30.6} rps，因膝點落在 0.5–0.75 之間 |
 | Closed-loop 網格 | concurrency {1 … 128}，每點 3 min（提案） | {1, 2, 4, 8, 16, 32, 64, 96, 128, 192, 256}；每點 `num_requests` 依上一輪 rps 取 ≥ 180 s；**丟棄前 60 s**；256 = `--max-num-seqs`（ADR 0006） |
 | r_sat 定義 | closed-loop 吞吐平台 | 網格內最大平均 rps；最後一格增幅 ≥ 5% 時標「下界」；不得為追平台把 `--max-num-seqs` 推進 preemption 區（ADR 0006） |
 | Admission trace | `config/traffic/burst25.yaml`（提案） | 0.5·r_sat 5 min → 1.5·r_sat 5 min → 0.5·r_sat 15 min；FP8：21.8 / 65.5 / 21.8 rps |
