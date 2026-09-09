@@ -1,0 +1,47 @@
+api:
+  type: completion
+  streaming: true
+data:
+  type: synthetic
+  input_distribution:
+    min: 108
+    max: 108
+    mean: 108
+    std_dev: 0
+    total_count: 1
+  output_distribution:
+    min: 132
+    max: 132
+    mean: 132
+    std_dev: 0
+    total_count: 1
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-8B-FP8
+  base_url: http://127.0.0.1:8013
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-8B-FP8
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+  prometheus: null
+  goodput:
+    constraints:
+      ttft: 1.0
+      tpot: 0.05
+storage:
+  local_storage:
+    path: ~/vllm-slo-lab/runs-w2/open-loop/fp8/seed-1/ol-rate-26.20/ipf
+load:
+  type: poisson
+  interval: 1.0
+  stages:
+  - rate: 26.2
+    duration: 300
+  num_workers: 4
+  worker_max_concurrency: 4096
+  request_timeout: 300.0
+  base_seed: 1
