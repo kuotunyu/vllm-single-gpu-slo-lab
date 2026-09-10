@@ -119,8 +119,13 @@ def build_app(upstream_base_url: str, policy: AdmissionPolicy) -> web.Applicatio
     app[STATS_KEY] = ShimStats()
 
     async def _open_session(app: web.Application) -> None:
+        # limit=0: aiohttp's default pool of 100 connections would silently cap the engine at
+        # 100 concurrent requests behind every policy, native queueing included (W3, ADR 0012).
+        # Admission is the policy's job alone; the upstream pool must never be a second limiter.
         app[SESSION_KEY] = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=None), auto_decompress=False
+            timeout=aiohttp.ClientTimeout(total=None),
+            auto_decompress=False,
+            connector=aiohttp.TCPConnector(limit=0),
         )
 
     async def _close_session(app: web.Application) -> None:

@@ -39,9 +39,7 @@ def load_profile(path: Path) -> list[tuple[float, int]]:
 
 def phase_bounds(profile: Profile) -> list[tuple[str, float, float]]:
     """Named ``(phase, start_s, end_s)`` rows; a three-stage profile is pre / burst / recovery."""
-    names = (
-        _THREE_PHASES if len(profile) == 3 else tuple(f"phase-{i}" for i in range(len(profile)))
-    )
+    names = _THREE_PHASES if len(profile) == 3 else tuple(f"phase-{i}" for i in range(len(profile)))
     out: list[tuple[str, float, float]] = []
     start = 0.0
     for name, (_, duration) in zip(names, profile, strict=True):

@@ -143,3 +143,43 @@ async def test_unreachable_upstream_becomes_502_and_releases_slot():
         assert resp.status == 502
         assert (await resp.json())["error"]["type"] == "upstream_unreachable"
         assert policy.in_flight == 0
+
+
+async def test_passthrough_is_not_capped_by_the_upstream_connection_pool():
+    """150 requests must be in flight upstream at once: aiohttp's default pool stops at 100.
+
+    Behind the default ClientSession connector the shim would silently hold vLLM to 100
+    concurrent requests under every policy, including native queueing, where the engine's own
+    256-slot batch and queue are the point of the experiment (W3, ADR 0012).
+    """
+    import aiohttp
+
+    n = 150
+    arrived = 0
+    everyone_here = asyncio.Event()
+
+    async def handle(request: web.Request) -> web.Response:
+        nonlocal arrived
+        arrived += 1
+        if arrived >= n:
+            everyone_here.set()
+        try:
+            await asyncio.wait_for(everyone_here.wait(), 5.0)
+        except TimeoutError:
+            return web.json_response({"held": arrived}, status=504)
+        return web.json_response({"held": arrived})
+
+    upstream_app = web.Application()
+    upstream_app.router.add_route("*", "/{tail:.*}", handle)
+    upstream_server = TestServer(upstream_app)
+    await upstream_server.start_server()
+    base = str(upstream_server.make_url("")).rstrip("/")
+    try:
+        shim = TestServer(build_app(base, Passthrough()))
+        async with TestClient(shim, connector=aiohttp.TCPConnector(limit=0)) as client:
+            responses = await asyncio.gather(
+                *(client.post("/v1/completions", data=b"x") for _ in range(n))
+            )
+            assert [r.status for r in responses] == [200] * n
+    finally:
+        await upstream_server.close()
