@@ -1,5 +1,6 @@
-# TMMLU+ paired comparison against `awq` (same items, exact McNemar)
+# TMMLU+ paired comparison against `bf16` (same items, exact McNemar)
 
 | cell | n shared | accuracy | baseline accuracy | delta | 95% paired CI | only cell right | only baseline right | McNemar p |
 |---|---|---|---|---|---|---|---|---|
-| gptq | 19680 | 0.5703 | 0.5797 | -0.0095 | [-0.0150, -0.0037] | 1420 | 1606 | 0.000768 |
+| awq | 19680 | 0.5797 | 0.5911 | -0.0113 | [-0.0164, -0.0063] | 1110 | 1333 | 6.98e-06 |
+| gptq | 19680 | 0.5703 | 0.5911 | -0.0208 | [-0.0255, -0.0156] | 1020 | 1429 | 1.41e-16 |
