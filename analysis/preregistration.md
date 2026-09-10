@@ -1,6 +1,6 @@
 # Preregistration（2026-09-09 凍結；W2 起不得更動，例外列於下）
 
-狀態：**已凍結**（commit 於 ADR 0006 同批；ADR 0007 修訂引擎記憶體預算並凍結 warm-up），例外一項：AWQ／GPTQ／BF16 的 `--max-num-seqs` 於各自 closed-loop 掃描後補上。之後任何變更都要在 `docs/decisions/` 留 ADR。
+狀態：**已凍結**（commit 於 ADR 0006 同批；ADR 0007 修訂引擎記憶體預算並凍結 warm-up；ADR 0009 補齊各精度 `--max-num-seqs`，無例外項）。之後任何變更都要在 `docs/decisions/` 留 ADR。
 
 | 項目 | 規格值 | 定值（來源） |
 |---|---|---|
@@ -19,7 +19,7 @@
 | Bootstrap | B = 1000，percentile bootstrap，95%（提案） | 同規格；attainment 另附 Wilson 95% |
 | Client timeout | 300 s（提案） | 同規格（inference-perf `request_timeout: 300`） |
 | Quiet-GPU 門檻 | 1024 MiB（提案） | 記憶體 3,072 MiB（WSL2 閒置基線 2.6 GiB）＋ utilization 10%（5 × 1 s 平均）；WSL2 上 process 準則無效（ADR 0002） |
-| `--max-num-seqs` | 預設起，preemption 即下調 | FP8：256（c = 256 時 KV 67.5%，無 preemption）；BF16 提案 16（ADR 0004）；AWQ／GPTQ 待定 |
+| `--max-num-seqs` | 預設起，preemption 即下調 | FP8：256；AWQ：256；GPTQ-Int4：256（三者在 c = 256 皆無 preemption）；BF16：**40**（0.82 預算下 KV 僅 11,168–29,696 tokens，網格封頂於 40；峰值 KV 86.1%、零 preemption）。ADR 0009 |
 | 其他引擎旗標 | — | `--max-model-len 4096 --gpu-memory-utilization 0.82 --max-num-batched-tokens 2048`；`VLLM_WSL2_ENABLE_PIN_MEMORY=1`、`VLLM_USE_FLASHINFER_SAMPLER=0`、`HF_HUB_OFFLINE=1`（ADR 0002）。0.90 → 0.82 於 2026-09-09 中午（ADR 0007）：4090 與 Windows 桌面共用，0.90 只留 0.5 GiB 給桌面，桌面一活動就觸發 VidMm 分頁；夜間 0.90 的乾淨點保留為對照 |
 | Prompt 形狀 | 108 / 132 tokens、nonce、`ignore_eos`、thinking 關閉 | 同規格；inference-perf synthetic，completion API（chat 不支援，ADR 0005） |
 | Spec-decode `num_speculative_tokens` | 依安裝版本文件 | EAGLE-3：3；n-gram：依 `config/specdec/ngram.yaml` |
