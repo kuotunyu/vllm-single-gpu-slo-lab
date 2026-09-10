@@ -102,6 +102,31 @@ def test_scan_tree_skips_excluded_dirs_and_binaries(tmp_path):
     assert scan_tree(tmp_path, exclude_dirs=DEFAULT_EXCLUDE_DIRS | {"logs"}) == []
 
 
+def test_scan_tree_reads_gzip_and_files_over_the_old_2mb_cap(tmp_path):
+    import gzip
+
+    (tmp_path / "vllm.log.gz").write_bytes(gzip.compress(f"peer {PUBLIC_IP}\n".encode()))
+    big = "x" * 80 + "\n"
+    (tmp_path / "big.log").write_text(big * 30_000 + f"{HF_TOKEN}\n", encoding="utf-8")
+    assert (tmp_path / "big.log").stat().st_size > 2_000_000
+    (tmp_path / "blob.gz").write_bytes(gzip.compress(b"\0\0" + PUBLIC_IP.encode()))
+    (tmp_path / "fake.gz").write_text(f"not gzip {PUBLIC_IP}\n", encoding="utf-8")
+    found = sorted((str(f.path).replace("\\", "/"), f.pattern) for f in scan_tree(tmp_path))
+    # fake.gz is plain text with a .gz name: still scanned as text, never silently skipped
+    assert found == [("big.log", "hf_token"), ("fake.gz", "ipv4"), ("vllm.log.gz", "ipv4")]
+
+
+def test_dataset_text_allows_example_addresses_but_not_secrets(tmp_path):
+    d = tmp_path / "eval" / "tmmluplus"
+    d.mkdir(parents=True)
+    (d / "full.jsonl").write_text(
+        f'{{"question": "subnet of {LAN_IP}?", "note": "{HF_TOKEN}"}}\n', encoding="utf-8"
+    )
+    (tmp_path / "notes.md").write_text(f"lab box {LAN_IP}\n", encoding="utf-8")
+    found = sorted((str(f.path).replace("\\", "/"), f.pattern) for f in scan_tree(tmp_path))
+    assert found == [("eval/tmmluplus/full.jsonl", "hf_token"), ("notes.md", "ipv4")]
+
+
 def test_repository_tree_is_clean():
     findings = scan_tree(REPO)
     assert findings == [], format_findings(findings)

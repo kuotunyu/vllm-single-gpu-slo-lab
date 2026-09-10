@@ -10,6 +10,7 @@ Pattern literals are assembled at import time so this file never matches itself.
 
 from __future__ import annotations
 
+import gzip
 import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -143,9 +144,32 @@ def _looks_binary(head: bytes) -> bool:
     return b"\0" in head
 
 
+_GZIP_MAGIC = b"\x1f\x8b"
+# Evidence stores server logs and per-request records gzip-compressed (ADR 0011), and a single
+# server log runs to 11 MB; the old 2 MB cap silently skipped exactly those files. The caps below
+# cover every committed file with room to spare; the decompressed cap bounds a hostile archive.
+DEFAULT_MAX_BYTES = 64_000_000
+MAX_DECOMPRESSED_BYTES = 512_000_000
+
+
+# Third-party benchmark text committed verbatim (TMMLU+ is MIT, ADR 0003). Its networking exam
+# questions quote example addresses (subnet masks, 192.168.x.x), which are question content, not
+# infrastructure; every other pattern (keys, tokens, e-mail) still applies to these files.
+DATASET_TEXT_DIRS: tuple[str, ...] = ("eval/tmmluplus/",)
+DATASET_ALLOWED_PATTERNS: frozenset[str] = frozenset({"ipv4"})
+
+
+def _is_gzip(path: Path, head: bytes) -> bool:
+    return path.suffix == ".gz" and head.startswith(_GZIP_MAGIC)
+
+
 def iter_text_files(
-    root: Path, *, exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS, max_bytes: int = 2_000_000
+    root: Path,
+    *,
+    exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> Iterable[Path]:
+    """Every scannable file under ``root``: plain text, plus gzip-compressed text (``*.gz``)."""
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
@@ -155,23 +179,54 @@ def iter_text_files(
             if path.stat().st_size > max_bytes:
                 continue
             with path.open("rb") as fh:
-                if _looks_binary(fh.read(8192)):
-                    continue
+                head = fh.read(8192)
         except OSError:
             continue
-        yield path
+        if _is_gzip(path, head) or not _looks_binary(head):
+            yield path
+
+
+def _read_for_scan(path: Path) -> str | None:
+    """Text content for the scanner; decompresses real gzip; None if unreadable or binary.
+
+    Decided by magic bytes, not the name, so a plain file called ``*.gz`` is still scanned.
+    """
+    try:
+        with path.open("rb") as fh:
+            head = fh.read(len(_GZIP_MAGIC))
+    except OSError:
+        return None
+    if _is_gzip(path, head):
+        try:
+            with gzip.open(path, "rb") as fh:
+                data = fh.read(MAX_DECOMPRESSED_BYTES + 1)
+        except (OSError, EOFError):
+            return None
+        if len(data) > MAX_DECOMPRESSED_BYTES or _looks_binary(data[:8192]):
+            return None
+        return data.decode("utf-8", errors="replace")
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
 
 
 def scan_tree(
-    root: Path, *, exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS, max_bytes: int = 2_000_000
+    root: Path,
+    *,
+    exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> list[Finding]:
     findings: list[Finding] = []
     for path in iter_text_files(root, exclude_dirs=exclude_dirs, max_bytes=max_bytes):
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
+        text = _read_for_scan(path)
+        if text is None:
             continue
-        findings.extend(scan_text(text, path.relative_to(root)))
+        rel = path.relative_to(root)
+        found = scan_text(text, rel)
+        if rel.as_posix().startswith(DATASET_TEXT_DIRS):
+            found = [f for f in found if f.pattern not in DATASET_ALLOWED_PATTERNS]
+        findings.extend(found)
     return findings
 
 
