@@ -460,6 +460,22 @@ vLLM sizes the KV cache from whatever VRAM is free when it profiles, so on a des
 
 **Queue revision.** Dropped the "GPTQ closed-loop c = 1, 2, 4, 8 re-run": every cell already spans four server sessions by design (one closed-loop, one per open-loop seed), so "one session per cell" was never the protocol, and GPTQ's closed-loop merely has one extra session boundary at c = 8 → 16 with a KV difference that cannot bind at c ≤ 8 (8 × 240 = 1,920 tokens). Documented instead. The remaining follow-up is `scripts/wsl/w2-followup-night.sh`: FP8 TMMLU+ full set, then knee refinement at 0.80 / 0.85 / 0.90 × r_sat for AWQ, GPTQ and BF16 — all three knees fell in the frozen 0.75 → 1.0 gap, while FP8's was resolved to ~8 % by ADR 0008's 0.55–0.70 points. About 3.3 h of GPU after the main chain.
 
+**BF16 cell complete 18:48** (commit `b032bb4`): r_sat 11.40 rps — not a plateau, still climbing at c = 40 where `--max-num-seqs` caps it, so it is an admission-limited lower bound; C = 40; r_SLO 8.55 rps; TMMLU+ full 11,632 / 19,680 = 0.5911. Its sensitivity grid is 8.55 rps at **every** threshold: the next rate fails on a TTFT queueing cliff that no bound in the grid rescues.
+
+**Paired quality against the unquantised baseline** (same 19,680 items, exact McNemar):
+
+| cell | accuracy | vs BF16 | 95 % paired CI | p |
+|---|---|---|---|---|
+| BF16 | 0.5911 | — | — | — |
+| AWQ | 0.5797 | −1.13 pts | [−1.64, −0.63] | 7.0e−6 |
+| GPTQ-Int4 | 0.5703 | −2.08 pts | [−2.55, −1.56] | 1.4e−16 |
+
+**19:00 NIGHT DONE, and one more harness defect.** The FP8 `--max-num-batched-tokens 8192` contrast cell was skipped at 18:48: its quiet-GPU gate ran 20 s after BF16's server exited and read utilization 11 % against the 10 % threshold (samples 15 → 4, memory already back to 2.1 GB). One borderline reading dropped a 2.5-hour cell because the gate had no retry. Fixed in `batch.sh` and `tmmlu-only.sh` (commit `4bb528f`): five attempts 30 s apart, threshold unchanged. The contrast cell is the first item of the follow-up.
+
+**Cross-check (commit `1dbd9ea`).** `vllm bench serve` agrees with inference-perf within 5–7 % on throughput (c = 256: 39.42 vs 41.35 rps; c = 64: 20.61 vs 22.05 rps) and lands in the same latency buckets at 21.8 rps open-loop (TTFT p95 107 ms, TPOT p95 29.9 ms). Committed as **summary-only JSON**: `--save-detailed` stores `generated_texts`, the model's free continuations of random-token prompts, and those reproduced training-data fragments — other people's build paths and website paths. They do not belong in a public repo. Per-request arrays stay under `runs-w2` with the original's sha256 recorded, the same policy already applied to inference-perf's per-request JSON. A repo-wide check found no other committed model text and no `/home/` string.
+
+**19:01 follow-up launched** (`scripts/wsl/w2-followup-night.sh` via `run-logged.sh`): FP8 contrast cell (KV 67,888 tokens at 8192 batched tokens vs 76,112 at 2048), FP8 TMMLU+ full set, then knee refinement for AWQ, GPTQ and BF16. About 6 h of GPU.
+
 Also worth the ADR: **FP8 buys nothing single-stream.** At c = 1 BF16 gives 0.38 rps with probe TPOT 19.3 ms and FP8 gives 0.384 rps at 18.6–19.6 ms, while AWQ/GPTQ give 0.89 rps at 7.8 ms. Halving the weight bytes from BF16 to FP8 does not move batch-1 decode on this card; going to 4-bit does, 2.5×.
 
 ## Self-review
