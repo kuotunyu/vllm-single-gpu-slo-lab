@@ -23,6 +23,24 @@
     },
     {
       "a": "bf16",
+      "b": "fp8",
+      "n_shared": 19680,
+      "excluded_errors": 0,
+      "a_correct": 11632,
+      "b_correct": 11629,
+      "a_accuracy": 0.5910569105691057,
+      "b_accuracy": 0.5909044715447155,
+      "delta_b_minus_a": -0.00015243902439021628,
+      "delta_ci95": [
+        -0.0028976117886179154,
+        0.002693089430894302
+      ],
+      "discordant_a_only": 416,
+      "discordant_b_only": 413,
+      "mcnemar_exact_p": 0.9446267263778911
+    },
+    {
+      "a": "bf16",
       "b": "gptq",
       "n_shared": 19680,
       "excluded_errors": 0,
