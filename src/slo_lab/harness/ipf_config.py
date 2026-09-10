@@ -106,6 +106,49 @@ def closed_loop_config(
     return cfg
 
 
+def trace_replay_config(
+    *,
+    model: str,
+    base_url: str,
+    report_dir: str,
+    trace_file: str,
+    duration_s: int,
+    mean_rate_rps: float,
+    seed: int,
+    workers: int = 4,
+    timeout_s: float = 300.0,
+    worker_max_concurrency: int = 4096,
+    worker_max_tcp_connections: int = 4096,
+) -> dict[str, Any]:
+    """One continuous stage replaying a pre-generated arrival trace (W3, ADR 0012).
+
+    inference-perf finishes every request of a stage before starting the next, so a multistage
+    Poisson burst would drain its backlog with no arrivals; replaying one trace keeps arrivals
+    flowing through the burst and the recovery. The random generator takes each request's
+    108 / 132 token counts from the trace rows and ignores distributions, so none are passed.
+    ``worker_max_tcp_connections`` is raised from inference-perf's default of 2,500 per worker so
+    the client pool can never cap the native-queue arm (about 8k in flight at FP8's burst end).
+    ``mean_rate_rps`` only labels the stage; arrivals come from the trace file.
+    """
+    cfg = _common(
+        model=model, base_url=base_url, report_dir=report_dir, seed=seed, timeout_s=timeout_s
+    )
+    trace = {"file": str(trace_file), "format": "AzurePublicDataset"}
+    cfg["data"] = {"type": "random", "trace": dict(trace)}
+    cfg["load"] = {
+        "type": "trace_replay",
+        "trace": dict(trace),
+        "interval": 0,
+        "stages": [{"rate": round(float(mean_rate_rps), 4), "duration": int(duration_s)}],
+        "num_workers": workers,
+        "worker_max_concurrency": int(worker_max_concurrency),
+        "worker_max_tcp_connections": int(worker_max_tcp_connections),
+        "request_timeout": cfg.pop("_timeout"),
+        "base_seed": cfg.pop("_seed"),
+    }
+    return cfg
+
+
 def write_config(cfg: dict[str, Any], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True), encoding="utf-8")

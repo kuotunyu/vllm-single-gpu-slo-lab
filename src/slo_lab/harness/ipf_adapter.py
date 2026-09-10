@@ -68,12 +68,22 @@ def adapt_record(raw: dict[str, Any], *, index: int, origin_s: float) -> Request
 
 
 def adapt_file(path: Path) -> list[RequestRecord]:
+    return adapt_file_with_origin(path)[0]
+
+
+def adapt_file_with_origin(path: Path) -> tuple[list[RequestRecord], float]:
+    """Records plus the raw origin (earliest ``start_time``, inference-perf's monotonic clock).
+
+    The trace stage needs the origin to put scraped ``/metrics`` and shim samples (wall-clock)
+    on the records' time axis: wall = origin + (time.time() - time.monotonic()) at the stage.
+    """
     raw_list = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(raw_list, list) or not raw_list:
         raise ValueError(f"{path} holds no per-request records")
     origin = min(float(r["start_time"]) for r in raw_list)
     ordered = sorted(raw_list, key=lambda r: float(r["start_time"]))
-    return [adapt_record(r, index=i, origin_s=origin) for i, r in enumerate(ordered)]
+    records = [adapt_record(r, index=i, origin_s=origin) for i, r in enumerate(ordered)]
+    return records, origin
 
 
 def write_records_jsonl(records: list[RequestRecord], path: Path) -> None:
