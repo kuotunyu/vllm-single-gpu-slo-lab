@@ -29,3 +29,13 @@
 
 - AWQ 的 admission 三策略（ADR 0001：W5 有餘裕再補）。
 - `config/traffic/cloud_2p5x.yaml` 的 2.5 倍形狀。
+
+## 附錄：GPU smoke 發現的三件事（2026-09-11 03:49–04:33，正式量測開始前修正）
+
+GPU smoke 在任何正式資料產生前抓到以下問題，修正都在第一段正式量測（04:31 開始）之前 commit，所以 W3 的每一筆正式紀錄都使用修正後的程式。
+
+1. **shim 與 vLLM 之間的 keep-alive 競態**：第一次 smoke 的 passthrough 有 9 筆 502（`Server disconnected`、`Connection reset by peer`），都發生在積壓期間。原因是 shim 重用閒置連線，而 uvicorn 在 5 s 後關閉閒置連線。shim 改為每個請求一條上游連線（`force_close`），修正後 shim 對 vLLM 的失敗數為 0。直連的 `direct` 對照組仍有同類錯誤（inference-perf 的連線池會重用 15 s，比 uvicorn 的 5 s 長），經過 shim 時不會發生，因為 shim 的 aiohttp server 閒置 75 s 才關。`run` 也開啟 handler cancellation；實測 aiohttp 3.14 在 shim 的情境下本來就會把用戶端斷線傳到上游，這個設定是防護。
+2. **inference-perf 的 output token 數是把回傳文字重新 tokenize 算出來的**，不是伺服器的 `completion_tokens`。隨機 token prompt 下有 25 % 的請求算成 128–131（W2 的文本 prompt 為 1.45 %），模型先輸出 EOS 時可見文字更短，使 (e2e − TTFT) / (n − 1) 高估 TPOT。adapter 改為優先採用伺服器回報的 `completion_tokens`（`server_usage`，每筆都是 132）。重新解析 smoke 的原始檔，direct 組 [30, 60) s 的 TPOT p95 由 39.2 ms 降為 33.7 ms。W2 的 `records.jsonl` 仍是當時的計數；1.45 % 的差異對 W2 的 TPOT p95 影響待 W5 以原始檔重新解析確認。
+3. **文字全空的串流**：模型先輸出 EOS 時，`ignore_eos` 讓它繼續生成特殊 token，每個 chunk 的文字都是空字串，inference-perf 不會為它們記時間戳。這類請求確實完成了，但沒有 TTFT，adapter 保守地算為未達（錯誤）。每段約 0.1 %，三個策略都會遇到。
+
+另外兩項觀察：smoke 的前段只有 60 s，最後幾秒送出的請求會碰到突發，p95 被拉高，所以 smoke 與 W2 的延遲比較只作參考，shim 開銷以同 session 的 direct 對照為準（TPOT p50 +3 %、p95 +2 %）。WSL2 的 wall clock 在開機後持續漂移，每 25 分鐘約 130 s，對齊一律使用 monotonic clock，不受影響。今晚引擎的單流 probe TPOT 為 19.8–20.0 ms，比 W2 高約 5 %，前段 TPOT p95 26 ms（W2 24.6 ms）。
