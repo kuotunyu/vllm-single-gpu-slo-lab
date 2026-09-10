@@ -419,6 +419,7 @@ Slips: each quarantined stage costs 6–12 min; a paging incident that forces a 
 | 23:48 | GPTQ refinement done (24.21 / 25.72 / 27.23 rps × 3 seeds): r_SLO stays 22.70. |
 | 01:00 | BF16 refinement done (9.12 / 9.69 / 10.26 rps × 3 seeds): r_SLO 8.55 → 10.26. `FOLLOWUP DONE`. Windows VRAM sampler stopped, log copied to `evidence/raw/w2/win-vram-2026-09-10.log` (2,315 samples, committed max 24,187 MB). |
 | 01:05 | `slo-lab reproduce-lite`: all 13 index tables and the paired quality table rebuilt, secrets audit clean. GPU work finished; Tasks 5–6 (write-up) follow. |
+| 09-11 wrap-up | Tasks 5–6 done. ADR 0009 final (BF16 row, brackets, sensitivity transpose, refinement results, VRAM monitoring, FP8 untuned-kernel decision, defect 6); README, claims audit (13 rows), runbook, evidence README updated; reproduce deterministic, ruff clean, 126 tests, audit clean. Found at wrap-up: the refinement had overwritten nine seeds' main-run `vllm.log`/`quiet_gpu.json`; restored from git, refinement copies kept as `*-refine-0.80.*`, `promote-w2.sh` gained a session tag (`a31aeef`). Lab `254c171`; control tower `55de225`; memory and dashboard updated. |
 
 ## Results as they land (raw notes for ADR 0009)
 
