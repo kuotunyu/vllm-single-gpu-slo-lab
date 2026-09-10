@@ -143,12 +143,17 @@ class MetricsScraper:
         interval_s: float = 5.0,
         fetch: Callable[[str], str] = fetch_metrics,
         clock: Callable[[], float] = time.time,
+        mono_clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.url = url
         self.out_path = out_path
         self.interval_s = interval_s
         self._fetch = fetch
         self._clock = clock
+        # t_mono is the clock inference-perf stamps requests with; in WSL2 the wall clock drifted
+        # ~7 s against it within one 2.5-minute stage (W3 dry run, 2026-09-11), so the trace
+        # analysis aligns scraped samples with records on t_mono, never on t_unix.
+        self._mono_clock = mono_clock
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.rows = 0
@@ -158,12 +163,15 @@ class MetricsScraper:
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         with self.out_path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.writer(handle, lineterminator="\n")
-            writer.writerow(["t_unix", *[name.removeprefix("vllm:") for name in TRACKED]])
+            header = ["t_unix", *[name.removeprefix("vllm:") for name in TRACKED], "t_mono"]
+            writer.writerow(header)
             while not self._stop.is_set():
-                stamp = self._clock()
+                stamp, mono = self._clock(), self._mono_clock()
                 try:
                     values = parse_metrics(self._fetch(self.url))
-                    writer.writerow([f"{stamp:.3f}", *[values.get(name, "") for name in TRACKED]])
+                    writer.writerow(
+                        [f"{stamp:.3f}", *[values.get(name, "") for name in TRACKED], f"{mono:.3f}"]
+                    )
                     self.rows += 1
                 except Exception:
                     self.errors += 1

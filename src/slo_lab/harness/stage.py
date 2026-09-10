@@ -257,7 +257,7 @@ def trace_stage_summary(
 ) -> dict[str, Any]:
     """Per-phase summaries and recovery times, with scraped queues put on the records' axis."""
     origin_unix = origin_monotonic_s + sum(clock_offsets) / len(clock_offsets)
-    waiting = waiting_series(run_dir, origin_unix)
+    waiting = waiting_series(run_dir, origin_mono=origin_monotonic_s, origin_unix=origin_unix)
     sm = stage_metrics(records, phases, waiting or None)
     return {
         "phase_summaries": {k: v for k, v in sm.items() if isinstance(v, dict)},
@@ -517,6 +517,7 @@ def run_stage(
         raise ValueError(f"unknown stage kind {kind}")
     cfg_path = write_config(cfg, run_dir / "inference-perf.yaml")
     t_load_start = time.time()
+    t_load_start_mono = time.monotonic()
     proc = subprocess.run(
         [inference_perf_bin, "-c", str(cfg_path), "--log-level", "INFO"],
         capture_output=True,
@@ -611,10 +612,10 @@ def run_stage(
         if trace_info is not None:
             offsets = [offset_before, offset_after]
             result["records_origin_monotonic_s"] = origin_monotonic
-            # sanity of the clock alignment: the first request leaves a few seconds after launch
-            result["first_request_after_launch_s"] = round(
-                origin_monotonic + sum(offsets) / 2 - t_load_start, 3
-            )
+            # sanity of the clock alignment, on the monotonic clock only: the first request
+            # leaves a few seconds after launch (tokenizer load, trace read, worker start-up)
+            result["first_request_after_launch_s"] = round(origin_monotonic - t_load_start_mono, 3)
+            result["wall_clock_drift_s"] = round(offset_after - offset_before, 3)
             result.update(
                 trace_stage_summary(
                     run_dir,

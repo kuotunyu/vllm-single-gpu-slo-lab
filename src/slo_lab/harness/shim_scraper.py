@@ -59,12 +59,14 @@ class ShimScraper:
         interval_s: float = 5.0,
         fetch: Callable[[str], dict[str, Any]] = fetch_stats,
         clock: Callable[[], float] = time.time,
+        mono_clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.url = url
         self.out_path = out_path
         self.interval_s = interval_s
         self._fetch = fetch
         self._clock = clock
+        self._mono_clock = mono_clock  # alignment clock, see MetricsScraper
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.rows = 0
@@ -75,12 +77,12 @@ class ShimScraper:
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         with self.out_path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.writer(handle, lineterminator="\n")
-            writer.writerow(["t_unix", *COLUMNS])
+            writer.writerow(["t_unix", *COLUMNS, "t_mono"])
             while True:
-                stamp = self._clock()
+                stamp, mono = self._clock(), self._mono_clock()
                 try:
                     stats = self._fetch(self.url)
-                    writer.writerow([f"{stamp:.3f}", *stats_row(stats)])
+                    writer.writerow([f"{stamp:.3f}", *stats_row(stats), f"{mono:.3f}"])
                     self.last = stats
                     self.rows += 1
                 except Exception:

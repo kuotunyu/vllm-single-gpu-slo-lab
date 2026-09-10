@@ -98,8 +98,9 @@ def test_shim_scraper_writes_counter_rows_and_keeps_the_last_payload(tmp_path: P
     _time.sleep(0.3)
     scraper.stop()
     lines = (tmp_path / "shim.csv").read_text(encoding="utf-8").splitlines()
-    assert lines[0].split(",") == ["t_unix", *COLUMNS]
-    assert lines[2].split(",")[1:] == ["256", "12", "900", "640", "0", "0", "5", "2"]
+    assert lines[0].split(",") == ["t_unix", *COLUMNS, "t_mono"]
+    assert lines[2].split(",")[1:-1] == ["256", "12", "900", "640", "0", "0", "5", "2"]
+    assert float(lines[2].split(",")[-1]) > 0  # monotonic stamp for alignment with records
     assert scraper.rows >= 2 and scraper.last == last
 
 

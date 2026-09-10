@@ -56,16 +56,22 @@ trap stop_server EXIT
 start_server() {  # $1 = seed dir
   local dir="$1" qg=0 ready=0 code=""
   pkill -f ".venv/bin/vllm serve" 2>/dev/null; pkill -f "EngineCore" 2>/dev/null
-  pkill -f "slo-lab shim" 2>/dev/null; sleep 3
-  for attempt in 1 2 3 4 5; do
-    if "$LABCLI" quiet-gpu --out "$dir/quiet_gpu.json" >/dev/null 2>&1; then qg=1; break; fi
-    log "quiet-gpu attempt $attempt refused, retrying in 30 s"; sleep 30
-  done
-  [ "$qg" = 1 ] || { log "QUIET_GPU_REFUSED"; return 2; }
-  cd "$HOME/vllm-slo-lab" || return 1
-  # shellcheck disable=SC2086
-  .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port "$VLLM_PORT" --max-model-len 4096 --gpu-memory-utilization "$GPU_MEM_UTIL" --max-num-seqs "$MAX_NUM_SEQS" --max-num-batched-tokens "$MAX_BATCHED_TOKENS" > "$dir/serve.log" 2>&1 &
-  SERVER_PID=$!
+  pkill -f "slo-lab shim" 2>/dev/null; pkill -f "fake_vllm.py" 2>/dev/null; sleep 3
+  if [ "${FAKE_ENGINE:-0}" = 1 ]; then
+    # CPU-only dry run (plan Task A7): no GPU gate, a fake engine on the same port
+    "$LABPY" "$WSL/fake_vllm.py" --port "$VLLM_PORT" --model "$MODEL" --slots "${FAKE_SLOTS:-8}" --token-ms "${FAKE_TOKEN_MS:-2}" > "$dir/serve.log" 2>&1 &
+    SERVER_PID=$!
+  else
+    for attempt in 1 2 3 4 5; do
+      if "$LABCLI" quiet-gpu --out "$dir/quiet_gpu.json" >/dev/null 2>&1; then qg=1; break; fi
+      log "quiet-gpu attempt $attempt refused, retrying in 30 s"; sleep 30
+    done
+    [ "$qg" = 1 ] || { log "QUIET_GPU_REFUSED"; return 2; }
+    cd "$HOME/vllm-slo-lab" || return 1
+    # shellcheck disable=SC2086
+    .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port "$VLLM_PORT" --max-model-len 4096 --gpu-memory-utilization "$GPU_MEM_UTIL" --max-num-seqs "$MAX_NUM_SEQS" --max-num-batched-tokens "$MAX_BATCHED_TOKENS" > "$dir/serve.log" 2>&1 &
+    SERVER_PID=$!
+  fi
   # readiness: command substitution, never `curl | grep -q` (SIGPIPE under pipefail, 2026-09-10)
   for _ in $(seq 1 180); do
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$VLLM_PORT/v1/models" 2>/dev/null || true)

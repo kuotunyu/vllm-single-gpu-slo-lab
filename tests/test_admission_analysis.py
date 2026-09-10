@@ -102,9 +102,33 @@ def test_waiting_series_adds_the_shim_queue_to_the_engine_queue(tmp_path: Path):
         ["t_unix", "in_flight", "waiting"],
         [[origin + 1.0, 10, 0], [origin + 6.0, 256, 7], [origin + 11.0, 90, 0]],
     )
-    assert waiting_series(tmp_path, origin) == [(0.0, 0.0), (5.0, 40.0), (10.0, 7.0)]
+    # files without t_mono fall back to the wall clock
+    expected = [(0.0, 0.0), (5.0, 40.0), (10.0, 7.0)]
+    assert waiting_series(tmp_path, origin_mono=123.0, origin_unix=origin) == expected
     (tmp_path / "shim.csv").unlink()
-    assert waiting_series(tmp_path, origin) == [(0.0, 0.0), (5.0, 40.0), (10.0, 0.0)]
+    assert waiting_series(tmp_path, origin_unix=origin) == [(0.0, 0.0), (5.0, 40.0), (10.0, 0.0)]
+    assert waiting_series(tmp_path) == []
+
+
+def test_waiting_series_aligns_on_the_monotonic_clock_when_present(tmp_path: Path):
+    # the wall clock drifts 7 s over the stage (seen in WSL2); t_mono does not
+    mono0, unix0 = 500.0, 1_000_000.0
+    _write_csv(
+        tmp_path / "metrics.csv",
+        ["t_unix", "num_requests_running", "num_requests_waiting", "t_mono"],
+        [
+            [unix0 + 0.0, 1, 0, mono0 + 0.0],
+            [unix0 + 1.5, 1, 30, mono0 + 5.0],
+            [unix0 + 3.0, 1, 0, mono0 + 10.0],
+        ],
+    )
+    _write_csv(
+        tmp_path / "shim.csv",
+        ["t_unix", "in_flight", "waiting", "t_mono"],
+        [[unix0 + 2.0, 1, 4, mono0 + 6.0]],
+    )
+    got = waiting_series(tmp_path, origin_mono=mono0, origin_unix=unix0)
+    assert got == [(0.0, 0.0), (5.0, 30.0), (10.0, 4.0)]
 
 
 def _stage(root: Path, cell: str, policy: str, seed: int, recs: list[RequestRecord], probe=0.019):

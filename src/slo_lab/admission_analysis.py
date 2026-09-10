@@ -116,14 +116,36 @@ def _latest_at_or_before(series: list[tuple[float, float]], t: float) -> float |
     return series[i][1] if i >= 0 else None
 
 
-def waiting_series(stage_dir: Path, origin_unix: float) -> list[tuple[float, float]]:
-    """``(seconds from trace start, vLLM waiting + shim waiting)`` at each ``/metrics`` sample."""
-    engine = _read_csv_series(stage_dir / "metrics.csv", "t_unix", "num_requests_waiting")
-    shim = _read_csv_series(stage_dir / "shim.csv", "t_unix", "waiting")
+def _has_column(path: Path, column: str) -> bool:
+    if not path.exists():
+        return False
+    with path.open(encoding="utf-8") as fh:
+        return column in fh.readline().strip().split(",")
+
+
+def waiting_series(
+    stage_dir: Path, *, origin_mono: float | None = None, origin_unix: float | None = None
+) -> list[tuple[float, float]]:
+    """``(seconds from trace start, vLLM waiting + shim waiting)`` at each ``/metrics`` sample.
+
+    Samples are put on the records' axis with the monotonic clock inference-perf uses
+    (``t_mono``). In WSL2 the wall clock drifted ~7 s against it within one 2.5-minute stage
+    (W3 dry run, 2026-09-11), so ``t_unix`` plus a clock offset is only a fallback for files
+    written before ``t_mono`` existed.
+    """
+    metrics, shim_path = stage_dir / "metrics.csv", stage_dir / "shim.csv"
+    if origin_mono is not None and _has_column(metrics, "t_mono"):
+        t_col, origin = "t_mono", origin_mono
+    elif origin_unix is not None:
+        t_col, origin = "t_unix", origin_unix
+    else:
+        return []
+    engine = _read_csv_series(metrics, t_col, "num_requests_waiting")
+    shim = _read_csv_series(shim_path, t_col, "waiting")
     out = []
     for t, waiting in engine:
         queued = _latest_at_or_before(shim, t) or 0.0
-        out.append((round(t - origin_unix, 3), waiting + queued))
+        out.append((round(t - origin, 3), waiting + queued))
     return out
 
 
@@ -226,9 +248,10 @@ def _stage_row(m: dict[str, Any]) -> dict[str, Any] | None:
     if evidence_path(records_path) is None or not phases:
         return None
     records = read_records_jsonl(records_path)
-    origin = _origin_unix(m)
-    waiting = waiting_series(stage_dir, origin) if origin is not None else None
-    sm = stage_metrics(records, phases, waiting)
+    waiting = waiting_series(
+        stage_dir, origin_mono=m.get("records_origin_monotonic_s"), origin_unix=_origin_unix(m)
+    )
+    sm = stage_metrics(records, phases, waiting or None)
 
     def ph(name: str, key: str) -> Any:
         return (sm.get(name) or {}).get(key)
