@@ -34,8 +34,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from slo_lab.harness.ipf_adapter import adapt_file, write_records_jsonl
-from slo_lab.harness.ipf_config import closed_loop_config, open_loop_config, write_config
+from slo_lab.admission_analysis import stage_metrics, waiting_series
+from slo_lab.harness.ipf_adapter import adapt_file_with_origin, write_records_jsonl
+from slo_lab.harness.ipf_config import (
+    closed_loop_config,
+    open_loop_config,
+    trace_replay_config,
+    write_config,
+)
 from slo_lab.harness.metrics_scraper import (
     HISTOGRAMS,
     MetricsScraper,
@@ -45,6 +51,8 @@ from slo_lab.harness.metrics_scraper import (
     parse_histograms,
     parse_metrics,
 )
+from slo_lab.harness.shim_scraper import ShimScraper
+from slo_lab.harness.trace import load_profile, phase_bounds
 from slo_lab.slo import DEFAULT_SLO, RequestRecord, filter_window, summarise
 from slo_lab.stats import percentile
 
@@ -219,6 +227,46 @@ def _host_state() -> dict[str, Any]:
     return state
 
 
+def proc_cpu_s(pid: int | None) -> float | None:
+    """utime + stime of a process in seconds from ``/proc/<pid>/stat``; None when unavailable.
+
+    The shim is one asyncio process; if it saturated a core during a burst its own latency
+    would be part of every policy's numbers, so the trace manifest records its CPU time.
+    """
+    if pid is None:
+        return None
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").rsplit(")", 1)[1].split()
+        return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError, AttributeError):
+        return None
+
+
+def clock_offset_s() -> float:
+    """Wall clock minus the monotonic clock inference-perf stamps requests with."""
+    return time.time() - time.monotonic()
+
+
+def trace_stage_summary(
+    run_dir: Path,
+    records: Sequence[RequestRecord],
+    *,
+    origin_monotonic_s: float,
+    clock_offsets: Sequence[float],
+    phases: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Per-phase summaries and recovery times, with scraped queues put on the records' axis."""
+    origin_unix = origin_monotonic_s + sum(clock_offsets) / len(clock_offsets)
+    waiting = waiting_series(run_dir, origin_unix)
+    sm = stage_metrics(records, phases, waiting or None)
+    return {
+        "phase_summaries": {k: v for k, v in sm.items() if isinstance(v, dict)},
+        "time_to_recover_s": sm["time_to_recover_s"],
+        "time_to_recover_attainment_s": sm["time_to_recover_attainment_s"],
+        "waiting_samples": len(waiting),
+    }
+
+
 def stage_window(
     records: Sequence[RequestRecord], *, kind: str, discard_first_s: float, duration_s: int
 ) -> tuple[list[RequestRecord], float | None]:
@@ -230,6 +278,9 @@ def stage_window(
     discard period yields an empty window instead of silently reporting its start-up transient
     (the exploratory FP8 sweep of 2026-09-09 had no discard and 60-100 s stages; ADR 0006).
     """
+    if kind == "trace":
+        # an admission trace is measured whole: its phases are summarised separately
+        return list(records), float(duration_s)
     window = filter_window(records, start_s=discard_first_s)
     if kind == "open_loop":
         return window, float(duration_s - discard_first_s)
@@ -367,10 +418,35 @@ def run_stage(
     inference_perf_bin: str = "inference-perf",
     engine_flags: dict[str, Any] | None = None,
     workers: int = 4,
+    trace_file: Path | None = None,
+    profile_path: Path | None = None,
+    policy: str | None = None,
+    shim_stats_url: str | None = None,
+    shim_pid: int | None = None,
 ) -> dict[str, Any]:
     run_dir.mkdir(parents=True, exist_ok=True)
     started_at = datetime.now(UTC).isoformat(timespec="seconds")
     io_before = _io_pressure()
+
+    # admission trace (W3, ADR 0012): one continuous replay through the shim, measured whole
+    trace_info: dict[str, Any] | None = None
+    if kind == "trace":
+        if trace_file is None or profile_path is None:
+            raise ValueError("a trace stage needs trace_file and profile_path")
+        profile = load_profile(profile_path)
+        phases = [
+            {"phase": name, "start_s": lo, "end_s": hi} for name, lo, hi in phase_bounds(profile)
+        ]
+        duration_s = int(sum(d for _, d in profile))
+        discard_first_s = 0.0
+        arrivals = sum(1 for line in trace_file.read_text(encoding="utf-8").splitlines()[1:] if line)
+        trace_info = {
+            "file": trace_file.name,
+            "sha256": _sha256(trace_file),
+            "arrivals": arrivals,
+            "profile": profile_path.name,
+            "phases": phases,
+        }
 
     # 1. warm-up (its own power phase so the measurement window is clean)
     power_warm = _PowerThread(run_dir / "power-warmup.csv", "warmup").start()
@@ -391,10 +467,29 @@ def run_stage(
     except Exception:
         pass
     host_before = _host_state()
+    shim_scraper = (
+        ShimScraper(shim_stats_url, run_dir / "shim.csv", interval_s=5.0).start()
+        if shim_stats_url
+        else None
+    )
+    shim_cpu_before = proc_cpu_s(shim_pid)
+    offset_before = clock_offset_s()
 
     # 3. inference-perf
     report_dir = run_dir / "ipf"
-    if kind == "open_loop":
+    if kind == "trace":
+        assert trace_file is not None and trace_info is not None
+        cfg = trace_replay_config(
+            model=model,
+            base_url=base_url,
+            report_dir=str(report_dir),
+            trace_file=str(trace_file),
+            duration_s=duration_s,
+            mean_rate_rps=trace_info["arrivals"] / duration_s,
+            seed=seed,
+            workers=workers,
+        )
+    elif kind == "open_loop":
         assert rate_rps is not None
         cfg = open_loop_config(
             model=model,
@@ -432,6 +527,10 @@ def run_stage(
         proc.stdout + "\n--- stderr ---\n" + proc.stderr, encoding="utf-8"
     )
 
+    offset_after = clock_offset_s()
+    shim_cpu_after = proc_cpu_s(shim_pid)
+    if shim_scraper is not None:
+        shim_scraper.stop()
     scraper.stop()
     power.stop()
     metrics_after = None
@@ -483,14 +582,46 @@ def run_stage(
         },
         "platform": platform.platform(),
     }
+    if trace_info is not None:
+        cpu = (
+            round(shim_cpu_after - shim_cpu_before, 2)
+            if shim_cpu_before is not None and shim_cpu_after is not None
+            else None
+        )
+        result.update(
+            {
+                "policy": policy,
+                "trace": trace_info,
+                "clock_offset_s": {"before": offset_before, "after": offset_after},
+                "shim_cpu_s": cpu,
+                "shim_rows": shim_scraper.rows if shim_scraper else 0,
+                "shim_final": shim_scraper.last if shim_scraper else None,
+            }
+        )
     if warm:
         (run_dir / "warmup-ttft.json").write_text(
             json.dumps({"ttft_s": warm.ttft_s, "tpot_s": warm.tpot_s}, indent=0) + "\n",
             encoding="utf-8",
         )
     if per_request.exists():
-        records = adapt_file(per_request)
+        records, origin_monotonic = adapt_file_with_origin(per_request)
         write_records_jsonl(records, run_dir / "records.jsonl")
+        if trace_info is not None:
+            offsets = [offset_before, offset_after]
+            result["records_origin_monotonic_s"] = origin_monotonic
+            # sanity of the clock alignment: the first request leaves a few seconds after launch
+            result["first_request_after_launch_s"] = round(
+                origin_monotonic + sum(offsets) / 2 - t_load_start, 3
+            )
+            result.update(
+                trace_stage_summary(
+                    run_dir,
+                    records,
+                    origin_monotonic_s=origin_monotonic,
+                    clock_offsets=offsets,
+                    phases=trace_info["phases"],
+                )
+            )
         window, window_s = stage_window(
             records, kind=kind, discard_first_s=discard_first_s, duration_s=duration_s
         )

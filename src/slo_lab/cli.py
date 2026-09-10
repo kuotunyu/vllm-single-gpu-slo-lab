@@ -319,7 +319,7 @@ def run_stage_cmd(
     run_dir: Annotated[Path, typer.Option(help="Output directory for this stage.")],
     cell: Annotated[str, typer.Option(help="Engine cell label, e.g. fp8.")],
     model: Annotated[str, typer.Option(help="Model id served by vLLM.")],
-    kind: Annotated[str, typer.Option(help="open_loop | closed_loop")],
+    kind: Annotated[str, typer.Option(help="open_loop | closed_loop | trace")],
     base_url: str = "http://127.0.0.1:8013",
     metrics_url: str = "http://127.0.0.1:8013/metrics",
     seed: int = 1,
@@ -333,6 +333,19 @@ def run_stage_cmd(
     workers: int = 4,
     engine_flags: Annotated[
         str | None, typer.Option(help="JSON of the server flags, copied into the manifest.")
+    ] = None,
+    trace_file: Annotated[
+        Path | None, typer.Option(help="trace: Azure-format arrivals from make-trace.")
+    ] = None,
+    profile: Annotated[
+        Path | None, typer.Option(help="trace: the traffic YAML the trace was made from.")
+    ] = None,
+    policy: Annotated[str | None, typer.Option(help="trace: admission policy label.")] = None,
+    shim_stats_url: Annotated[
+        str | None, typer.Option(help="trace: the shim's /_shim/stats URL, scraped to shim.csv.")
+    ] = None,
+    shim_pid: Annotated[
+        int | None, typer.Option(help="trace: shim process id, for its CPU time.")
     ] = None,
 ) -> None:
     """Warm up, sample power and /metrics, run inference-perf, adapt records, write manifest.json."""
@@ -357,7 +370,40 @@ def run_stage_cmd(
         inference_perf_bin=inference_perf_bin,
         engine_flags=_json.loads(engine_flags) if engine_flags else None,
         workers=workers,
+        trace_file=trace_file,
+        profile_path=profile,
+        policy=policy,
+        shim_stats_url=shim_stats_url,
+        shim_pid=shim_pid,
     )
+    if kind == "trace":
+        phases = result.get("phase_summaries") or {}
+        typer.echo(
+            _json.dumps(
+                {
+                    "cell": cell,
+                    "policy": policy,
+                    "seed": seed,
+                    "records": result.get("records"),
+                    "arrivals": (result.get("trace") or {}).get("arrivals"),
+                    "first_request_after_launch_s": result.get("first_request_after_launch_s"),
+                    "time_to_recover_s": result.get("time_to_recover_s"),
+                    "time_to_recover_attainment_s": result.get("time_to_recover_attainment_s"),
+                    "shim_cpu_s": result.get("shim_cpu_s"),
+                    "load_wall_s": result.get("load_wall_s"),
+                    "inference_perf_returncode": result.get("inference_perf_returncode"),
+                    **{
+                        f"{name}_attainment": (p or {}).get("attainment")
+                        for name, p in phases.items()
+                    },
+                    **{
+                        f"{name}_rejection": (p or {}).get("rejection_rate")
+                        for name, p in phases.items()
+                    },
+                }
+            )
+        )
+        raise typer.Exit(code=0 if result.get("records") else 1)
     keys = (
         "cell",
         "kind",
