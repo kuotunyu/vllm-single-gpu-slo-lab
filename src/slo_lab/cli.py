@@ -277,6 +277,43 @@ def shim(
     run(upstream, policy_from_config(cfg), host=host, port=port)
 
 
+@app.command("make-trace")
+def make_trace(
+    rate_ref: Annotated[float, typer.Option(help="r that the profile's multipliers scale (rps).")],
+    seed: Annotated[int, typer.Option(help="Arrival seed; every policy of a seed replays it.")],
+    out: Annotated[Path, typer.Option(help="Azure-format trace CSV for inference-perf.")],
+    profile: Annotated[
+        Path, typer.Option(help="Multistage traffic YAML (stages of rate_multiplier, duration_s).")
+    ] = Path("config/traffic/burst25.yaml"),
+) -> None:
+    """Write a seeded piecewise-Poisson trace for inference-perf trace replay (ADR 0012)."""
+    from slo_lab.harness.trace import burst_arrivals, load_profile, phase_bounds, write_azure_trace
+
+    prof = load_profile(profile)
+    arrivals = burst_arrivals(rate_ref, prof, seed)
+    digest = write_azure_trace(out, arrivals)
+    phases = [
+        {
+            "phase": name,
+            "start_s": lo,
+            "end_s": hi,
+            "rate_rps": round(mult * rate_ref, 4),
+            "arrivals": sum(1 for t in arrivals if lo <= t < hi),
+        }
+        for (name, lo, hi), (mult, _) in zip(phase_bounds(prof), prof, strict=True)
+    ]
+    _echo_json(
+        {
+            "arrivals": len(arrivals),
+            "sha256": digest,
+            "rate_ref": rate_ref,
+            "seed": seed,
+            "duration_s": sum(d for _, d in prof),
+            "phases": phases,
+        }
+    )
+
+
 @app.command("run-stage")
 def run_stage_cmd(
     run_dir: Annotated[Path, typer.Option(help="Output directory for this stage.")],

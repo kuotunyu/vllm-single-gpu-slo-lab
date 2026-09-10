@@ -204,3 +204,19 @@ def test_reproduce_lite_rebuilds_attainment_for_a_run(tmp_path):
     assert "raw/2026-09-03-fp8-native-r1-s0: offered=15" in result.output
     assert "evidence runs with records: 1" in result.output
     assert "tables rebuilt" not in result.output  # no analysis/tables/index.json in this tree
+
+
+def test_make_trace_writes_a_seeded_burst25_trace(tmp_path):
+    out = tmp_path / "trace-seed-1.csv"
+    args = ["make-trace", "--rate-ref", "11.4", "--seed", "1", "--out", str(out)]
+    args += ["--profile", str(REPO / "config" / "traffic" / "burst25.yaml")]
+    result = runner.invoke(app, args)
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.output)
+    lines = out.read_text(encoding="utf-8").splitlines()
+    assert info["arrivals"] == len(lines) - 1
+    assert [p["phase"] for p in info["phases"]] == ["pre", "burst", "recovery"]
+    assert sum(p["arrivals"] for p in info["phases"]) == info["arrivals"]
+    other = [a if a != str(out) else str(tmp_path / "b.csv") for a in args]
+    again = runner.invoke(app, other)
+    assert json.loads(again.output)["sha256"] == info["sha256"]
