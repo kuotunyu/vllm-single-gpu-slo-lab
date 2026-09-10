@@ -45,9 +45,14 @@ def adapt_record(raw: dict[str, Any], *, index: int, origin_s: float) -> Request
     e2e = end - start
     if ttft is not None and e2e < ttft:
         e2e = ttft  # end_time can be recorded a hair before the last chunk timestamp settles
-    output_tokens = resp.get("output_tokens")
-    if output_tokens is None and resp.get("server_usage"):
-        output_tokens = resp["server_usage"].get("completion_tokens")
+    # The server's own count wins. inference-perf's ``output_tokens`` re-tokenizes the returned
+    # text, which does not round-trip: with W3's random-token prompts 25 % of requests counted
+    # 128-131 of their 132 tokens (1.45 % with W2's text prompts), and a request whose model
+    # hit EOS early counts only its visible text, so (e2e - TTFT) / (n - 1) inflated TPOT.
+    usage = resp.get("server_usage") or {}
+    output_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else None
+    if output_tokens is None:
+        output_tokens = resp.get("output_tokens")
     input_tokens = None
     text = req.get("text") if isinstance(req, dict) else None
     if isinstance(text, dict):

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from slo_lab.harness.ipf_adapter import adapt_file, adapt_file_with_origin
 from slo_lab.harness.ipf_config import trace_replay_config
 
@@ -156,3 +158,21 @@ def test_trace_stage_summary_aligns_scraped_queues_with_records(tmp_path: Path) 
     assert out["time_to_recover_s"] == 50.0  # queue empty from 650, TTFT fast from 650
     assert out["waiting_samples"] == 300
     assert proc_cpu_s(None) is None
+
+
+def test_adapter_takes_the_servers_token_count_over_the_retokenized_one() -> None:
+    from slo_lab.harness.ipf_adapter import adapt_record
+
+    chunks = [10.0 + 0.1 + 0.02 * i for i in range(132)]
+    raw = _raw(10.0, chunks)
+    raw["info"]["response_metrics"]["output_tokens"] = 128  # client re-tokenized the text
+    raw["info"]["response_metrics"]["server_usage"] = {
+        "prompt_tokens": 108,
+        "completion_tokens": 132,
+        "total_tokens": 240,
+    }
+    rec = adapt_record(raw, index=0, origin_s=10.0)
+    assert rec.output_tokens == 132
+    assert rec.tpot_s == pytest.approx((rec.e2e_s - rec.ttft_s) / 131)
+    del raw["info"]["response_metrics"]["server_usage"]
+    assert adapt_record(raw, index=0, origin_s=10.0).output_tokens == 128  # fallback
