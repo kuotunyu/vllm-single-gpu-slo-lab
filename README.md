@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 四精度完成（2026-09-11）；admission（W3）、spec-decode 與成本表（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
+> **狀態：W2 四精度完成（2026-09-11）；admission（W3）與 spec-decode（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
 >
 > | 精度 | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | r_sat | 單流 TPOT | 能耗 @ r_SLO | TMMLU+ 全集 | 對 BF16 配對差 |
 > |---|---|---|---|---|---|---|
@@ -13,17 +13,17 @@
 >
 > r_SLO 是 open-loop Poisson（108→132 tokens，每 cell 11–14 個 rate × 3 seeds × 5 min）在凍結規則下（所有 seed ≥ 95%、自最低 rate 連續向上）的值，四個 cell 的膝點都夾到 7–11% 以內。TMMLU+ 全集 19,680 題、同題配對、exact McNemar。FP8 對 BF16：SLO 容量 2.55 倍、每 token 能耗 42%、品質無法區分。4-bit 單流快約 2.5 倍，但飽和吞吐比 FP8 低 27%，品質顯著下降。
 >
-> 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡；admission 策略與 $/M token 要等 W3／W4。
+> 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡；admission 策略要等 W3。4090 不計 $／百萬 token（ADR 0010）。
 
 ## 一句話
 
-在一張 RTX 4090 上，給定 SLO（TTFT p95 ≤ 1 s、TPOT p95 ≤ 50 ms），量出 Qwen3-8B 四種精度 × 三種 admission 策略 × 兩種 decoding 加速在 open-loop Poisson 流量下的容量（rps at SLO）與每百萬 output token 成本（4090 攤提 + 實測電費），n ≥ 3、附 bootstrap CI，並自跑 TMMLU+ 把品質與成本放進同一張表。
+在一張 RTX 4090 上，給定 SLO（TTFT p95 ≤ 1 s、TPOT p95 ≤ 50 ms），量出 Qwen3-8B 四種精度 × 三種 admission 策略 × 兩種 decoding 加速在 open-loop Poisson 流量下的容量（rps at SLO）與每百萬 output token 的實測能耗，n ≥ 3、附 bootstrap CI，並自跑 TMMLU+ 把品質、容量與能耗放進同一張表。
 
 ## 30 秒結論（目標讀者：台灣 LLM／AI infra 用人主管）
 
 *（下面是本專案**要證明**的事；截至 2026-09-11 完成四精度的容量、能耗與 TMMLU+ 全集（W2），admission 與 $/M token 未做，見上方狀態表。）*
 
-這個人把單張 GPU 上的 vLLM 當成一個必須守 SLO 的服務來量，而不是跑一次 throughput 截圖。同一條 Poisson trace、同一組 seed，報出每個精度在 SLO 下的容量與 $/M token；證明 admission control（原生排隊 vs 硬上限 429 vs 有界佇列）在同一張卡上對 SLO attainment、goodput、拒絕率的三維取捨；成本用實測功耗與實測 utilisation 算，並附 utilisation-naive 值的 1/U 警語；量化品質用自跑的 TMMLU+ 而非過期 leaderboard；全部從 raw JSON 一鍵重建，且明寫哪些結論**不能**外推。
+這個人把單張 GPU 上的 vLLM 當成一個必須守 SLO 的服務來量，而不是跑一次 throughput 截圖。同一條 Poisson trace、同一組 seed，報出每個精度在 SLO 下的容量與每百萬 token 能耗；證明 admission control（原生排隊 vs 硬上限 429 vs 有界佇列）在同一張卡上對 SLO attainment、goodput、拒絕率的三維取捨；能耗用實測 GPU 板卡功耗算，不用任何價格假設（ADR 0010）；量化品質用自跑的 TMMLU+ 而非過期 leaderboard；全部從 raw JSON 一鍵重建，且明寫哪些結論**不能**外推。
 
 ## 與 `local-inference-bench-gateway`（LIBG）的分工
 
@@ -35,7 +35,7 @@
 
 | 軸 | 水準 | 主要問題 |
 |---|---|---|
-| 精度 | BF16、FP8、AWQ、GPTQ-Int4（repo id 與授權 W1 核對） | 每精度的 rps at SLO、$/M token、TMMLU+ |
+| 精度 | BF16、FP8、AWQ、GPTQ-Int4（repo id 與授權 W1 核對） | 每精度的 rps at SLO、Wh／百萬 token、TMMLU+ |
 | Admission | (i) vLLM 原生排隊 (ii) 硬上限 C + HTTP 429 (iii) 有界佇列 Q + 逾時 T | 突發流量下 SLO attainment、goodput、拒絕率的取捨 |
 | Decoding 加速 | none、n-gram（8B 與 4B）、EAGLE-3（僅 Qwen3-4B） | 低／高 rate 下 TPOT 與容量的變化 |
 
@@ -49,10 +49,10 @@
 
 1. 不宣稱多 replica、擴縮、生產可靠度（re-plan §4）。
 2. 不宣稱跨 GPU class 推論——只講實際量過的 class：4090，加上 A1 完成後的 L4（或 L40S）；H100／Blackwell 一律不外推（memo §5）。
-3. 不宣稱絕對「比 API 便宜」——只報「在我實際驅動的 utilisation 下」的 $/M token，並列 1/U 警語（memo §3(d)：H100 在 1–10 rps 間 $0.21–$15.25）。
+3. 不宣稱任何 $／百萬 token，也不做「比 API 便宜」的比較——4090 是自有硬體，攤提與電價是假設而非量測，因此不計成本、只報實測能耗（ADR 0010）。
 4. 不宣稱 EAGLE-3 在 Qwen3-8B 上的效果——memo §2 只找到 AngelSlim 的 4B／14B／32B head；EAGLE-3 數字只屬於 Qwen3-4B，8B 只有 n-gram。
 5. 不宣稱 TMMLU+ 分數可與他人 leaderboard 比較——ikala leaderboard README 已 12 個月未更新（memo §4）；只報自跑數字與四個精度間的配對差。
-6. 不宣稱電費為整機功耗——`nvidia-smi` 只量 GPU 板卡功耗，主機其餘功耗未量，電費項為下限（提案）。
+6. 不宣稱能耗為整機功耗——NVML 只量 GPU 板卡功耗，主機其餘功耗未量，Wh 數字是下限。
 7. 不宣稱 WSL2 數字等於裸機 Linux——所有 4090 數字都在 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`（vLLM 自述在 WSL2 有小幅效能退化）與 torch 原生 sampler（`VLLM_USE_FLASHINFER_SAMPLER=0`，WSL2 無 nvcc/ninja 可 JIT）下量測；WSL2 額外開銷未分離量測。A1 的 RunPod L4 是唯一的非 WSL2 對照（ADR 0002）。
 8. 不宣稱 thinking 模式下的延遲——所有延遲量測關閉 Qwen3 thinking（memo §4 的 thinking toggle；提案）。
 
@@ -71,12 +71,13 @@
 |---|---|---|
 | `slo_lab/slo.py` | canonical per-request 記錄、joint SLO 判定、offered-denominator attainment、goodput、拒絕率、r_SLO、SLO 敏感度網格 | 手算小樣本 |
 | `slo_lab/stats.py` | percentile bootstrap CI、paired-difference bootstrap、Wilson interval | 手算值 |
-| `slo_lab/cost.py` | 規格 §6 公式、`config/cost.yaml` 讀取、power.csv 梯形積分與 idle 基線、實測值 + utilisation-naive 值 + 1/U 警語、Wh/M token | 手算值 |
+| `slo_lab/cost.py` | 規格 §6 公式、`config/cost.yaml` 讀取、power.csv 梯形積分與 idle 基線、實測值 + utilisation-naive 值 + 1/U 警語、Wh/M token；4090 不計 $，保留給租用 GPU（ADR 0010） | 手算值 |
 | `slo_lab/admission/` | 三策略（passthrough／hard cap + 429／bounded FIFO queue + timeout）與 aiohttp reverse-proxy shim | 純 asyncio 語意 + loopback fake upstream |
 | `slo_lab/power/sampler.py` | 1 s NVML 取樣寫 CSV；無 NVML 時明確報錯 | 注入 fake reader／clock |
 | `slo_lab/quiet_gpu.py` | 拒跑判定 + NVML／nvidia-smi 快照 JSON | 注入 fake process 清單 |
-| `slo_lab/redact.py` + `scripts/redact.py` | 去敏與 `make audit-secrets` 掃描（IP、私鑰、SSH 公鑰、RunPod key／host、HF token、email） | 動態組字串 + 掃描本 repo |
-| `config/` | cost（placeholder，標 owner input）、engine 五 cell + common、admission 三策略、traffic 四份（含 `burst25` 與保留的 `cloud_2p5x`）、specdec 三份 | YAML 解析與內容 |
+| `slo_lab/redact.py` + `scripts/redact.py` | 去敏與 `make audit-secrets` 掃描（IP、私鑰、SSH 公鑰、RunPod key／host、HF token、email），含 gzip 檔與大檔（ADR 0011） | 動態組字串 + 掃描本 repo |
+| `scripts/compress_evidence.py` | 逐筆紀錄與 server log 以決定性 gzip 提交，讀取端以 `open_evidence_text` 透明解壓（ADR 0011） | 無損、決定性、壓縮前後讀出相同 |
+| `config/` | cost（placeholder；4090 不使用，ADR 0010）、engine 五 cell + common、admission 三策略、traffic 四份（含 `burst25` 與保留的 `cloud_2p5x`）、specdec 三份 | YAML 解析與內容 |
 | `evidence/metrics-names.txt` | 96 個 vLLM metric 名，2026-09-09 由 live `/metrics` 凍結 | — |
 | `slo_lab/tmmluplus.py` + `scripts/tmmluplus_eval.py` | TMMLU+ 分層不重疊切片（3 × 200，seed 20260908，SHA-256 凍結於 `eval/tmmluplus/`）與離線評分（greedy、`/no_think`、Wilson CI） | 合成 CSV：不重疊、比例、決定性、雜湊 |
 | `evidence/raw/w1/` | W1 驗證證據：五 cell 載入矩陣、`vllm bench serve` 與 inference-perf smoke、shim 開銷四回合、TMMLU+ 20 題 dry run（ADR 0004、0005） | — |
@@ -95,9 +96,8 @@
 ### 還沒有
 
 - W3 admission 三策略在 burst trace 下的量測；W4 spec-decode 兩個 cell（n-gram、EAGLE-3）。
-- 成本表（`config/cost.yaml` 仍是 placeholder；Wh 已有、$ 未算）、圖、model card；ledger 只有表頭。
+- 圖、model card；ledger 只有表頭。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
-- `config/cost.yaml` 的 owner 真實數值與來源（目前為標記 placeholder；`slo-lab cost` 會印警語）。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
 - A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。
 
@@ -151,7 +151,7 @@ uv run slo-lab reproduce-lite
 
 ## 里程碑
 
-W0 骨架（本 commit）→ W1 驗證清單 10 項與基線 → W2 四精度掃描與 TMMLU+ 切片 → W3 admission trace → W4 spec-decode、成本表、A1／A3 → W5 補 n、敏感度、claims audit → W6 誠實寫作與發佈前檢查。細節見設計規格與 `docs/decisions/`。
+W0 骨架（本 commit）→ W1 驗證清單 10 項與基線 → W2 四精度掃描與 TMMLU+ 切片 → W3 admission trace → W4 spec-decode、A1（付費前先問）→ W5 補 n、敏感度、claims audit → W6 誠實寫作與發佈前檢查。細節見設計規格與 `docs/decisions/`。
 
 ## 授權
 
