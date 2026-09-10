@@ -441,6 +441,23 @@ Slips: each quarantined stage costs 6–12 min; a paging incident that forces a 
 2. **GPTQ closed-loop c = 1, 2, 4, 8 re-run** (~12 min). Those four stages come from the 04:18 server session that the readiness bug interrupted; the rest of the cell runs in the 09:24 session, which profiled a different KV cache size (98,464 vs 91,152 tokens). The difference does not bind at any grid point, but one server session per cell is the protocol every other cell follows.
 3. **Open-loop knee refinement** per cell via `scripts/wsl/refine-cell.sh` — AWQ at 0.80/0.85/0.90 × r_sat = 24.12/25.63/27.14 rps (~63 min); the other cells once their knees are known.
 
+**GPTQ-Int4 cell complete 13:58** (`evidence/raw/w2/gptq/`, commit `545b2ca`): r_sat 30.26 rps (plateau), C = 192, r_SLO 22.70 rps, sensitivity 21.18 rps at TPOT 30 ms and 22.70 at 50/100 ms, TMMLU+ full 11,223/19,680 = 0.5703. Against AWQ's 30.15 / 192 / 22.61 / 0.5797 the two 4-bit cells are indistinguishable in serving behaviour, so **bit width sets the serving envelope and the quantisation method does not**.
+
+**Paired quality (commit `9915dba`)**: on the shared 19,680 items GPTQ scores **0.95 points below AWQ, 95% paired CI [-1.50, -0.37] points, exact McNemar p = 0.00077** (1,606 items only AWQ answered, 1,420 only GPTQ). The independent Wilson intervals ([0.573, 0.587] and [0.563, 0.577]) overlap and cannot support that conclusion; the preregistered paired test can. Two implementation notes worth keeping: McNemar has to be summed in log space because `2 ** n` overflows a float once thousands of items are discordant, and it was the real data — not the unit tests — that exposed it.
+
+**BF16, r_sat 11.40 rps, and the KV cache instability (14:47)**:
+
+| cell | model weights | KV cache per session | sessions agree? |
+|---|---|---|---|
+| AWQ | 5.7 GiB | 98,400 tokens × 4 | yes, exactly |
+| GPTQ | 5.7 GiB | 98,464 tokens × 4 | yes, exactly |
+| FP8 | 8.8 GiB | 76,112 tokens (0.82) | — |
+| **BF16** | **15.3 GiB** | **11,168 (1.53 GiB) closed-loop vs 29,696 (4.08 GiB) open-loop** | **no, 2.7×** |
+
+vLLM sizes the KV cache from whatever VRAM is free when it profiles, so on a desktop-shared card the residual after a 15.3 GiB model swings with the compositor. The closed-loop grid is still valid — peak KV usage 86.1 %, **zero preemptions**, waiting queue never left 0, so c = 40 fit — but BF16 is the only cell whose own two sessions disagree, and that is itself the finding: on a 24 GB desktop GPU, BF16 leaves so little headroom that its serving capacity is not reproducible across restarts. r_sat 11.40 rps is 3.6× below FP8 and 2.6× below the 4-bit cells.
+
+Also worth the ADR: **FP8 buys nothing single-stream.** At c = 1 BF16 gives 0.38 rps with probe TPOT 19.3 ms and FP8 gives 0.384 rps at 18.6–19.6 ms, while AWQ/GPTQ give 0.89 rps at 7.8 ms. Halving the weight bytes from BF16 to FP8 does not move batch-1 decode on this card; going to 4-bit does, 2.5×.
+
 ## Self-review
 
 - Spec coverage: closed-loop, open-loop × 3 seeds, TMMLU+ slices + full, contrast cell, cross-check, suspects handling, evidence promotion, tables/reproduce, ADR, README, claims audit, preregistration row, ledger, memory, dashboard, report — each has a task. Cost table and W3/W4 are explicitly out of scope (owner input / later windows).
