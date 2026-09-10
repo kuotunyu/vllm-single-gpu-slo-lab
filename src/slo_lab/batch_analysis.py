@@ -403,6 +403,14 @@ def write_tables(out: Path, closed: dict[str, Any], open_: dict[str, Any]) -> No
 def run(batch_dirs: list[Path], out: Path) -> dict[str, Any]:
     """Load, analyze, write; returns a compact summary for the console."""
     manifests = load_manifests(batch_dirs)
+    if manifests and all(m.get("kind") == "trace" for m in manifests):
+        # W3 admission traces get their own table (ADR 0012); imported here because
+        # admission_analysis itself builds on this module.
+        from slo_lab.admission_analysis import analyze_trace, write_trace_tables
+
+        result = analyze_trace(manifests)
+        write_trace_tables(out, result)
+        return {"manifests": len(manifests), "trace_rows": len(result["rows"])}
     closed, open_ = analyze(manifests)
     write_tables(out, closed, open_)
     return {
