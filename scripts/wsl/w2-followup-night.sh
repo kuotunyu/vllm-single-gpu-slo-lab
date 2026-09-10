@@ -8,6 +8,11 @@
 set -uo pipefail
 WSL="$(cd "$(dirname "$0")" && pwd)"
 log() { echo "[$(date +%H:%M:%S)] [followup] $*"; }
+FULL="1 2 4 8 16 32 64 96 128 192 256"
+# 0. the planned FP8 max-num-batched-tokens 8192 contrast, skipped at 18:48 by a quiet-gpu reading
+#    taken 20 s after BF16's teardown (fixed in batch.sh with retries)
+log "START fp8-mbt8192 (contrast, open-loop seed 1 only)"
+MAX_BATCHED_TOKENS=8192 OPEN_SEEDS="1" SKIP_TMMLU=1 bash "$WSL/w2-cell-chain.sh" fp8-mbt8192 Qwen/Qwen3-8B-FP8 256 "$FULL"
 log "START fp8 full set"
 bash "$WSL/tmmlu-only.sh" fp8 Qwen/Qwen3-8B-FP8 256
 log "START awq refinement"

@@ -23,8 +23,18 @@ BATCH="$RUN_ROOT/$CELL/seed-$SEED"
 mkdir -p "$BATCH"
 cd "$HOME/vllm-slo-lab"
 pkill -f ".venv/bin/vllm serve" 2>/dev/null; pkill -f "EngineCore" 2>/dev/null; sleep 3
-# quiet-GPU gate before the card is taken (WSL2: memory + utilization criteria)
-"$LABCLI" quiet-gpu --out "$BATCH/quiet_gpu.json" || { echo "QUIET_GPU_REFUSED"; cat "$BATCH/quiet_gpu.json" | head -40; exit 2; }
+# quiet-GPU gate before the card is taken (WSL2: memory + utilization criteria), retried.
+# The previous cell's server keeps the GPU busy for ~30 s after it exits: on 2026-09-10 a
+# single reading 20 s after BF16's teardown (utilization 11 % against the 10 % threshold,
+# samples falling 15 -> 4) skipped the whole 2.5-hour FP8 contrast cell. The threshold is
+# unchanged; only a transient right after a teardown gets time to clear.
+QG_OK=0
+for attempt in 1 2 3 4 5; do
+  if "$LABCLI" quiet-gpu --out "$BATCH/quiet_gpu.json" >/dev/null 2>&1; then QG_OK=1; break; fi
+  echo "quiet-gpu attempt $attempt refused, retrying in 30 s"
+  sleep 30
+done
+[ "$QG_OK" = 1 ] || { echo "QUIET_GPU_REFUSED"; head -40 "$BATCH/quiet_gpu.json"; exit 2; }
 # shellcheck disable=SC2086
 .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port 8013 --max-model-len 4096 --gpu-memory-utilization "$GPU_MEM_UTIL" --max-num-seqs "$MAX_NUM_SEQS" --max-num-batched-tokens "$MAX_BATCHED_TOKENS" $EXTRA > "$BATCH/serve.log" 2>&1 &
 PID=$!

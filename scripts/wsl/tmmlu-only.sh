@@ -21,8 +21,15 @@ for s in 1 2 3; do [ -f "$out/slice-$s.json" ] || need=1; done
 [ -f "$out/full.json" ] || need=1
 if [ "$need" = 0 ]; then log "slices and full set already present"; else
   cd "$HOME/vllm-slo-lab" || exit 1
-  "$LABCLI" quiet-gpu --out "$out/quiet_gpu-full.json" || { log "QUIET_GPU_REFUSED"; exit 2; }
   pkill -f ".venv/bin/vllm serve" 2>/dev/null; pkill -f "EngineCore" 2>/dev/null; sleep 3
+  # retried like batch.sh: a previous server's teardown keeps utilization up for ~30 s
+  QG_OK=0
+  for attempt in 1 2 3 4 5; do
+    if "$LABCLI" quiet-gpu --out "$out/quiet_gpu-full.json" >/dev/null 2>&1; then QG_OK=1; break; fi
+    log "quiet-gpu attempt $attempt refused, retrying in 30 s"
+    sleep 30
+  done
+  [ "$QG_OK" = 1 ] || { log "QUIET_GPU_REFUSED"; exit 2; }
   .venv/bin/vllm serve "$MODEL" --host 127.0.0.1 --port 8013 --max-model-len 4096 \
     --gpu-memory-utilization "$GPU_MEM_UTIL" --max-num-seqs "$MAX_NUM_SEQS" \
     --max-num-batched-tokens 2048 > "$out/serve-full.log" 2>&1 &
