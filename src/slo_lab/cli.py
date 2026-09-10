@@ -421,6 +421,12 @@ def reproduce_lite(
 
         rebuilt = rebuild_from_index(root, index_path)
         typer.echo(f"tables rebuilt from evidence: {', '.join(rebuilt) or '(none)'}")
+
+    from slo_lab.quality import rebuild_paired_tables
+
+    paired = rebuild_paired_tables(root, root / "analysis" / "tables" / "w2-quality-paired")
+    if paired:
+        typer.echo(f"paired quality table rebuilt: {', '.join(paired)} vs baseline")
     if problems:
         for p in problems:
             typer.echo(f"problem: {p}", err=True)

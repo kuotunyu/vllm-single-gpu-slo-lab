@@ -1,0 +1,25 @@
+{
+  "baseline": "awq",
+  "n_boot": 1000,
+  "seed": 0,
+  "rows": [
+    {
+      "a": "awq",
+      "b": "gptq",
+      "n_shared": 19680,
+      "excluded_errors": 0,
+      "a_correct": 11409,
+      "b_correct": 11223,
+      "a_accuracy": 0.5797256097560975,
+      "b_accuracy": 0.5702743902439025,
+      "delta_b_minus_a": -0.009451219512195075,
+      "delta_ci95": [
+        -0.01499364837398376,
+        -0.0036572662601626043
+      ],
+      "discordant_a_only": 1606,
+      "discordant_b_only": 1420,
+      "mcnemar_exact_p": 0.0007681132512236496
+    }
+  ]
+}
