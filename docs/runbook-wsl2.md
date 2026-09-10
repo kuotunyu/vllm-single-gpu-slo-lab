@@ -53,6 +53,21 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w2-nig
 
 **同一批次目錄只保留最後一個伺服器 session 的 `serve.log`／`quiet_gpu.json`。** 在已完成的 seed 目錄再起一個 session（補點、隔離重跑）之前，先確認舊的 log 已經 promote 並提交；補點用 `refine-cell.sh`，它會以 `refine-<第一個倍率>` 為 tag 另存，不覆蓋主量測的 `vllm.log`。隔離重跑尚未分檔（ADR 0009 缺陷 6）。
 
+## W3 admission trace（2026-09-11 起，ADR 0012）
+
+執行計畫：`docs/superpowers/plans/2026-09-11-w3-admission-trace.md`。整晚約 11–12 小時 GPU，一次連續時段；不需要 Docker。
+
+```bash
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w3-dryrun.sh            # CPU-only 全流程演練，約 8 分鐘，不用 GPU
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-logged.sh w3-night.sh  # GPU smoke，然後 FP8、BF16 各 3 seeds
+```
+
+- `w3-night.sh` 先跑 4 分鐘的 GPU smoke（`config/traffic/burst-smoke.yaml`，passthrough 與 bounded_queue），`scripts/wsl/check_w3_smoke.py` 不通過就停在 `SMOKE_FAILED`，不進主要 cell。
+- `w3-trace-chain.sh <cell> <model> <max_num_seqs> <C> <r>`：每個 seed 一個 vLLM session（port 8013），shim 在 8021，三個策略依 Latin square 輪換；`make-trace` 每個 seed 只產生一次，三個策略共用。已有 manifest 的段會跳過，重下同一指令就是續跑。
+- run dir 為 `~/vllm-slo-lab/runs-w3/<cell>/seed-N/trace-<policy>/`，裡面有 `records.jsonl`、`metrics.csv`、`shim.csv`、`manifest.json`（`phase_summaries`、`time_to_recover_s`、`shim_cpu_s`、`first_request_after_launch_s`、`wall_clock_drift_s`）。可疑段在所有 seed 跑完後移到 `runs-w3/quarantine/` 並在新 session 重跑，之後才 promote 到 `evidence/raw/w3/<cell>/trace/seed-N/`。
+- **時鐘**：佇列取樣以 `t_mono` 對齊逐筆紀錄；WSL2 的 wall clock 在一段 2.5 分鐘的測試中漂移約 7 s，不能用 `t_unix` 對齊。
+- **連接埠與行程**：chain 啟動時會 `pkill` 殘留的 vLLM、shim 與假引擎；跑之前確認沒有其他專案在 WSL 裡用 vLLM。
+
 ## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
 
 ```bash

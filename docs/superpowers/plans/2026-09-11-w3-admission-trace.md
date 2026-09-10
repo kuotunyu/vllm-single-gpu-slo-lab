@@ -60,15 +60,15 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 - `write_azure_trace(path, arrivals, *, input_tokens=108, output_tokens=132) -> str` — header + rows `2026-01-01 00:MM:SS.ff,108,132`; returns sha256 of the file.
 - CLI `slo-lab make-trace --rate-ref R --seed S --out PATH [--profile config/traffic/burst25.yaml]` prints `{"arrivals": n, "sha256": ..., "phases": [...]}`.
 
-- [ ] Tests: deterministic for a seed and different across seeds; first arrival 0.0; all times on the 10 ms grid and sorted; counts per phase within 4 σ of `rate × duration`; written file round-trips through inference-perf's own timestamp rule (keep two fractional digits) to the same offsets; header present.
-- [ ] Implement, run `uv run --frozen pytest -q tests/test_trace.py`, commit.
+- [x] Tests: deterministic for a seed and different across seeds; first arrival 0.0; all times on the 10 ms grid and sorted; counts per phase within 4 σ of `rate × duration`; written file round-trips through inference-perf's own timestamp rule (keep two fractional digits) to the same offsets; header present.
+- [x] Implement, run `uv run --frozen pytest -q tests/test_trace.py`, commit.
 
 ### Task A2: Shim connector limit
 
 **Files:** Modify `src/slo_lab/admission/shim.py`; test `tests/test_shim.py`.
 
-- [ ] Test: 150 concurrent requests through `Passthrough` reach a fake upstream that holds each one until 150 are in flight (5 s timeout); fails with the default connector (100).
-- [ ] Implement `aiohttp.TCPConnector(limit=0)` in `_open_session`; tests pass; commit.
+- [x] Test: 150 concurrent requests through `Passthrough` reach a fake upstream that holds each one until 150 are in flight (5 s timeout); fails with the default connector (100).
+- [x] Implement `aiohttp.TCPConnector(limit=0)` in `_open_session`; tests pass; commit.
 
 ### Task A3: Trace-replay config and adapter origin
 
@@ -76,8 +76,8 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 **Interfaces:** `trace_replay_config(*, model, base_url, report_dir, trace_file, duration_s, seed, workers=4, timeout_s=300.0, worker_max_concurrency=4096, worker_max_tcp_connections=4096) -> dict` with `data: {type: random, trace: {file, format: AzurePublicDataset}}` and `load: {type: trace_replay, trace: {...}, stages: [{rate, duration}], interval: 0, ...}`; `adapt_file_with_origin(path) -> tuple[list[RequestRecord], float]`.
 
-- [ ] Tests: config shape; adapter origin equals min `start_time`; `adapt_file` unchanged.
-- [ ] Implement; commit.
+- [x] Tests: config shape; adapter origin equals min `start_time`; `adapt_file` unchanged.
+- [x] Implement; commit.
 
 ### Task A4: Shim scraper and the trace stage
 
@@ -85,8 +85,8 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 **Interfaces:** `ShimScraper(url, out_path, interval_s=5.0, fetch=...)` writes `t_unix,in_flight,waiting,admitted,completed,upstream_errors,rejected_cap_full,rejected_queue_full,rejected_queue_timeout`; `run_stage(..., kind="trace", trace_file=Path, policy=str, shim_stats_url=str|None, shim_pid=int|None)`; manifest adds `policy`, `trace` (`file`, `sha256`, `arrivals`, `phases`), `clock_offset_s` (unix − monotonic, before and after), `records_origin_monotonic_s`, `shim_final`, `shim_cpu_s`, `phase_summaries`, `time_to_recover_s`, `time_to_recover_attainment_s`.
 
-- [ ] Tests: scraper rows from a fake fetch; trace-kind window covers the whole trace with no discard; manifest phase summaries computed from a synthetic record set (uses Task A5 functions).
-- [ ] Implement; commit.
+- [x] Tests: scraper rows from a fake fetch; trace-kind window covers the whole trace with no discard; manifest phase summaries computed from a synthetic record set (uses Task A5 functions).
+- [x] Implement; commit.
 
 ### Task A5: Admission analysis and reproduce wiring
 
@@ -99,8 +99,8 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 - `analyze_trace(manifests) -> dict` rows per (cell, policy, seed) and `per_cell_policy` means with per-seed paired differences vs `passthrough`; `write_trace_tables(out, result)` → `admission.json`, `tables.md`.
 - `batch_analysis.run()` writes admission tables instead of empty closed/open tables when every manifest is a trace stage.
 
-- [ ] Tests: hand-built records (a backlog that clears at a known time) give the expected time-to-recover; never-recovering input gives None; cap-style rejections lower attainment but not TTFT; paired differences computed per seed.
-- [ ] Implement; commit.
+- [x] Tests: hand-built records (a backlog that clears at a known time) give the expected time-to-recover; never-recovering input gives None; cap-style rejections lower attainment but not TTFT; paired differences computed per seed.
+- [x] Implement; commit.
 
 ### Task A6: Drivers, promotion, compression
 
@@ -108,18 +108,18 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 - `w3-trace-chain.sh <cell> <model> <max_num_seqs> <capacity> <rate_ref>`; env `SEEDS` (default `1 2 3`), `PROFILE` (default `config/traffic/burst25.yaml`), `RUN_ROOT` (default `~/vllm-slo-lab/runs-w3`), `PROMOTE` (default 1). Per seed: skip if all three manifests exist; quiet-GPU gate (5 × 30 s); start vLLM; readiness loop identical to `batch.sh`; `make-trace` once; for each policy in the seed's rotated order (seed 1: passthrough, hard_cap, bounded_queue; seed 2: hard_cap, bounded_queue, passthrough; seed 3: bounded_queue, passthrough, hard_cap): wait for vLLM idle (running + waiting = 0, ≤ 600 s), start the shim on 8021, wait for `/_shim/stats`, `run-stage --kind trace` (warm-up 100 for the session's first stage, else 20), stop the shim; stop vLLM; promote to `evidence/raw/w3/<cell>/trace/seed-N` with tag-free session files.
 - `w3-night.sh`: smoke (FP8, mini profile 60/60/120 s, passthrough then bounded_queue, `RUN_ROOT=runs-w3-smoke`, promoted to `evidence/raw/w3/smoke/`), then FP8 chain, then BF16 chain, then `analyze-batch` into `analysis/tables/w3-*`.
-- [ ] `bash -n` both; DRY mode prints the plan; commit.
+- [x] `bash -n` both; DRY mode prints the plan; commit.
 
 ### Task A7: CPU dry run in WSL against a fake vLLM
 
 **Files:** Create `scripts/wsl/fake_vllm.py` (aiohttp: `/v1/models`, streaming `/v1/completions` with 132 chunks at 2 ms, at most N in service with FIFO waiting, `/metrics` exposing `vllm:num_requests_running` / `vllm:num_requests_waiting`), `scripts/wsl/w3-dryrun.sh`.
 
-- [ ] Run a 30 s mini trace at 40 rps through `passthrough` and `hard_cap` (C = 8) against the fake; check: request count = trace rows, 429s become `rejected_429` records, `shim.csv` and `metrics.csv` have rows, phases and time-to-recover present in the manifest, promotion writes gz and `home paths clean`.
-- [ ] Fix whatever breaks; commit.
+- [x] Run a 30 s mini trace at 40 rps through `passthrough` and `hard_cap` (C = 8) against the fake; check: request count = trace rows, 429s become `rejected_429` records, `shim.csv` and `metrics.csv` have rows, phases and time-to-recover present in the manifest, promotion writes gz and `home paths clean`.
+- [x] Fix whatever breaks; commit.
 
 ### Task A8: ADR 0012, preregistration row, docs
 
-- [ ] `docs/decisions/0012-w3-protocol.md` with every choice above; preregistration row "W3 協定（ADR 0012）"; runbook W3 section; commit. Full suite, ruff, audit, reproduce determinism.
+- [x] `docs/decisions/0012-w3-protocol.md` with every choice above; preregistration row "W3 協定（ADR 0012）"; runbook W3 section; commit. Full suite, ruff, audit, reproduce determinism.
 
 ## Part B: overnight run (GPU window, 2026-09-11 night)
 
@@ -158,6 +158,8 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 | time | event |
 |---|---|
+| 09-11 afternoon | Part A done (commits `0ca22ae`..`4c29da1`, ADR 0012). Findings before any data: inference-perf multistage stages drain between stages, so W3 uses trace replay; the shim's upstream pool was capped at 100 connections (fixed); the WSL2 wall clock drifted ~7 s per 2.5-min dry-run stage, so queues are aligned on `t_mono`. |
+| 09-11 afternoon | CPU dry run against `fake_vllm.py`: records = trace rows for all three policies; 530 (hard_cap) and 376 (bounded_queue) rejections recorded as `rejected_429`; first request 2.8–19 s after launch; promotion gzip, home paths clean; admission table rebuilt from evidence. |
 
 ## Results as they land
 
