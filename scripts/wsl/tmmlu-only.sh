@@ -61,4 +61,5 @@ for f in slice-1.json slice-2.json slice-3.json full.json quiet_gpu-full.json; d
 done
 [ -f "$out/serve-full.log" ] && sed -e "s#$HOME#~#g" "$out/serve-full.log" \
   | "$LABPY" "$REPO/scripts/redact.py" redact - -o "$T/vllm-full.log" 2>/dev/null
+"$LABPY" "$REPO/scripts/compress_evidence.py" "$T"   # vllm*.log -> .gz (ADR 0011)
 log "TMMLU DONE"

@@ -62,7 +62,7 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- env WARMUP=100 MAX_NUM_SEQS=256 RU
   cl:1:90 cl:2:200 cl:4:400 cl:8:780 cl:16:1550 cl:32:2800 cl:64:4700 cl:96:5800 cl:128:6700 cl:192:8000 cl:256:9000
 # open-loop 一點：ol:<rate_rps>:<duration_s>；驅動會先 quiet-gpu，再起 server，逐 stage 呼叫 `slo-lab run-stage`，最後關 server
 bash scripts/wsl/io-sampler.sh <batch dir>          # 同時在背景跑，記 I/O／CPU 壓力
-bash scripts/wsl/promote-w2.sh <batch dir> fp8/closed-loop/seed-1   # 搬進 evidence/raw/w2/（去 home 路徑、redact log、不搬 10+ MB 的 per-request JSON）
+bash scripts/wsl/promote-w2.sh <batch dir> fp8/closed-loop/seed-1   # 搬進 evidence/raw/w2/（去 home 路徑、redact log、不搬 10+ MB 的 per-request JSON；records 與 server log 最後 gzip，ADR 0011）
 uv run python scripts/analyze_batch.py evidence/raw/w2/fp8/closed-loop --out analysis/tables/w2-fp8-closed-loop
 ```
 

@@ -29,7 +29,9 @@ from typing import Any
 from slo_lab.slo import (
     SweepCell,
     SweepRun,
+    evidence_path,
     grid_markdown,
+    open_evidence_text,
     r_slo,
     read_records_jsonl,
     sensitivity_grid,
@@ -119,10 +121,10 @@ def served_rps(records_path: Path, *, discard_first_s: float, window_end_s: floa
     Closed-loop stages do not need this: a new request is only offered when one completes, so
     offered and served rates coincide by construction.
     """
-    if not records_path.exists() or window_end_s <= discard_first_s:
+    if evidence_path(records_path) is None or window_end_s <= discard_first_s:
         return None
     served = 0
-    with records_path.open(encoding="utf-8") as handle:
+    with open_evidence_text(records_path) as handle:
         for line in handle:
             if not line.strip():
                 continue
@@ -179,7 +181,7 @@ def _sensitivity(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
         if r["suspect"] or not r.get("_dir"):
             continue
         records_path = Path(r["_dir"]) / "records.jsonl"
-        if not records_path.exists():
+        if evidence_path(records_path) is None:
             continue
         runs.append(
             SweepRun(

@@ -7,7 +7,8 @@
 # the source, so it is always a superset and keeps its name.
 # Copies the digest-bearing small files; drops the 10+ MB per_request_lifecycle_metrics.json
 # (records.jsonl is the canonical form and manifest.json carries its sha256). Home path -> ~,
-# serve.log passes through scripts/redact.py as vllm.log.
+# serve.log passes through scripts/redact.py as vllm.log; records.jsonl and vllm*.log are then
+# gzipped by scripts/compress_evidence.py (ADR 0011).
 set -euo pipefail
 SRC="$1"; REL="$2"; TAG="${3:-}"
 SFX=""; [ -n "$TAG" ] && SFX="-$TAG"
@@ -33,4 +34,9 @@ for stage in "$SRC"/*/; do
   done
 done
 echo "promoted -> evidence/raw/w2/$REL"; du -sh "$DEST"; find "$DEST" -type f | wc -l
-grep -rl "/home/" "$DEST" && echo "WARNING: home path remains" || echo "home paths clean"
+"$PY" "$REPO/scripts/compress_evidence.py" "$DEST"   # records.jsonl, vllm*.log -> .gz (ADR 0011)
+if grep -rl "/home/" "$DEST" || find "$DEST" -name "*.gz" -exec zgrep -l "/home/" {} +; then
+  echo "WARNING: home path remains"
+else
+  echo "home paths clean"
+fi

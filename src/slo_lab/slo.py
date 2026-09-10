@@ -23,10 +23,12 @@ inference-perf raw JSON is W1 work and does not exist yet.
 
 from __future__ import annotations
 
+import gzip
 import json
 from collections.abc import Iterable, Sequence
 from enum import StrEnum
 from pathlib import Path
+from typing import IO
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -266,10 +268,36 @@ def grid_markdown(grid: dict[tuple[float, float], float | None], unit: str = "re
     return "\n".join([header, sep, *rows])
 
 
+def evidence_path(path: Path) -> Path | None:
+    """The file on disk for a logical evidence path: ``path`` itself, else ``<path>.gz``.
+
+    Committed evidence stores bulky text (per-request records, server logs) gzip-compressed
+    (ADR 0011) while the harness writes plain files, so readers name the logical file and never
+    care which form is on disk. Returns None when neither exists.
+    """
+    if path.exists():
+        return path
+    compressed = path.with_name(path.name + ".gz")
+    return compressed if compressed.exists() else None
+
+
+def open_evidence_text(path: Path) -> IO[str]:
+    """Open a logical evidence text file for reading, transparently decompressing ``.gz``."""
+    actual = evidence_path(path)
+    if actual is None:
+        raise FileNotFoundError(path)
+    if actual.suffix == ".gz":
+        return gzip.open(actual, "rt", encoding="utf-8")
+    return actual.open(encoding="utf-8")
+
+
 def read_records_jsonl(path: Path) -> list[RequestRecord]:
-    """Load canonical per-request records (one JSON object per line; blank lines ignored)."""
+    """Load canonical per-request records (one JSON object per line; blank lines ignored).
+
+    ``path`` may name ``records.jsonl`` even when only ``records.jsonl.gz`` is committed.
+    """
     out: list[RequestRecord] = []
-    with path.open(encoding="utf-8") as fh:
+    with open_evidence_text(path) as fh:
         for line in fh:
             line = line.strip()
             if line:

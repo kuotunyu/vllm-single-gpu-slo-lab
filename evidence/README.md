@@ -7,15 +7,15 @@
 | 檔案 | 內容 | 狀態 |
 |---|---|---|
 | `manifest.json` | vLLM 版本、模型 revision、旗標全文、GPU／driver／CUDA／WSL2 kernel、seed、trace、時間窗 | W1 定案欄位 |
-| `records.jsonl` | 本 package 的 canonical per-request 記錄（`slo_lab.slo.RequestRecord`）；由 inference-perf raw JSON 轉出（adapter 為 W1 工作） | 格式已定，adapter 未寫 |
+| `records.jsonl.gz` | 本 package 的 canonical per-request 記錄（`slo_lab.slo.RequestRecord`），由 inference-perf raw JSON 轉出；以決定性 gzip 提交，`open_evidence_text` 透明讀取（ADR 0011） | 已定 |
 | `inference-perf/*.json` | loadgen 原始輸出 | W1 |
 | `power.csv` | `slo-lab power-sample` 的 1 s NVML 取樣（idle／warmup／measure 三段） | 格式已定 |
 | `quiet_gpu.json` | `slo-lab quiet-gpu` 快照：NVML 裝置狀態、compute process 清單、best-effort `nvidia-smi` 全文 | 格式已定 |
 | `metrics/*.prom` | `/metrics` scrape（名稱見 `metrics-names.txt`） | W1 |
-| `vllm.log` | 去敏後的 server log（`scripts/redact.py redact`） | W1 |
+| `vllm.log.gz` | 去敏後的 server log（`scripts/redact.py redact`），gzip 提交；同目錄之後的 session 帶 tag，例如 `vllm-refine-0.80.log.gz` | 已定 |
 
 排除：權重、`VLLM_CACHE_ROOT`、`.env`、SSH 金鑰、未去敏 log、任何含 IP／pod id／hostname 的原始輸出。`make audit-secrets` 在 CI 與 pre-commit 掃描。
 
 目前狀態（2026-09-09）：`raw/w1/` 為驗證證據；`raw/w2/fp8/closed-loop-exploratory/seed-1/` 與 `raw/w2/fp8/closed-loop/seed-1/` 為 W2 第一步的兩次 closed-loop 掃描（每 stage 一個目錄：`manifest.json`、`records.jsonl`、`power.csv`／`power-warmup.csv`、`metrics.csv`、`warmup-ttft.json`、`inference-perf.yaml`／`.log`、`ipf/{config,summary,stage_0}`；批次層 `quiet_gpu.json`、`vllm.log`、`io-pressure.log`）。10+ MB 的 `per_request_lifecycle_metrics.json` 不提交，manifest 記其 sha256，`records.jsonl` 是由它轉出的 canonical 形式。正式掃描 c = 1–96 的 stage 被桌面 VRAM 分頁污染，保留但由分析器標記排除（ADR 0006／0007）。之後加入：`closed-loop-rerun-0.90-paging/`（分頁證據）、`closed-loop-v3/`（0.82，全乾淨）、`open-loop/seed-{1,2,3}/`（11 rates）、`tmmluplus/`（三切片逐題輸出）、`win-vram-2026-09-09.log`（Windows 端 VRAM 取樣）。`analysis/tables/index.json` 列出每張表對應的證據目錄，`make reproduce` 逐一重建。
 
-W2 結案（2026-09-11）加入：`raw/w2/{awq,gptq,bf16}/`（每 cell `closed-loop/seed-1/`、`open-loop/seed-{1,2,3}/`、`tmmluplus/`）、`raw/w2/fp8-mbt8192/`（`--max-num-batched-tokens` 8192 對照組）、`raw/w2/fp8/crosscheck/`（`vllm bench serve` 的純量摘要；生成文字不提交，只記原檔 sha256）、`raw/w2/fp8/tmmluplus/full.json`（TMMLU+ 全集）、`raw/w2/win-vram-2026-09-10.log`（W2 全程的 Windows 端 VRAM 取樣）。批次層的 log 以伺服器 session 為單位：主量測是 `vllm.log`／`quiet_gpu.json`，同一目錄之後的 session（膝點補點）帶 tag，例如 `vllm-refine-0.80.log`、`quiet_gpu-refine-0.80.json`；`io-pressure.log` 是整個目錄的連續紀錄。有三個 session 的 server log 在提交前就被覆蓋，清單見 ADR 0009 缺陷 6。
+W2 結案（2026-09-11）加入：`raw/w2/{awq,gptq,bf16}/`（每 cell `closed-loop/seed-1/`、`open-loop/seed-{1,2,3}/`、`tmmluplus/`）、`raw/w2/fp8-mbt8192/`（`--max-num-batched-tokens` 8192 對照組）、`raw/w2/fp8/crosscheck/`（`vllm bench serve` 的純量摘要；生成文字不提交，只記原檔 sha256）、`raw/w2/fp8/tmmluplus/full.json`（TMMLU+ 全集）、`raw/w2/win-vram-2026-09-10.log`（W2 全程的 Windows 端 VRAM 取樣）。批次層的 log 以伺服器 session 為單位：主量測是 `vllm.log.gz`／`quiet_gpu.json`，同一目錄之後的 session（膝點補點）帶 tag，例如 `vllm-refine-0.80.log.gz`、`quiet_gpu-refine-0.80.json`；`io-pressure.log` 是整個目錄的連續紀錄。有三個 session 的 server log 在提交前就被覆蓋，清單見 ADR 0009 缺陷 6。

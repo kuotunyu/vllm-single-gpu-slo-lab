@@ -21,6 +21,7 @@ from slo_lab.slo import (
     Slo,
     SweepCell,
     SweepRun,
+    evidence_path,
     filter_window,
     grid_markdown,
     r_slo,
@@ -393,7 +394,10 @@ def reproduce_lite(
         base = root / "evidence" / area
         if not base.exists():
             continue
-        for records in sorted(base.rglob("records.jsonl")):
+        # Committed records may be gzip-compressed (ADR 0011); name each stage by its logical
+        # records.jsonl so plain and compressed copies of the same stage are counted once.
+        logical = {p.with_name("records.jsonl") for p in base.rglob("records.jsonl*")}
+        for records in sorted(p for p in logical if evidence_path(p) is not None):
             n_runs += 1
             recs = filter_window(read_records_jsonl(records), 60.0)
             if not recs:

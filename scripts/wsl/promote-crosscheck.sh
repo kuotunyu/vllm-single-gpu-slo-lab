@@ -44,4 +44,5 @@ PY
 [ -f "$SRC/quiet_gpu.json" ] && sed -e "s#$HOME#~#g" "$SRC/quiet_gpu.json" > "$DST/quiet_gpu.json"
 [ -f "$SRC/serve.log" ] && sed -e "s#$HOME#~#g" "$SRC/serve.log" | "$PY" "$REPO/scripts/redact.py" redact - -o "$DST/vllm.log" 2>/dev/null
 du -sh "$DST"
-if grep -rl "/home/" "$DST" >/dev/null 2>&1; then echo "WARNING: /home/ still present"; grep -rl "/home/" "$DST"; else echo "no /home/ strings"; fi
+"$PY" "$REPO/scripts/compress_evidence.py" "$DST"   # vllm.log -> vllm.log.gz (ADR 0011)
+if grep -rl "/home/" "$DST" || find "$DST" -name "*.gz" -exec zgrep -l "/home/" {} +; then echo "WARNING: /home/ still present"; else echo "no /home/ strings"; fi

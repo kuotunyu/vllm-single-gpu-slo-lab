@@ -139,5 +139,6 @@ if [ "${DRY:-0}" = 1 ]; then echo "DRY: promote $CELL"; else
     [ -f "$ROOT/tmmluplus/$CELL/$f" ] && sed -e "s#$HOME#~#g" "$ROOT/tmmluplus/$CELL/$f" > "$T/$f"
   done
   [ -f "$ROOT/tmmluplus/$CELL/serve.log" ] && sed -e "s#$HOME#~#g" "$ROOT/tmmluplus/$CELL/serve.log" | "$LABPY" "$REPO/scripts/redact.py" redact - -o "$T/vllm.log" 2>/dev/null
+  "$LABPY" "$REPO/scripts/compress_evidence.py" "$T"   # vllm.log -> vllm.log.gz (ADR 0011)
 fi
 log "CELL DONE"
