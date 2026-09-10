@@ -439,7 +439,9 @@ def run_stage(
         ]
         duration_s = int(sum(d for _, d in profile))
         discard_first_s = 0.0
-        arrivals = sum(1 for line in trace_file.read_text(encoding="utf-8").splitlines()[1:] if line)
+        arrivals = sum(
+            1 for line in trace_file.read_text(encoding="utf-8").splitlines()[1:] if line
+        )
         trace_info = {
             "file": trace_file.name,
             "sha256": _sha256(trace_file),

@@ -196,7 +196,9 @@ def stage_metrics(
     by_name = {p["phase"]: p for p in phases}
     out: dict[str, Any] = {"all": phase_summary(records, 0.0, trace_end)}
     for p in phases:
-        start = float(p["start_s"]) + (PRE_DISCARD_S if p["phase"] == "pre" else 0.0)
+        start = float(p["start_s"])
+        if p["phase"] == "pre":  # 60 s like W2; half the phase for a short smoke profile
+            start += min(PRE_DISCARD_S, (float(p["end_s"]) - start) / 2)
         out[p["phase"]] = phase_summary(records, start, float(p["end_s"]))
     burst_end = float(by_name["burst"]["end_s"]) if "burst" in by_name else None
     ttr = ttr_att = None

@@ -87,3 +87,20 @@ def test_readers_see_the_same_records_plain_or_compressed(tmp_path):
 def test_main_reports_missing_directory(tmp_path, capsys):
     assert compress_evidence.main([str(tmp_path / "absent")]) == 2
     assert "not found" in capsys.readouterr().err
+
+
+def test_w3_trace_files_are_compressed_but_their_json_summary_is_not(tmp_path):
+    seed = tmp_path / "seed-1"
+    seed.mkdir()
+    (seed / "trace-seed-1.csv").write_text(
+        "TIMESTAMP,ContextTokens,GeneratedTokens\n", encoding="utf-8"
+    )
+    (seed / "trace-seed-1.json").write_text("{}\n", encoding="utf-8")
+    (seed / "shim.csv").write_text("t_unix,in_flight\n", encoding="utf-8")
+    files, _, _ = compress_evidence.compress_tree([tmp_path])
+    assert files == 1
+    assert sorted(p.name for p in seed.iterdir()) == [
+        "shim.csv",
+        "trace-seed-1.csv.gz",
+        "trace-seed-1.json",
+    ]

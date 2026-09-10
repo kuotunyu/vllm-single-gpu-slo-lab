@@ -2,7 +2,8 @@
 
     python scripts/compress_evidence.py [DIR ...]        # default: evidence/raw
 
-Compresses every ``records.jsonl`` and every server log (``vllm.log``, ``vllm-<tag>.log``) under
+Compresses every ``records.jsonl``, every server log (``vllm.log``, ``vllm-<tag>.log``) and every
+W3 arrival trace (``trace-seed-N.csv``) under
 the given directories to ``<name>.gz``, verifies the round trip byte for byte, and only then
 removes the plain file. Output is deterministic (level 9, mtime 0, no stored file name), so the
 same input always produces the same bytes and re-running changes nothing. A plain file next to an
@@ -26,6 +27,8 @@ LEVEL = 9
 def is_target(path: Path) -> bool:
     name = path.name
     if name == "records.jsonl":
+        return True
+    if name.startswith("trace-seed-") and name.endswith(".csv"):
         return True
     return name.startswith("vllm") and name.endswith(".log")
 

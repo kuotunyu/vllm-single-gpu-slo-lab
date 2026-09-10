@@ -1,0 +1,20 @@
+# Four-minute version of burst25 for the GPU smoke test that opens the W3 night (ADR 0012).
+# Same shape and multipliers, shorter phases; never used for a reported number. It proves the
+# whole path on the real engine before the 11-hour chain: server, shim, trace replay, 429
+# records, /metrics and /_shim/stats scraping, clock alignment, manifest phase summaries.
+name: burst-smoke
+status: smoke                 # not preregistered; results go to evidence/raw/w3/fp8-smoke only
+headline: false
+kind: open_loop_multistage
+arrival: poisson
+rate_reference: r_sat
+stages:
+  - {rate_multiplier: 0.5, duration_s: 60}
+  - {rate_multiplier: 1.5, duration_s: 60}    # burst
+  - {rate_multiplier: 0.5, duration_s: 120}   # recovery
+prompt:
+  input_tokens: 108
+  output_tokens: 132
+  ignore_eos: true
+  thinking: false
+client_timeout_s: 300

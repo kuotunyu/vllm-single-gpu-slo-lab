@@ -14,18 +14,21 @@ SRC="$1"; REL="$2"; TAG="${3:-}"
 SFX=""; [ -n "$TAG" ] && SFX="-$TAG"
 REPO="/mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab"
 PY="$HOME/vllm-slo-lab/.venv-slolab/bin/python"
-DEST="$REPO/evidence/raw/w2/$REL"
+DEST="$REPO/evidence/raw/${EVIDENCE_WEEK:-w2}/$REL"   # EVIDENCE_WEEK=w3 for the admission traces
 mkdir -p "$DEST"
 norm() { sed -e "s#$HOME#~#g" "$1" > "$2"; }
 [ -f "$SRC/quiet_gpu.json" ] && norm "$SRC/quiet_gpu.json" "$DEST/quiet_gpu$SFX.json"
 [ -f "$SRC/io-pressure.log" ] && norm "$SRC/io-pressure.log" "$DEST/io-pressure.log"
+for f in "$SRC"/trace-seed-*.csv "$SRC"/trace-seed-*.json; do   # W3: the replayed arrivals
+  [ -f "$f" ] && norm "$f" "$DEST/$(basename "$f")"
+done
 if [ -f "$SRC/serve.log" ]; then
   sed -e "s#$HOME#~#g" "$SRC/serve.log" | "$PY" "$REPO/scripts/redact.py" redact - -o "$DEST/vllm$SFX.log"
 fi
 for stage in "$SRC"/*/; do
   [ -f "$stage/manifest.json" ] || continue
   name=$(basename "$stage"); mkdir -p "$DEST/$name/ipf"
-  for f in manifest.json records.jsonl power.csv power-warmup.csv metrics.csv warmup-ttft.json inference-perf.yaml; do
+  for f in manifest.json records.jsonl power.csv power-warmup.csv metrics.csv shim.csv warmup-ttft.json inference-perf.yaml; do
     [ -f "$stage/$f" ] && norm "$stage/$f" "$DEST/$name/$f"
   done
   [ -f "$stage/inference-perf.log" ] && sed -e "s#$HOME#~#g" "$stage/inference-perf.log" | "$PY" "$REPO/scripts/redact.py" redact - -o "$DEST/$name/inference-perf.log"
@@ -33,7 +36,7 @@ for stage in "$SRC"/*/; do
     [ -f "$stage/ipf/$f" ] && norm "$stage/ipf/$f" "$DEST/$name/ipf/$f"
   done
 done
-echo "promoted -> evidence/raw/w2/$REL"; du -sh "$DEST"; find "$DEST" -type f | wc -l
+echo "promoted -> evidence/raw/${EVIDENCE_WEEK:-w2}/$REL"; du -sh "$DEST"; find "$DEST" -type f | wc -l
 "$PY" "$REPO/scripts/compress_evidence.py" "$DEST"   # records.jsonl, vllm*.log -> .gz (ADR 0011)
 if grep -rl "/home/" "$DEST" || find "$DEST" -name "*.gz" -exec zgrep -l "/home/" {} +; then
   echo "WARNING: home path remains"
