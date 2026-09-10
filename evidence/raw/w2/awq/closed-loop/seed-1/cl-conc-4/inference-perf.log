@@ -1,0 +1,769 @@
+2026-09-10 04:47:13,634 - inference_perf.config.config - INFO - Using configuration from: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/inference-perf.yaml
+2026-09-10 04:47:13,637 - inference_perf.config.config - INFO - Benchmarking with the following config:
+
+api:
+  type: completion
+  streaming: true
+  headers: null
+  slo_unit: null
+  slo_tpot_header: null
+  slo_ttft_header: null
+  response_format: null
+  session_id_header_key: null
+data:
+  type: synthetic
+  path: null
+  corpus_file_path: null
+  input_distribution:
+    min: 108
+    max: 108
+    mean: 108
+    std_dev: 0
+    total_count: 1
+  output_distribution:
+    min: 132
+    max: 132
+    mean: 132
+    std_dev: 0
+    total_count: 1
+  shared_prefix: null
+  multimodal: null
+  trace: null
+  otel_trace_replay: null
+  weka_trace_replay: null
+  conversation_replay: null
+  visionarena: null
+load:
+  type: concurrent
+  interval: 1.0
+  stages:
+  - !!python/object:inference_perf.config.loadgen.config.ConcurrentLoadStage
+    __dict__:
+      num_requests: 400
+      concurrency_level: 4
+      rate: null
+      duration: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      num_requests: null
+      concurrency_level: null
+    __pydantic_private__: null
+  sweep: null
+  num_workers: 4
+  worker_max_concurrency: 4096
+  worker_max_tcp_connections: 2500
+  trace: null
+  circuit_breakers: []
+  request_timeout: 300.0
+  lora_traffic_split: null
+  base_seed: 1
+metrics: null
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+    per_adapter: true
+    per_adapter_stage: false
+    percentiles:
+    - 0.1
+    - 1.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 75.0
+    - 90.0
+    - 95.0
+    - 99.0
+    - 99.9
+    use_server_output_tokens: false
+    max_error_messages: 100
+  prometheus: null
+  session_lifecycle:
+    summary: true
+    per_stage: true
+    per_session: false
+  goodput:
+    constraints:
+      ttft: 1.0
+      tpot: 0.05
+storage:
+  local_storage:
+    path: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf
+    report_file_prefix: null
+  google_cloud_storage: null
+  simple_storage_service: null
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-8B-AWQ
+  base_url: http://127.0.0.1:8013
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-8B-AWQ
+circuit_breakers: null
+
+
+2026-09-10 04:47:13,638 - inference_perf.client.filestorage.local - INFO - Report files will be stored at: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf
+2026-09-10 04:47:14,132 - inference_perf.datagen.synthetic_datagen - INFO - Loaded prompt corpus from: ~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/assets/shakespeare.txt (5020475 chars)
+2026-09-10 04:47:17,129 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run started
+2026-09-10 04:47:17,138 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 1 prompts (worker pid=3566)
+2026-09-10 04:47:17,141 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 1 prompts (worker pid=3561)
+2026-09-10 04:47:17,142 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 1 prompts (worker pid=3560)
+2026-09-10 04:47:17,143 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 1 prompts (worker pid=3562)
+2026-09-10 04:47:27,165 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 9 prompts (worker pid=3566)
+2026-09-10 04:47:27,172 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 9 prompts (worker pid=3562)
+2026-09-10 04:47:27,172 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 9 prompts (worker pid=3561)
+2026-09-10 04:47:27,173 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 9 prompts (worker pid=3560)
+2026-09-10 04:47:36,457 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 19 prompts (worker pid=3566)
+2026-09-10 04:47:36,474 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 19 prompts (worker pid=3560)
+2026-09-10 04:47:36,474 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 19 prompts (worker pid=3562)
+2026-09-10 04:47:36,474 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 19 prompts (worker pid=3561)
+2026-09-10 04:47:46,693 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 28 prompts (worker pid=3566)
+2026-09-10 04:47:46,709 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 28 prompts (worker pid=3562)
+2026-09-10 04:47:46,709 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 28 prompts (worker pid=3561)
+2026-09-10 04:47:46,709 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 28 prompts (worker pid=3560)
+2026-09-10 04:47:54,955 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 37 prompts (worker pid=3566)
+2026-09-10 04:47:54,972 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 37 prompts (worker pid=3562)
+2026-09-10 04:47:54,972 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 37 prompts (worker pid=3561)
+2026-09-10 04:47:54,972 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 37 prompts (worker pid=3560)
+2026-09-10 04:48:05,057 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 46 prompts (worker pid=3566)
+2026-09-10 04:48:05,183 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 46 prompts (worker pid=3561)
+2026-09-10 04:48:05,183 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 46 prompts (worker pid=3562)
+2026-09-10 04:48:05,184 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 46 prompts (worker pid=3560)
+2026-09-10 04:48:15,264 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 55 prompts (worker pid=3566)
+2026-09-10 04:48:15,389 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 55 prompts (worker pid=3561)
+2026-09-10 04:48:15,389 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 55 prompts (worker pid=3562)
+2026-09-10 04:48:15,389 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 55 prompts (worker pid=3560)
+2026-09-10 04:48:23,339 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 64 prompts (worker pid=3566)
+2026-09-10 04:48:23,456 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 64 prompts (worker pid=3561)
+2026-09-10 04:48:23,457 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 64 prompts (worker pid=3562)
+2026-09-10 04:48:23,457 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 64 prompts (worker pid=3560)
+2026-09-10 04:48:33,458 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 73 prompts (worker pid=3566)
+2026-09-10 04:48:33,585 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 73 prompts (worker pid=3560)
+2026-09-10 04:48:33,585 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 73 prompts (worker pid=3562)
+2026-09-10 04:48:33,586 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 73 prompts (worker pid=3561)
+2026-09-10 04:48:43,712 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 82 prompts (worker pid=3566)
+2026-09-10 04:48:43,848 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 82 prompts (worker pid=3561)
+2026-09-10 04:48:43,848 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 82 prompts (worker pid=3562)
+2026-09-10 04:48:43,848 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 82 prompts (worker pid=3560)
+2026-09-10 04:48:51,771 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 91 prompts (worker pid=3566)
+2026-09-10 04:48:51,906 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 91 prompts (worker pid=3560)
+2026-09-10 04:48:51,913 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 91 prompts (worker pid=3562)
+2026-09-10 04:48:51,913 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 91 prompts (worker pid=3561)
+2026-09-10 04:49:01,988 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 100 prompts (worker pid=3566)
+2026-09-10 04:49:01,997 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 100 prompts (worker pid=3561)
+2026-09-10 04:49:02,004 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 100 prompts (worker pid=3562)
+2026-09-10 04:49:02,005 - inference_perf.datagen.synthetic_datagen - INFO - Synthetic datagen progress: materialized 100 prompts (worker pid=3560)
+2026-09-10 04:49:04,016 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run completed
+Overall Progress ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 1/1 0:00:00 0:01:55
+2026-09-10 04:49:05,156 - inference_perf.reportgen.base - INFO - Generating Reports...
+2026-09-10 04:49:07,583 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf/summary_lifecycle_metrics.json
+2026-09-10 04:49:07,583 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf/stage_0_lifecycle_metrics.json
+2026-09-10 04:49:07,790 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf/per_request_lifecycle_metrics.json
+2026-09-10 04:49:07,792 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/cl-conc-4/ipf/config.yaml
+=== START_SUMMARY ===
+{
+  "benchmark_time_seconds": 113.39656604600168,
+  "load_summary": {
+    "count": 400,
+    "schedule_delay": {
+      "mean": 55.679732692806084,
+      "min": 0.01045363008233835,
+      "max": 111.28426037325153,
+      "p0.1": 0.01760500685246552,
+      "p1": 1.3952000821358528,
+      "p5": 5.85842717016549,
+      "p10": 11.268701904317101,
+      "p25": 27.82320456971911,
+      "median": 55.626245046738404,
+      "p75": 83.46598983285685,
+      "p90": 100.2528252096998,
+      "p95": 105.64527253918018,
+      "p99": 110.16949511555042,
+      "p99.9": 111.28367168735515
+    }
+  },
+  "successes": {
+    "count": 400,
+    "latency": {
+      "request_latency": {
+        "mean": 1.1322393589974717,
+        "min": 1.0451247319997492,
+        "max": 1.396123456001078,
+        "p0.1": 1.0456672726489742,
+        "p1": 1.0468869369891944,
+        "p5": 1.053304255549938,
+        "p10": 1.0967338153004675,
+        "p25": 1.1324770595006157,
+        "median": 1.1360133914995458,
+        "p75": 1.1378955172494898,
+        "p90": 1.1410949944011008,
+        "p95": 1.1434638674996676,
+        "p99": 1.3420687164697844,
+        "p99.9": 1.3943621167848854
+      },
+      "normalized_time_per_output_token": {
+        "mean": 0.008577755002629934,
+        "min": 0.007917611606058706,
+        "max": 0.010576692848493016,
+        "p0.1": 0.007921721762492229,
+        "p1": 0.007930961643857534,
+        "p5": 0.007979577693560135,
+        "p10": 0.008308589509852027,
+        "p25": 0.008578173837115559,
+        "median": 0.008606286954545794,
+        "p75": 0.008621520318184374,
+        "p90": 0.008645770465151751,
+        "p95": 0.008680153482517713,
+        "p99": 0.010167187245983216,
+        "p99.9": 0.010563349369582465
+      },
+      "time_per_output_token": {
+        "mean": 0.00834004557696441,
+        "min": 0.007703029038170721,
+        "max": 0.009330014893130838,
+        "p0.1": 0.007703080161947485,
+        "p1": 0.007721838456180347,
+        "p5": 0.007797645303816429,
+        "p10": 0.008037801940455759,
+        "p25": 0.00833603751145333,
+        "median": 0.008401071152672926,
+        "p75": 0.008421425309158086,
+        "p90": 0.008446071400761283,
+        "p95": 0.008482039812979356,
+        "p99": 0.008537542921315179,
+        "p99.9": 0.009275078425838542
+      },
+      "time_to_first_token": {
+        "mean": 0.03828314029250578,
+        "min": 0.01986853299968061,
+        "max": 0.28864933800105064,
+        "p0.1": 0.020075097294949957,
+        "p1": 0.021323942058843387,
+        "p5": 0.024329858598503052,
+        "p10": 0.029817393898883892,
+        "p25": 0.031479684250371065,
+        "median": 0.03332249950017285,
+        "p75": 0.03929062875022282,
+        "p90": 0.042240629899788475,
+        "p95": 0.042833692200201764,
+        "p99": 0.2389577243295387,
+        "p99.9": 0.28467394938103335
+      },
+      "inter_token_latency": {
+        "mean": 0.00833969981070944,
+        "min": 0.0,
+        "max": 0.2455997050001315,
+        "p0.1": 0.0,
+        "p1": 0.006769671001165989,
+        "p5": 0.007144745999539737,
+        "p10": 0.007313173000511597,
+        "p25": 0.007543413001258159,
+        "median": 0.008163684999090037,
+        "p75": 0.009105179999096435,
+        "p90": 0.009403915000802954,
+        "p95": 0.009542240000882884,
+        "p99": 0.009903330999804894,
+        "p99.9": 0.020319217200085754
+      }
+    },
+    "throughput": {
+      "input_tokens_per_sec": 380.96391721840166,
+      "output_tokens_per_sec": 465.6137468799627,
+      "total_tokens_per_sec": 846.5776640983644,
+      "requests_per_sec": 3.5274436779481633,
+      "images_per_sec": 0.0,
+      "videos_per_sec": 0.0,
+      "audios_per_sec": 0.0
+    },
+    "request_size_bytes": {
+      "mean": 568.6925,
+      "min": 476.0,
+      "max": 651.0,
+      "p0.1": 477.596,
+      "p1": 490.95,
+      "p5": 519.95,
+      "p10": 529.0,
+      "p25": 548.75,
+      "median": 570.0,
+      "p75": 591.0,
+      "p90": 609.0,
+      "p95": 622.1499999999999,
+      "p99": 635.01,
+      "p99.9": 647.8080000000004
+    },
+    "prompt_len": {
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "image": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "video": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "frames": null,
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "audio": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "seconds": null,
+      "bytes": null
+    },
+    "prompt_tokens": {
+      "total": 43200.0,
+      "cached": 0.0,
+      "uncached": 43200.0,
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "output_len": {
+      "mean": 131.9975,
+      "min": 130.0,
+      "max": 134.0,
+      "p0.1": 130.399,
+      "p1": 131.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.01,
+      "p99.9": 133.60100000000006
+    },
+    "output_tokens": {
+      "total": 52800.0,
+      "mean": 132.0,
+      "min": 132.0,
+      "max": 132.0,
+      "p0.1": 132.0,
+      "p1": 132.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.0,
+      "p99.9": 132.0
+    },
+    "token_count_mismatches": 1,
+    "goodput_metrics": {
+      "goodput_percentage": 100.0,
+      "request_goodput": 3.5274436779481633,
+      "token_goodput": 846.5776640983644,
+      "good_requests": 400,
+      "total_requests": 400,
+      "ttft_attainment_percentage": 100.0,
+      "tpot_attainment_percentage": 100.0
+    }
+  },
+  "failures": {
+    "count": 0,
+    "request_latency": null,
+    "prompt_len": null,
+    "by_label": {}
+  }
+}
+=== END_SUMMARY ===
+=== START_STAGE_0 ===
+{
+  "benchmark_time_seconds": 113.39656604600168,
+  "load_summary": {
+    "count": 400,
+    "schedule_delay": {
+      "mean": 55.679732692806084,
+      "min": 0.01045363008233835,
+      "max": 111.28426037325153,
+      "p0.1": 0.01760500685246552,
+      "p1": 1.3952000821358528,
+      "p5": 5.85842717016549,
+      "p10": 11.268701904317101,
+      "p25": 27.82320456971911,
+      "median": 55.626245046738404,
+      "p75": 83.46598983285685,
+      "p90": 100.2528252096998,
+      "p95": 105.64527253918018,
+      "p99": 110.16949511555042,
+      "p99.9": 111.28367168735515
+    },
+    "send_duration": 112.26262042300004,
+    "requested_rate": 400.0,
+    "achieved_rate": 3.5630737862061266,
+    "concurrency": 4
+  },
+  "successes": {
+    "count": 400,
+    "latency": {
+      "request_latency": {
+        "mean": 1.1322393589974717,
+        "min": 1.0451247319997492,
+        "max": 1.396123456001078,
+        "p0.1": 1.0456672726489742,
+        "p1": 1.0468869369891944,
+        "p5": 1.053304255549938,
+        "p10": 1.0967338153004675,
+        "p25": 1.1324770595006157,
+        "median": 1.1360133914995458,
+        "p75": 1.1378955172494898,
+        "p90": 1.1410949944011008,
+        "p95": 1.1434638674996676,
+        "p99": 1.3420687164697844,
+        "p99.9": 1.3943621167848854
+      },
+      "normalized_time_per_output_token": {
+        "mean": 0.008577755002629934,
+        "min": 0.007917611606058706,
+        "max": 0.010576692848493016,
+        "p0.1": 0.007921721762492229,
+        "p1": 0.007930961643857534,
+        "p5": 0.007979577693560135,
+        "p10": 0.008308589509852027,
+        "p25": 0.008578173837115559,
+        "median": 0.008606286954545794,
+        "p75": 0.008621520318184374,
+        "p90": 0.008645770465151751,
+        "p95": 0.008680153482517713,
+        "p99": 0.010167187245983216,
+        "p99.9": 0.010563349369582465
+      },
+      "time_per_output_token": {
+        "mean": 0.00834004557696441,
+        "min": 0.007703029038170721,
+        "max": 0.009330014893130838,
+        "p0.1": 0.007703080161947485,
+        "p1": 0.007721838456180347,
+        "p5": 0.007797645303816429,
+        "p10": 0.008037801940455759,
+        "p25": 0.00833603751145333,
+        "median": 0.008401071152672926,
+        "p75": 0.008421425309158086,
+        "p90": 0.008446071400761283,
+        "p95": 0.008482039812979356,
+        "p99": 0.008537542921315179,
+        "p99.9": 0.009275078425838542
+      },
+      "time_to_first_token": {
+        "mean": 0.03828314029250578,
+        "min": 0.01986853299968061,
+        "max": 0.28864933800105064,
+        "p0.1": 0.020075097294949957,
+        "p1": 0.021323942058843387,
+        "p5": 0.024329858598503052,
+        "p10": 0.029817393898883892,
+        "p25": 0.031479684250371065,
+        "median": 0.03332249950017285,
+        "p75": 0.03929062875022282,
+        "p90": 0.042240629899788475,
+        "p95": 0.042833692200201764,
+        "p99": 0.2389577243295387,
+        "p99.9": 0.28467394938103335
+      },
+      "inter_token_latency": {
+        "mean": 0.00833969981070944,
+        "min": 0.0,
+        "max": 0.2455997050001315,
+        "p0.1": 0.0,
+        "p1": 0.006769671001165989,
+        "p5": 0.007144745999539737,
+        "p10": 0.007313173000511597,
+        "p25": 0.007543413001258159,
+        "median": 0.008163684999090037,
+        "p75": 0.009105179999096435,
+        "p90": 0.009403915000802954,
+        "p95": 0.009542240000882884,
+        "p99": 0.009903330999804894,
+        "p99.9": 0.020319217200085754
+      }
+    },
+    "throughput": {
+      "input_tokens_per_sec": 380.96391721840166,
+      "output_tokens_per_sec": 465.6137468799627,
+      "total_tokens_per_sec": 846.5776640983644,
+      "requests_per_sec": 3.5274436779481633,
+      "images_per_sec": 0.0,
+      "videos_per_sec": 0.0,
+      "audios_per_sec": 0.0
+    },
+    "request_size_bytes": {
+      "mean": 568.6925,
+      "min": 476.0,
+      "max": 651.0,
+      "p0.1": 477.596,
+      "p1": 490.95,
+      "p5": 519.95,
+      "p10": 529.0,
+      "p25": 548.75,
+      "median": 570.0,
+      "p75": 591.0,
+      "p90": 609.0,
+      "p95": 622.1499999999999,
+      "p99": 635.01,
+      "p99.9": 647.8080000000004
+    },
+    "prompt_len": {
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "image": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "video": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "frames": null,
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "audio": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "seconds": null,
+      "bytes": null
+    },
+    "prompt_tokens": {
+      "total": 43200.0,
+      "cached": 0.0,
+      "uncached": 43200.0,
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "output_len": {
+      "mean": 131.9975,
+      "min": 130.0,
+      "max": 134.0,
+      "p0.1": 130.399,
+      "p1": 131.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.01,
+      "p99.9": 133.60100000000006
+    },
+    "output_tokens": {
+      "total": 52800.0,
+      "mean": 132.0,
+      "min": 132.0,
+      "max": 132.0,
+      "p0.1": 132.0,
+      "p1": 132.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.0,
+      "p99.9": 132.0
+    },
+    "token_count_mismatches": 1,
+    "goodput_metrics": {
+      "goodput_percentage": 100.0,
+      "request_goodput": 3.5274436779481633,
+      "token_goodput": 846.5776640983644,
+      "good_requests": 400,
+      "total_requests": 400,
+      "ttft_attainment_percentage": 100.0,
+      "tpot_attainment_percentage": 100.0
+    }
+  },
+  "failures": {
+    "count": 0,
+    "request_latency": null,
+    "prompt_len": null,
+    "by_label": {}
+  }
+}
+=== END_STAGE_0 ===
+                         Throughput and Goodput Summary                         
+┏━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━┓
+┃      ┃  Req ┃ Ach… ┃ Err… ┃      ┃   In ┃  Out ┃   Tot ┃ Goo… ┃   Req ┃ Tok… ┃
+┃ Sta… ┃ Rate ┃ Rate ┃ Rate ┃ Req… ┃ Tok… ┃ Tok… ┃ Toke… ┃    % ┃ Good… ┃ Goo… ┃
+┡━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━┩
+│    0 │ 400… │  3.6 │ 0.0% │  3.5 │ 381… │ 465… │ 846.6 │ 100… │   3.5 │ 846… │
+└──────┴──────┴──────┴──────┴──────┴──────┴──────┴───────┴──────┴───────┴──────┘
+                          Request & Token Latency (ms)                          
+┏━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━┓
+┃       ┃   Req ┃   Req ┃   Req ┃       ┃       ┃       ┃       ┃       ┃      ┃
+┃       ┃   Lat ┃   Lat ┃   Lat ┃  TTFT ┃  TTFT ┃  TTFT ┃   ITL ┃   ITL ┃  ITL ┃
+┃ Stage ┃  Mean ┃   Med ┃   P90 ┃  Mean ┃   Med ┃   P90 ┃  Mean ┃   Med ┃  P90 ┃
+┡━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━┩
+│     0 │ 1132… │ 1136… │ 1141… │  38.3 │  33.3 │  42.2 │   8.3 │   8.2 │  9.4 │
+└───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┴──────┘
+                          Token Generation Speed (ms)                           
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃       ┃           ┃          ┃          ┃ Norm TPOT ┃ Norm TPOT ┃  Norm TPOT ┃
+┃ Stage ┃ TPOT Mean ┃ TPOT Med ┃ TPOT P90 ┃      Mean ┃       Med ┃        P90 ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│     0 │       8.3 │      8.4 │      8.4 │       8.6 │       8.6 │        8.6 │
+└───────┴───────────┴──────────┴──────────┴───────────┴───────────┴────────────┘
+                            Token Length Aggregates                             
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
+┃       ┃    Prompt ┃    Prompt ┃    Prompt ┃    Output ┃   Output ┃    Output ┃
+┃ Stage ┃      Mean ┃       Med ┃       P90 ┃      Mean ┃      Med ┃       P90 ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
+│     0 │     108.0 │     108.0 │     108.0 │     132.0 │    132.0 │     132.0 │
+└───────┴───────────┴───────────┴───────────┴───────────┴──────────┴───────────┘
+Request Error Summary
+┏━━━━━━━┳━━━━━━━━━━━┓
+┃ Stage ┃ Successes ┃
+┡━━━━━━━╇━━━━━━━━━━━┩
+│     0 │       400 │
+└───────┴───────────┘
+
+--- stderr ---
+None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+Token indices sequence length is longer than the specified maximum sequence length for this model (1306158 > 131072). Running this sequence through the model will result in indexing errors

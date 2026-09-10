@@ -65,7 +65,7 @@
 
 # Open-loop
 
-| cell | seed | offered_rps | records | achieved_rps | ttft_p50_s | ttft_p95_s | tpot_p50_s | tpot_p95_s | attainment | attainment_ci95 | goodput_rps | w_per_util_point | probe_tpot_median_s | suspect |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| cell | seed | offered_rps | records | achieved_rps | served_rps | ttft_p50_s | ttft_p95_s | tpot_p50_s | tpot_p95_s | attainment | attainment_ci95 | goodput_rps | w_per_util_point | probe_tpot_median_s | suspect |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 {}

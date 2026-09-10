@@ -1,0 +1,39 @@
+{
+  "taken_at": "2026-09-10T01:16:54+00:00",
+  "gpu_index": 0,
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "591.86",
+  "memory_total_mib": 24564.0,
+  "memory_used_mib": 1636.91796875,
+  "utilization_percent": 5.0,
+  "utilization_samples_percent": [
+    5.0,
+    5.0,
+    5.0,
+    5.0,
+    5.0
+  ],
+  "compute_processes": [],
+  "process_list_trustworthy": false,
+  "nvidia_smi": {
+    "args": [],
+    "available": true,
+    "returncode": 0,
+    "stdout": "Thu Sep 10 09:16:54 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 590.57                 Driver Version: 591.86         CUDA Version: 13.1     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 4090        On  |   00000000:01:00.0  On |                  Off |\n|  0%   42C    P8             19W /  450W |    1210MiB /  24564MiB |      5%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A              17      G   /Xwayland                             N/A      |\n+-----------------------------------------------------------------------------------------+\n",
+    "stderr": ""
+  },
+  "nvidia_smi_compute_apps": {
+    "args": [
+      "--query-compute-apps=pid,process_name,used_memory",
+      "--format=csv"
+    ],
+    "available": true,
+    "returncode": 0,
+    "stdout": "pid, process_name, used_gpu_memory [MiB]\n",
+    "stderr": ""
+  },
+  "decision": {
+    "ok": true,
+    "reasons": []
+  }
+}
