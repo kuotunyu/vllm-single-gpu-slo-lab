@@ -429,6 +429,18 @@ Slips: each quarantined stage costs 6–12 min; a paging incident that forces a 
 - **The precision reversal is the story.** AWQ is 2.3× faster single-stream (0.89 vs 0.38 rps; probe TPOT 7.8 vs 18.6–19.6 ms) but saturates 27 % *lower* than FP8 (30.2 vs 41.4 rps) and is 17 % less energy-efficient at its own maximum (36.1k vs 43.7k tok/Wh). Weight-only 4-bit wins when decode is memory-bound at small batches and loses when large batches make dequantization compute-bound, while FP8 uses the Ada W8A8 tensor cores. AWQ also pays on prefill: at c = 64 its TTFT p95 is 0.541 s against FP8's 0.334 s.
 - Open-loop grid for AWQ therefore runs 7.54 … 60.30 rps (0.25 … 2.0 × 30.15), started 05:22.
 
+**AWQ cell complete 09:23** (`evidence/raw/w2/awq/`, commit `de65963`; 33 open-loop + 11 closed-loop stages, zero suspects):
+
+- **r_sat 30.15 rps** (true plateau), **C = 192**, **r_SLO 22.61 rps**, sensitivity grid 21.1 rps at TPOT 30 ms and 22.61 at 50/100 ms, flat across TTFT 0.5–2 s — TPOT-bound like FP8.
+- Open-loop knee is a cliff, not a slope: 22.61 rps holds attainment 1.000 with TPOT p95 32.8–40.5 ms, and the next preregistered point (30.15 rps) collapses to 0.000 with TTFT p95 54–64 s. `served_rps` there is only 24.4–25.3 rps, so the sustainable rate sits near 24–25 and the frozen 0.75 → 1.0 gap straddles it.
+- **TMMLU+ full set, first ever run: 11,409 / 19,680 = 0.5797**, Wilson [0.573, 0.587] — ten times tighter than the slices' ±0.065; slices were 119/117/124 = 0.595/0.585/0.620. Zero unparsed, zero non-200, zero errors, 77 items/s at concurrency 32.
+
+**Queued for after the main chain** (each needs the GPU, so none of it runs until the four cells are done):
+
+1. **FP8 TMMLU+ full set** (~7 min). FP8 only has slices, so the quality column would otherwise compare a ±0.065 estimate against AWQ's ±0.007.
+2. **GPTQ closed-loop c = 1, 2, 4, 8 re-run** (~12 min). Those four stages come from the 04:18 server session that the readiness bug interrupted; the rest of the cell runs in the 09:24 session, which profiled a different KV cache size (98,464 vs 91,152 tokens). The difference does not bind at any grid point, but one server session per cell is the protocol every other cell follows.
+3. **Open-loop knee refinement** per cell via `scripts/wsl/refine-cell.sh` — AWQ at 0.80/0.85/0.90 × r_sat = 24.12/25.63/27.14 rps (~63 min); the other cells once their knees are known.
+
 ## Self-review
 
 - Spec coverage: closed-loop, open-loop × 3 seeds, TMMLU+ slices + full, contrast cell, cross-check, suspects handling, evidence promotion, tables/reproduce, ADR, README, claims audit, preregistration row, ledger, memory, dashboard, report — each has a task. Cost table and W3/W4 are explicitly out of scope (owner input / later windows).
