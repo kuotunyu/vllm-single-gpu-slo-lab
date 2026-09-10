@@ -13,6 +13,9 @@ export PATH="$HOME/.local/bin:$PATH"
 export HF_HUB_OFFLINE=1 VLLM_WSL2_ENABLE_PIN_MEMORY=1 VLLM_USE_FLASHINFER_SAMPLER=0
 CELL="$1"; MODEL="$2"; MAX_NUM_SEQS="$3"; R_SAT="$4"; MULTIPLIERS="$5"; shift 5
 SEEDS="${*:-1 2 3}"
+# The refinement is a second server session in the same batch dir; tag its session-level logs so
+# promotion keeps the main run's vllm.log / quiet_gpu.json (see promote-w2.sh).
+TAG="refine-$(echo "$MULTIPLIERS" | awk '{print $1}')"
 REPO="/mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab"
 WSL="$REPO/scripts/wsl"
 ROOT="$HOME/vllm-slo-lab/runs-w2/open-loop-cells"
@@ -39,9 +42,9 @@ for seed in $SEEDS; do
 done
 "$LABPY" "$REPO/scripts/analyze_batch.py" "$ROOT/$CELL" --out "$ROOT/$CELL/analysis" >/dev/null 2>&1
 "$LABPY" "$WSL/read_r_sat.py" "$ROOT/$CELL/analysis/open_loop.json" "$CELL" r_slo
-bash "$WSL/promote-w2.sh" "$ROOT/$CELL/seed-1" "$CELL/open-loop/seed-1" 2>&1 | grep -v "redact: 0"
+bash "$WSL/promote-w2.sh" "$ROOT/$CELL/seed-1" "$CELL/open-loop/seed-1" "$TAG" 2>&1 | grep -v "redact: 0"
 for seed in $SEEDS; do
   [ "$seed" = 1 ] && continue
-  bash "$WSL/promote-w2.sh" "$ROOT/$CELL/seed-$seed" "$CELL/open-loop/seed-$seed" 2>&1 | grep -v "redact: 0"
+  bash "$WSL/promote-w2.sh" "$ROOT/$CELL/seed-$seed" "$CELL/open-loop/seed-$seed" "$TAG" 2>&1 | grep -v "redact: 0"
 done
 log "REFINE DONE"
