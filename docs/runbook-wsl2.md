@@ -10,7 +10,7 @@
   - `HF_HUB_OFFLINE=1`：權重已在 `~/.cache/huggingface`（Qwen3-8B-FP8 兩個 shard，8.9 GB）。
 - 一次 `vllm serve Qwen/Qwen3-8B-FP8 --max-model-len 4096 --gpu-memory-utilization 0.90 --max-num-seqs 64` 的實測：attention backend `FLASH_ATTN`；`Loading weights took 64.32 s`、`Model loading took 8.8 GiB / 74.7 s`；`GPU KV cache size: 83,024 tokens`（4,096 tokens/request 時最大並發 20.27x）；CUDA graph capture 3 s / 0.21 GiB；`/v1/chat/completions` 一次請求回覆正常（21 prompt + 35 completion tokens）；`/metrics` 露出 `vllm:num_requests_running`、`vllm:num_requests_waiting`（另有 `_by_reason{capacity|deferred}`）、`vllm:kv_cache_usage_perc`、`vllm:prompt_tokens_total`。
 - **載入時間不是證據**：同一份 FP8 權重，page cache 溫熱時 64 s；在 30 GB 下載剛把 cache 沖掉、且 WSL 虛擬磁碟被其他工作（Docker、掃描）競爭時，AWQ 5.8 GB 光讀第一個 shard 就 106 s（io pressure 50–60%，EngineCore 停在 `folio_wait_bit_common`）。冷啟動分段記帳（規格 §5.5）只能用「第二次載入」或明確標示 cache 狀態的量測；每個 run 的 manifest 記錄 `/proc/pressure/io` 與載入前是否預熱。
-- FP8 警告：`Using default W8A8 Block FP8 kernel config. Performance might be sub-optimal!`（4090 沒有 tuned config）。這會影響 FP8 cell 的吞吐，屬於**可調參數而非缺陷**；W2 決定是否為 4090 產生 kernel config，並在證據中標明用的是預設或調過的 config。
+- FP8 警告：`Using default W8A8 Block FP8 kernel config. Performance might be sub-optimal!`（4090 沒有 tuned config）。這會影響 FP8 cell 的吞吐，屬於**可調參數而非缺陷**；W2 決定是否為 4090 產生 kernel config，並在證據中標明用的是預設或調過的 config。**W2 決定：不產生**，所有 W2 FP8 證據都是預設 config（server log 保留此警告，ADR 0009）。
 - 功耗與記憶體：`nvidia-smi --query-gpu` 在 WSL2 與 Windows 兩側都不支援（driver 591.86）；NVML（`nvidia-ml-py`）可讀：閒置 19.7 W／2,609 MiB（Windows 桌面本身占 VRAM），server 閒置待命 143 W／23,436 MiB。
 - **NVML 在 WSL2 列不出 compute process**（server 占 23 GiB 時 `nvmlDeviceGetComputeRunningProcesses` 仍回空）。`quiet-gpu` 因此在此主機只能靠記憶體與 utilization 兩個準則，快照會記 `process_list_trustworthy: false`；預設記憶體門檻依實測閒置基線改為 3,072 MiB、utilization 門檻 10%（5 × 1 s 取樣平均；單次讀值在閒置桌面上會出現 9% 的假警報）。
 
@@ -36,6 +36,22 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w2-nig
 ```
 
 `w2-night.sh` 依序呼叫 `w2-cell-chain.sh <cell> <model> <max_num_seqs> "<closed grid>"`：closed-loop → 由分析取 r_sat → open-loop 11 個 rate × seeds 1–3 → 可疑 stage 隔離到 `runs-w2/*/quarantine/` 並重跑（最多兩輪）→ TMMLU+ 三切片與全集（`eval/tmmluplus/full.jsonl`，19,680 題）→ 搬進 `evidence/raw/w2/<cell>/`。已有 manifest 的 stage 一律跳過，所以中斷後重跑同一指令就是續跑。BF16 的 KV 在 0.82 只剩約 1.7 GiB（≈ 11.7k tokens），網格到 40、`--max-num-seqs 40`。FP8 的 `--max-num-batched-tokens 8192` 對照 cell 只跑 open-loop seed 1。整夜約 22 小時 GPU；桌面可照常使用，但其他 GPU 工作會讓 stage 被標可疑而重跑。
+
+## W2 結案（2026-09-11）
+
+四精度全部完成，結果與協定偏離見 ADR 0009。實際耗時：主鏈（AWQ → GPTQ → BF16 → 交叉驗證）2026-09-10 04:35 → 19:00，約 14.5 小時；追加鏈（8192 對照組、FP8 TMMLU+ 全集、三個 cell 的膝點補點）19:01 → 01:00，約 6 小時。全程無可疑 stage、無隔離重跑，Windows committed 最高 24,187 MB。
+
+量測期間新增、之後可沿用的腳本（全部在 `scripts/wsl/`，以腳本檔呼叫，不用 `bash -c`）：
+
+- `run-logged.sh <script>`：把鏈的輸出寫到 ext4 上的日誌並更新 `runs-w2/w2-night-latest.log`；`watch-night.sh` 只挑里程碑與失敗行。Windows 端的 `| tr | grep | tee` 會區塊緩衝、整段遺失，不要再用。
+- `refine-cell.sh <cell> <model> <max_num_seqs> <r_sat> "<multipliers>" <seeds...>`：只在既有 open-loop 目錄補指定倍率的 rate，沿用同一套 stage、可疑規則與 promote。
+- `tmmlu-only.sh <cell> <model> <max_num_seqs>`：單獨起伺服器跑 TMMLU+ 全集。
+- `promote-crosscheck.sh`：`vllm bench serve` 的結果只搬純量摘要與原檔 sha256；`generated_texts` 會重現訓練資料片段，不進 repo。
+- `chain-status.sh`、`stage-summary.sh <batch dir>`、`stop-chain.sh`、`preflight.sh`：查進度、摘要、在 stage 邊界停止、起跑前檢查。
+
+`batch.sh` 在 W2 期間修了兩個會整段丟 cell 的缺陷：就緒探測改用 command substitution（`curl | grep -q` 在 `pipefail` 下會因 SIGPIPE 141 誤判失敗），`quiet-gpu` 改為最多重試 5 次、每次間隔 30 s（上一個伺服器剛關閉時 utilization 會殘留數秒）。
+
+**同一批次目錄只保留最後一個伺服器 session 的 `serve.log`／`quiet_gpu.json`。** 在已完成的 seed 目錄再起一個 session（補點、隔離重跑）之前，先確認舊的 log 已經 promote 並提交；補點用 `refine-cell.sh`，它會以 `refine-<第一個倍率>` 為 tag 另存，不覆蓋主量測的 `vllm.log`。隔離重跑尚未分檔（ADR 0009 缺陷 6）。
 
 ## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
 

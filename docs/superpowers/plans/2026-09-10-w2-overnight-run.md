@@ -408,6 +408,17 @@ Slips: each quarantined stage costs 6–12 min; a paging incident that forces a 
 | 04:35 | Chain relaunched with the fixed driver. AWQ restarts from scratch, GPTQ resumes from four stages. |
 | 04:40 | AWQ ready under the fixed probe: weights 84.0 s (warm), **KV cache 98,400 tokens** — the same cell reported 91,088 tokens at 04:18. vLLM sizes the KV cache from free VRAM at profiling time, so on a desktop-shared card it is not deterministic: the earlier attempt profiled while the compositor held more VRAM. Record the per-run value from each `serve.log`; never quote one cell's KV size as a constant. |
 | 04:47 | **Protocol deviation to record in ADR 0009.** The closed-loop `num_requests` table is calibrated on FP8 rates, so faster cells finish a point sooner and get a shorter measurement window: AWQ c = 1 offered 90 requests at 0.893 rps (FP8: 0.384) and the window after the 60 s discard held 34 records over ~38 s, against the frozen "≥ 180 s per point". Keeping the counts uniform is the deliberate choice: every cell is offered exactly the same work at every concurrency, which is what makes the four-precision table comparable; scaling counts per cell would make the cells differ in offered load instead. The cost is precision, not bias — report `window_s` and `window_records` in every row and state the minimum window per cell. |
+| 09:23 | AWQ cell complete (commit `de65963`), zero suspects. GPTQ server started 09:24. |
+| 13:58 | GPTQ-Int4 cell complete (commit `545b2ca`), zero suspects. BF16 started. |
+| 18:48 | BF16 cell complete (commit `b032bb4`), zero suspects. The FP8 8192 contrast cell was skipped by a single quiet-GPU reading (utilization 11 % vs 10 %, 20 s after BF16's server exited). |
+| 19:00 | `NIGHT DONE`. Cross-check finished; promoted summary-only (commit `1dbd9ea`) because `generated_texts` contained regurgitated third-party paths. quiet-GPU retry (5 × 30 s, threshold unchanged) committed `4bb528f`. |
+| 19:01 | Follow-up chain launched via `run-logged.sh w2-followup-night.sh`: contrast cell, FP8 TMMLU+ full set, knee refinement for AWQ, GPTQ, BF16. |
+| 21:34 | Contrast cell done: KV 67,888 tokens, r_sat 39.44 (lower bound), C = 128, r_SLO 25.64 (seed 1), zero suspects. `--max-num-batched-tokens` stays 2048. |
+| 21:40 | FP8 TMMLU+ full set done: 11,629 / 19,680 = 0.5909, zero errors. |
+| 22:45 | AWQ refinement done (24.12 / 25.63 / 27.13 rps × 3 seeds): r_SLO stays 22.61. |
+| 23:48 | GPTQ refinement done (24.21 / 25.72 / 27.23 rps × 3 seeds): r_SLO stays 22.70. |
+| 01:00 | BF16 refinement done (9.12 / 9.69 / 10.26 rps × 3 seeds): r_SLO 8.55 → 10.26. `FOLLOWUP DONE`. Windows VRAM sampler stopped, log copied to `evidence/raw/w2/win-vram-2026-09-10.log` (2,315 samples, committed max 24,187 MB). |
+| 01:05 | `slo-lab reproduce-lite`: all 13 index tables and the paired quality table rebuilt, secrets audit clean. GPU work finished; Tasks 5–6 (write-up) follow. |
 
 ## Results as they land (raw notes for ADR 0009)
 
@@ -477,6 +488,16 @@ vLLM sizes the KV cache from whatever VRAM is free when it profiles, so on a des
 **19:01 follow-up launched** (`scripts/wsl/w2-followup-night.sh` via `run-logged.sh`): FP8 contrast cell (KV 67,888 tokens at 8192 batched tokens vs 76,112 at 2048), FP8 TMMLU+ full set, then knee refinement for AWQ, GPTQ and BF16. About 6 h of GPU.
 
 Also worth the ADR: **FP8 buys nothing single-stream.** At c = 1 BF16 gives 0.38 rps with probe TPOT 19.3 ms and FP8 gives 0.384 rps at 18.6–19.6 ms, while AWQ/GPTQ give 0.89 rps at 7.8 ms. Halving the weight bytes from BF16 to FP8 does not move batch-1 decode on this card; going to 4-bit does, 2.5×.
+
+**Follow-up results (01:00, raw notes for ADR 0009).**
+
+| cell | 0.80 × r_sat | 0.85 × | 0.90 × | r_SLO before → after | next failing rate |
+|---|---|---|---|---|---|
+| AWQ | 24.12: 1.000 / 0.873 / 0.842 | 25.63: 0.258 / 0.243 / 0.000 | 27.13: 0 / 0 / 0 | 22.61 → 22.61 | 24.12 (+7 %) |
+| GPTQ | 24.21: 0.813 / 1.000 / 1.000 | 25.72: 0 / 0 / 0 | 27.23: 0 / 0 / 0 | 22.70 → 22.70 | 24.21 (+7 %) |
+| BF16 | 9.12: 0.999 / 1.000 / 0.996 | 9.69: 0.999 / 0.998 / 1.000 | 10.26: 0.996 / 0.972 / 0.991 | 8.55 → **10.26** | 11.40 (+11 %) |
+
+Attainment per seed 1 / 2 / 3. The quantised knees are cliffs; BF16's is a slope driven by queueing (worst-seed TTFT p95 0.10 → 0.16 → 0.39 → 0.82 s, TPOT p95 flat at 24–26 ms). The coarse grid had under-stated BF16 by 17 %, which would have inflated FP8's SLO advantage from 2.55× to 3.1×. BF16's sensitivity grid is now 9.69 rps at TTFT 0.5 s and 10.26 at 1–2 s, identical across TPOT thresholds, the transpose of the quantised cells. Energy at the new BF16 r_SLO: 74.6 Wh per million output tokens (was 89.8 at 8.55), so FP8 uses 42 % of BF16's energy, not 35 %.
 
 ## Self-review
 

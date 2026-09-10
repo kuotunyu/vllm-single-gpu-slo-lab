@@ -2,17 +2,18 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 FP8 完成（2026-09-09）；AWQ／GPTQ／BF16、admission、成本表未做。** W1 驗證清單結案（ADR 0002–0005）。FP8 首批數字（單卡 4090、WSL2、vLLM 0.28.0、`--gpu-memory-utilization 0.82`，證據與 ADR 0006–0008 在 repo）：
+> **狀態：W2 四精度完成（2026-09-11）；admission（W3）、spec-decode 與成本表（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
 >
-> | 量 | 值 | 條件 |
-> |---|---|---|
-> | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | **26.2 req/s** | open-loop Poisson，108→132 tokens，3 seeds × 11 rates，每點 5 min；凍結規則（所有 seed ≥ 95%，連續向上） |
-> | r_sat（closed-loop 飽和吞吐） | 41.4 req/s（下界） | c = 256 = `--max-num-seqs`，192→256 仍 +7%；夜間 0.90 預算 43.7 |
-> | 膝點 | 26–31 rps，TPOT 先破 50 ms | 32.75 rps 起 attainment 0.1–0.6；43.7 rps 起 0（佇列無界） |
-> | 能耗 | 31 Wh／百萬 output token @ r_SLO | 316 W、32,100 tok/Wh；c = 256 時 43,700 tok/Wh |
-> | TMMLU+（FP8） | 366 / 600 = 0.610 | 三個 200 題切片 0.610／0.595／0.625，Wilson 95% 各約 ±0.07 |
+> | 精度 | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | r_sat | 單流 TPOT | 能耗 @ r_SLO | TMMLU+ 全集 | 對 BF16 配對差 |
+> |---|---|---|---|---|---|---|
+> | BF16 | 10.26 req/s | 11.40（`--max-num-seqs` 40 封頂） | 19.3 ms | 74.6 Wh／百萬 output token | 0.5911 | — |
+> | **FP8** | **26.2 req/s** | 41.35（下界） | 18.9 ms | **31.2** | **0.5909** | −0.02 pts（p = 0.945） |
+> | AWQ | 22.61 req/s | 30.15（平台） | 7.8 ms | 36.2 | 0.5797 | −1.13 pts（p = 7.0 × 10⁻⁶） |
+> | GPTQ-Int4 | 22.70 req/s | 30.26（平台） | 7.6 ms | 36.3 | 0.5703 | −2.08 pts（p = 1.4 × 10⁻¹⁶） |
 >
-> 這些數字**只對 FP8、這組旗標、這張與 Windows 桌面共用的 4090 成立**；精度對照、admission 策略、$/M token 要等 W2 其餘 cell 與 W3。
+> r_SLO 是 open-loop Poisson（108→132 tokens，每 cell 11–14 個 rate × 3 seeds × 5 min）在凍結規則下（所有 seed ≥ 95%、自最低 rate 連續向上）的值，四個 cell 的膝點都夾到 7–11% 以內。TMMLU+ 全集 19,680 題、同題配對、exact McNemar。FP8 對 BF16：SLO 容量 2.55 倍、每 token 能耗 42%、品質無法區分。4-bit 單流快約 2.5 倍，但飽和吞吐比 FP8 低 27%，品質顯著下降。
+>
+> 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡；admission 策略與 $/M token 要等 W3／W4。
 
 ## 一句話
 
@@ -20,7 +21,7 @@
 
 ## 30 秒結論（目標讀者：台灣 LLM／AI infra 用人主管）
 
-*（下面是本專案**要證明**的事；截至 2026-09-09 只完成 FP8 的容量、能耗與 TMMLU+ 切片，見上方狀態表。）*
+*（下面是本專案**要證明**的事；截至 2026-09-11 完成四精度的容量、能耗與 TMMLU+ 全集（W2），admission 與 $/M token 未做，見上方狀態表。）*
 
 這個人把單張 GPU 上的 vLLM 當成一個必須守 SLO 的服務來量，而不是跑一次 throughput 截圖。同一條 Poisson trace、同一組 seed，報出每個精度在 SLO 下的容量與 $/M token；證明 admission control（原生排隊 vs 硬上限 429 vs 有界佇列）在同一張卡上對 SLO attainment、goodput、拒絕率的三維取捨；成本用實測功耗與實測 utilisation 算，並附 utilisation-naive 值的 1/U 警語；量化品質用自跑的 TMMLU+ 而非過期 leaderboard；全部從 raw JSON 一鍵重建，且明寫哪些結論**不能**外推。
 
@@ -59,7 +60,7 @@
 
 - 量測全部在 **WSL2 Ubuntu 上的獨立 vLLM 環境**：vLLM 0.28.0、torch 2.13.0+cu130；2026-09-08／09 的 W1 驗證在 RTX 4090 上載入全部五個 cell 並完成 completion（ADR 0004），條件是 `VLLM_WSL2_ENABLE_PIN_MEMORY=1` 與 `VLLM_USE_FLASHINFER_SAMPLER=0`（ADR 0002）。**vLLM 與 torch 不在本 repo 的 `pyproject.toml` 依賴中**：本 package 只做 CPU-side 的計算、shim 與量測工具，`make reproduce` 在無 GPU、無網路的 CI 上跑。
 - 此 driver 下 `nvidia-smi --query-gpu` 不支援，功耗改由 **NVML**（`pynvml`，optional extra `gpu`）以 1 s 間隔取樣；`nvidia-smi` 完整輸出仍以 best-effort 方式附進 quiet-GPU 快照。
-- 4090 與另一個 00:00–08:00 的 cron 工作共用；本專案只在 08:00 之後量測，且 `slo-lab quiet-gpu` 發現任何其他 compute process 或既有記憶體占用超過門檻即拒跑，快照隨 run 提交。
+- 4090 同時驅動 Windows 桌面，並與其他專案輪流使用：每個 batch 開跑前 `slo-lab quiet-gpu` 發現其他 compute process 或既有記憶體占用超過門檻即拒跑（重試 5 次、每次 30 s），快照隨 run 提交；Windows 端 WDDM 顯存另以 `scripts/win/vram-sampler.ps1` 取樣（ADR 0007）。W2 於 2026-09-10 04:35 至 09-11 01:00 連續量完。
 - 開發：Python 3.12 + uv；Windows 宿主只跑 CPU 測試。
 
 ## 目前有什麼／還沒有什麼
@@ -83,18 +84,21 @@
 | `scripts/analyze_batch.py` + `scripts/wsl/` | 批次彙整（r_sat 含平台旗標、C、r_SLO）與租戶污染標記（W／util 指紋、probe 漂移）；WSL2 批次驅動、I/O 取樣、證據搬移腳本 | 以真實 manifest 跑過 |
 | `evidence/raw/w2/fp8/closed-loop*/` | FP8 closed-loop：夜間 0.90 探索性（c = 1–128）與正式（c = 1–256）掃描（ADR 0006；正式 c = 1–96 被桌面 VRAM 分頁污染）、白天 0.90 分頁證據、**0.82 的 v3（c = 1–256 全乾淨：r_sat 41.4 rps 下界、C = 256）**（ADR 0007） | 表由 `make reproduce` 重建 |
 | `evidence/raw/w2/fp8/open-loop/seed-{1,2,3}/` | **FP8 open-loop 11 rates × 3 seeds**（0.25–2.0 × r_sat 加 0.55–0.70 細化，ADR 0008）：r_SLO 26.2 rps、膝點 26–31 rps、SLO 敏感度網格、過載段的佇列與 timeout | 同上 |
-| `evidence/raw/w2/fp8/tmmluplus/` | FP8 三切片逐題輸出與分數（366/600） | — |
-| `evidence/raw/w2/fp8/win-vram-2026-09-09.log` | Windows 端 VRAM（dedicated／shared／committed、桌面程序）每 30 s 取樣，整個 W2 白天量測期間 | — |
+| `evidence/raw/w2/fp8/tmmluplus/` | FP8 三切片（366/600）與全集（11,629／19,680 = 0.5909）的分數 | — |
+| `evidence/raw/w2/{awq,gptq,bf16}/` | 三精度 closed-loop（AWQ／GPTQ c = 1–256、BF16 c = 1–40）、open-loop 14 rates × 3 seeds（含 0.80–0.90 × r_sat 膝點補點）、TMMLU+ 切片與全集（ADR 0009） | 表由 `make reproduce` 重建 |
+| `evidence/raw/w2/fp8-mbt8192/` | `--max-num-batched-tokens` 8192 對照組（seed 1）：C 由 256 降到 128、r_SLO 25.64，2048 維持（ADR 0009） | 同上 |
+| `evidence/raw/w2/fp8/crosscheck/` | `vllm bench serve` 交叉驗證：吞吐與 inference-perf 差 5–7%；只存純量摘要與原檔 sha256，不存生成文字 | — |
+| `slo_lab/quality.py` | 配對品質：exact McNemar（對數空間）與 paired bootstrap；`reproduce-lite` 重建 `analysis/tables/w2-quality-paired/` | 手算值與常態近似 |
+| `evidence/raw/w2/fp8/win-vram-2026-09-09.log`、`evidence/raw/w2/win-vram-2026-09-10.log` | Windows 端 VRAM（dedicated／shared／committed、桌面程序）每 30 s 取樣：FP8 白天量測期間，以及 W2 四精度全程（committed 最高 24,187 MB，未超過實體） | — |
 | CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（空 evidence 通過） | — |
 
 ### 還沒有
 
-- AWQ／GPTQ-Int4／BF16 的 closed-loop、open-loop 與 TMMLU+（同一套 11 點網格），以及 2048 vs 8192 `--max-num-batched-tokens` 對照；成本表（`config/cost.yaml` 仍是 placeholder）、圖、model card；ledger 只有表頭。
-- TMMLU+ 全量（W4）；`vllm bench serve` 交叉驗證（`scripts/wsl/crosscheck.sh` 已備、未跑）。
-- open-loop 過載段的 served_rps（以完成時間計；目前 `achieved_rps` 以 offer 時間計，過載段不代表服務速率）。
+- W3 admission 三策略在 burst trace 下的量測；W4 spec-decode 兩個 cell（n-gram、EAGLE-3）。
+- 成本表（`config/cost.yaml` 仍是 placeholder；Wh 已有、$ 未算）、圖、model card；ledger 只有表頭。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - `config/cost.yaml` 的 owner 真實數值與來源（目前為標記 placeholder；`slo-lab cost` 會印警語）。
-- FP8 block kernel 的 4090 tuned config 決定（W2）；BF16 cell 的 `max-num-seqs`（ADR 0004 提案 16）。
+- FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
 - A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。
 
 ## Repository 佈局
