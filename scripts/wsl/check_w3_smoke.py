@@ -23,7 +23,7 @@ def check(seed_dir: Path) -> tuple[list[str], list[str]]:
     fails: list[str] = []
     notes: list[str] = []
     manifests: dict[str, dict] = {}
-    for policy in ("passthrough", "bounded_queue"):
+    for policy in ("direct", "passthrough", "bounded_queue"):
         path = seed_dir / f"trace-{policy}" / "manifest.json"
         if not path.exists():
             fails.append(f"{policy}: no manifest")
@@ -43,8 +43,11 @@ def check(seed_dir: Path) -> tuple[list[str], list[str]]:
         lag = m.get("first_request_after_launch_s")
         if lag is None or not 0 < lag < 180:
             fails.append(f"{policy}: first request {lag} s after launch (clock alignment)")
-        if not m.get("shim_rows"):
+        if policy != "direct" and not m.get("shim_rows"):
             fails.append(f"{policy}: shim.csv has no rows")
+        errors = (m.get("summary") or {}).get("errors") or 0
+        if policy != "bounded_queue" and errors:
+            fails.append(f"{policy}: {errors} errors (502 / broken streams) in an unrejected arm")
         if not m.get("metrics_rows"):
             fails.append(f"{policy}: metrics.csv has no rows")
         cpu, wall = m.get("shim_cpu_s"), m.get("load_wall_s")
@@ -58,10 +61,28 @@ def check(seed_dir: Path) -> tuple[list[str], list[str]]:
             f"first request {lag} s after launch"
         )
     native = manifests.get("passthrough")
+    direct = manifests.get("direct")
+    if native and direct:
+        # the shim-overhead check of spec §3.5: same session, same trace, with and without shim
+        p_pre = (native.get("phase_summaries") or {}).get("pre") or {}
+        d_pre = (direct.get("phase_summaries") or {}).get("pre") or {}
+        p_tpot, d_tpot = p_pre.get("tpot_p95_s"), d_pre.get("tpot_p95_s")
+        p_ttft, d_ttft = p_pre.get("ttft_p95_s"), d_pre.get("ttft_p95_s")
+        notes.append(
+            f"pre-burst p95 through shim vs direct: TPOT {p_tpot} vs {d_tpot} s, "
+            f"TTFT {p_ttft} vs {d_ttft} s"
+        )
+        if None in (p_tpot, d_tpot, p_ttft, d_ttft):
+            fails.append("shim-overhead check: missing pre-phase latency")
+        else:
+            if p_tpot > d_tpot * 1.10 + 0.001:
+                fails.append(f"shim adds TPOT: p95 {p_tpot:.4f} s vs direct {d_tpot:.4f} s")
+            if p_ttft > d_ttft + 0.05:
+                fails.append(f"shim adds TTFT: p95 {p_ttft:.3f} s vs direct {d_ttft:.3f} s")
+    for arm in (native, direct):
+        if arm and (arm.get("summary") or {}).get("rejected_429"):
+            fails.append(f"{arm.get('policy')}: rejections in an arm that must reject none")
     if native:
-        rejected = (native.get("summary") or {}).get("rejected_429")
-        if rejected:
-            fails.append(f"passthrough: {rejected} rejections, native queueing must reject none")
         pre = (native.get("phase_summaries") or {}).get("pre") or {}
         tpot, ttft = pre.get("tpot_p95_s"), pre.get("ttft_p95_s")
         notes.append(

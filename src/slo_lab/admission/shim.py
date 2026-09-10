@@ -122,10 +122,13 @@ def build_app(upstream_base_url: str, policy: AdmissionPolicy) -> web.Applicatio
         # limit=0: aiohttp's default pool of 100 connections would silently cap the engine at
         # 100 concurrent requests behind every policy, native queueing included (W3, ADR 0012).
         # Admission is the policy's job alone; the upstream pool must never be a second limiter.
+        # force_close: one connection per request. Reusing a keep-alive connection races
+        # uvicorn's 5 s idle close and surfaced as 502 "Server disconnected" / "Connection reset
+        # by peer" in the first GPU smoke (2026-09-11); a loopback handshake costs microseconds.
         app[SESSION_KEY] = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=None),
             auto_decompress=False,
-            connector=aiohttp.TCPConnector(limit=0),
+            connector=aiohttp.TCPConnector(limit=0, force_close=True),
         )
 
     async def _close_session(app: web.Application) -> None:
@@ -138,6 +141,15 @@ def build_app(upstream_base_url: str, policy: AdmissionPolicy) -> web.Applicatio
     return app
 
 
+# aiohttp >= 3.9 no longer cancels a handler when its client disconnects. The shim needs the
+# cancellation: a client that gives up (inference-perf's 300 s timeout) must close the upstream
+# request so vLLM aborts it, exactly as when the client talks to vLLM directly; otherwise the
+# native-queueing arm keeps decoding requests nobody will read.
+SERVER_KWARGS: dict[str, bool] = {"handler_cancellation": True}
+
+
 def run(upstream_base_url: str, policy: AdmissionPolicy, *, host: str, port: int) -> None:
     """Blocking entry point used by `slo-lab shim`."""
-    web.run_app(build_app(upstream_base_url, policy), host=host, port=port, print=None)
+    web.run_app(
+        build_app(upstream_base_url, policy), host=host, port=port, print=None, **SERVER_KWARGS
+    )

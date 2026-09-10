@@ -132,10 +132,17 @@ run_seed() {  # $1 = seed; runs every policy of the seed that has no manifest ye
   for p in $order; do
     [ -f "$dir/trace-$p/manifest.json" ] && continue
     vllm_idle || log "WARNING engine not idle after 600 s before $p"
-    start_shim "$p" "$dir" || { log "SHIM_FAILED $p"; stop_shim; continue; }
+    local target=(--base-url "http://127.0.0.1:$SHIM_PORT" --shim-stats-url "http://127.0.0.1:$SHIM_PORT/_shim/stats")
+    if [ "$p" = direct ]; then
+      # control arm for the smoke only: no shim, the client talks to vLLM (ADR 0012 item 4)
+      target=(--base-url "http://127.0.0.1:$VLLM_PORT")
+    else
+      start_shim "$p" "$dir" || { log "SHIM_FAILED $p"; stop_shim; continue; }
+      target+=(--shim-pid "$SHIM_PID")
+    fi
     wu=20; [ "$first" = 1 ] && wu=100; first=0
     log "START seed=$seed policy=$p warmup=$wu"
-    "$LABCLI" run-stage --run-dir "$dir/trace-$p" --cell "$CELL" --model "$MODEL" --kind trace --seed "$seed" --base-url "http://127.0.0.1:$SHIM_PORT" --metrics-url "http://127.0.0.1:$VLLM_PORT/metrics" --shim-stats-url "http://127.0.0.1:$SHIM_PORT/_shim/stats" --shim-pid "$SHIM_PID" --policy "$p" --trace-file "$trace" --profile "$PROFILE" --warmup-requests "$wu" --inference-perf-bin "$IPF" --engine-flags "$flags"
+    "$LABCLI" run-stage --run-dir "$dir/trace-$p" --cell "$CELL" --model "$MODEL" --kind trace --seed "$seed" "${target[@]}" --metrics-url "http://127.0.0.1:$VLLM_PORT/metrics" --policy "$p" --trace-file "$trace" --profile "$PROFILE" --warmup-requests "$wu" --inference-perf-bin "$IPF" --engine-flags "$flags"
     rc=$?
     stop_shim
     log "END seed=$seed policy=$p rc=$rc"

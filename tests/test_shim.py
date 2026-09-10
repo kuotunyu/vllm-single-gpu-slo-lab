@@ -183,3 +183,92 @@ async def test_passthrough_is_not_capped_by_the_upstream_connection_pool():
             assert [r.status for r in responses] == [200] * n
     finally:
         await upstream_server.close()
+
+
+async def test_each_request_gets_its_own_upstream_connection():
+    """No keep-alive reuse: uvicorn closes idle connections after 5 s, and reusing one races
+    that close into 502 "Server disconnected" / "Connection reset by peer" (GPU smoke,
+    2026-09-11: 9 such errors in one 4-minute burst)."""
+    peers: list[object] = []
+
+    async def handle(request: web.Request) -> web.Response:
+        peers.append(request.transport.get_extra_info("peername") if request.transport else None)
+        return web.json_response({"ok": True})
+
+    upstream_app = web.Application()
+    upstream_app.router.add_route("*", "/{tail:.*}", handle)
+    upstream_server = TestServer(upstream_app)
+    await upstream_server.start_server()
+    base = str(upstream_server.make_url("")).rstrip("/")
+    try:
+        async with TestClient(TestServer(build_app(base, Passthrough()))) as client:
+            for _ in range(3):
+                assert (await client.post("/v1/completions", data=b"x")).status == 200
+        assert len(peers) == 3 and len(set(peers)) == 3
+    finally:
+        await upstream_server.close()
+
+
+async def _disconnect_reaches_upstream(server_kwargs: dict) -> tuple[bool, int]:
+    """Client gives up while its request still waits upstream (no body bytes yet).
+
+    Returns (upstream saw the disconnect within 2 s, policy in-flight count afterwards).
+    """
+    upstream_saw_disconnect = asyncio.Event()
+    headers_sent = asyncio.Event()
+
+    async def handle(request: web.Request) -> web.StreamResponse:
+        resp = web.StreamResponse()
+        await resp.prepare(request)  # vLLM sends headers at once, tokens only after queueing
+        headers_sent.set()
+        try:
+            await asyncio.sleep(5.0)  # the request sits in the engine queue
+            await resp.write(b"data: tok\n\n")
+        except (ConnectionError, asyncio.CancelledError):
+            upstream_saw_disconnect.set()
+            raise
+        return resp
+
+    upstream_app = web.Application()
+    upstream_app.router.add_route("*", "/{tail:.*}", handle)
+    upstream_server = TestServer(upstream_app, handler_cancellation=True)
+    await upstream_server.start_server()
+    base = str(upstream_server.make_url("")).rstrip("/")
+    policy = HardCap(4)
+    try:
+        shim = TestServer(build_app(base, policy), **server_kwargs)
+        async with TestClient(shim) as client:
+            resp = await client.post("/v1/completions", data=b"x")
+            await asyncio.wait_for(headers_sent.wait(), 2.0)
+            resp.close()  # inference-perf's timeout fires before the first token
+            try:
+                await asyncio.wait_for(upstream_saw_disconnect.wait(), 2.0)
+                seen = True
+            except TimeoutError:
+                seen = False
+            for _ in range(50):
+                if policy.in_flight == 0:
+                    break
+                await asyncio.sleep(0.02)
+            return seen, policy.in_flight
+    finally:
+        await upstream_server.close()
+
+
+async def test_client_disconnect_while_queued_upstream_aborts_the_engine_request():
+    """A client that gives up while its request waits in vLLM's queue must abort it there, as
+    it would talking to vLLM directly; otherwise native queueing keeps a request nobody reads.
+    aiohttp 3.14 already propagates this in the shim's setup; ``run`` also turns on server-side
+    handler cancellation so the behaviour does not hinge on that version detail."""
+    from slo_lab.admission.shim import SERVER_KWARGS
+
+    assert await _disconnect_reaches_upstream(SERVER_KWARGS) == (True, 0)
+
+
+def test_run_enables_handler_cancellation(monkeypatch):
+    from slo_lab.admission import shim as shim_module
+
+    seen: dict = {}
+    monkeypatch.setattr(shim_module.web, "run_app", lambda app, **kw: seen.update(kw))
+    shim_module.run("http://127.0.0.1:9", Passthrough(), host="127.0.0.1", port=8021)
+    assert seen["handler_cancellation"] is True and seen["port"] == 8021

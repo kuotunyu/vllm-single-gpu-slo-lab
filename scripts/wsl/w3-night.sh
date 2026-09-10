@@ -13,7 +13,7 @@ export DRY
 
 log "START (DRY=$DRY)"
 if [ "${SKIP_SMOKE:-0}" != 1 ]; then
-  SEEDS=1 POLICIES="passthrough bounded_queue" RERUN_MAX=0 \
+  SEEDS=1 POLICIES="direct passthrough bounded_queue" RERUN_MAX=0 \
     PROFILE="$REPO/config/traffic/burst-smoke.yaml" RUN_ROOT="$HOME/vllm-slo-lab/runs-w3-smoke" \
     bash "$WSL/w3-trace-chain.sh" fp8-smoke Qwen/Qwen3-8B-FP8 256 256 43.67
   if [ "$DRY" != 1 ]; then
