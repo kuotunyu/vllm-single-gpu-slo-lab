@@ -10,4 +10,4 @@ for _ in $(seq 1 120); do
 done
 [ -f "$LOG" ] || { echo "WATCH: no log at $LOG"; exit 1; }
 stdbuf -o0 tail -F -n +1 "$LOG" 2>/dev/null | stdbuf -o0 grep -E \
-  "server ready|CELL DONE|NIGHT DONE|START |END seed=|r_sat=|r_slo |no r_sat|TMMLU done|promoted -> |quarantined|QUARANTINED|SMOKE_|SHIM_FAILED|FAIL:|WARNING|SERVER_NOT_READY|SERVER_EXITED_EARLY|QUIET_GPU_REFUSED|Traceback|Error|error:|Killed|OOM|exit=[1-9]"
+  "server ready|shim ready|CELL DONE|NIGHT DONE|START |END seed=|END smoke|r_sat=|rate_ref=|r_slo |no r_sat|CLOSED_LOOP_SHORT|TMMLU done|promoted -> |quarantined|QUARANTINED|SMOKE_|SHIM_FAILED|SHIM_NOT_READY|FAIL:|WARNING|SERVER_NOT_READY|SERVER_EXITED_EARLY|QUIET_GPU_REFUSED|Traceback|Error|error:|Killed|OOM|exit=[1-9]"
