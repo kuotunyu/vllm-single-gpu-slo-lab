@@ -105,7 +105,11 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash <寫一個腳本檔，內容�
 3. claims audit 更新、`docs/model-card.md`、README 的敘事。
 4. 可選：每段紀錄數都比 trace 列數少 1 筆的原因（ADR 0013）。
 
+**W5 進度（2026-09-12 凌晨，W4 量測進行中順手做的）**：`docs/model-card.md` 草稿（缺 W4 列）；`docs/licences.md` 補齊 GPTQ 與 EAGLE-3 head 的授權（head 的 HF repo 內附 `License_AngelSlim_model_and_dataset.txt`，Apache-2.0）；`slo_lab.plots` 以純 Python 產生 SVG（W2 attainment 對 rate、W3 佇列時間線；W4 的圖在表存在時自動加），`reproduce-lite` 重建、`make reproduce` diff；W5 第 4 項查過 inference-perf 原始碼：trace 列數與請求數相同（`get_request_count` = 列數），少的那一筆發生在派發之後，未再追，影響 0.002 %。W5 第 1 項（重解析 W2）等 GPU 跑完再做，因為要讀 117 GB 原始檔，量測中會擾動磁碟。
+
 ### W6：寫作與發佈前檢查（不用 GPU）
+
+**預檢結果（2026-09-12）**：歷史 73 個 commit 作者全部是 `kuotunyu <61350295+kuotunyu@users.noreply.github.com>`，沒有 Co-Authored-By；全樹（含 gzip 證據）掃 `/home/` 只出現在腳本與文件的說明文字、email 只有 noreply 與 example.com、`http` 除 uv.lock 與授權連結外都是 localhost，**唯一要在公開前拿掉的是 `docs/HANDOFF.md` 與 `docs/superpowers/plans/2026-09-10-w2-overnight-run.md` 裡的私人儀表板網址**。
 
 1. 使用者決定是否公開。
 2. 若公開：先用 `git filter-repo` 改寫歷史，讓公開 repo 只含 gzip 版證據（目前 `.git` 約 125 MB，因為舊的未壓縮版本還在歷史裡）；確認所有 commit 作者是 `kuotunyu <61350295+kuotunyu@users.noreply.github.com>`、沒有 Co-Authored-By；跑 secrets audit，並另外 grep `/home/`、`@`、`http`；確認 EAGLE-3 head 的授權（model card 沒寫授權，ADR 0003）。

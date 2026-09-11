@@ -463,6 +463,46 @@ def specdec_flags(
     typer.echo(speculative_config_flag(config))
 
 
+@app.command("reparse-records")
+def reparse_records(
+    raw: Annotated[Path, typer.Argument(help="inference-perf per_request_lifecycle_metrics.json")],
+    out: Annotated[Path, typer.Option(help="records.jsonl to write.")],
+) -> None:
+    """Re-adapt one raw loadgen file with the current adapter (server token counts; W5)."""
+    from slo_lab.reparse import reparse_stage
+
+    typer.echo(f"{reparse_stage(raw, out)} records -> {out}")
+
+
+@app.command("reparse-compare")
+def reparse_compare(
+    evidence_root: Annotated[Path, typer.Argument(help="Committed tree, e.g. evidence/raw/w2")],
+    new_root: Annotated[Path, typer.Argument(help="Re-parsed tree with the same layout.")],
+    out: Annotated[Path | None, typer.Option(help="Write the full comparison JSON here.")] = None,
+) -> None:
+    """Compare committed records with a re-parsed tree: per stage and per cell r_SLO (W5)."""
+    from slo_lab.reparse import compare_tree
+
+    result = compare_tree(evidence_root, new_root)
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            json.dumps(result, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    for cell, c in result["per_cell"].items():
+        typer.echo(
+            f"{cell}: r_SLO {c['r_slo_old']} -> {c['r_slo_new']}"
+            f"{' CHANGED' if c['changed'] else ''}; {c['changed_token_counts']} of {c['records']} "
+            f"token counts differ over {c['open_loop_stages']} open-loop stages"
+        )
+    typer.echo(
+        f"stages compared: {len(result['stages'])}; "
+        f"missing on the new side: {len(result['missing_new'])}"
+    )
+
+
 @app.command("reproduce-lite")
 def reproduce_lite(
     root: Annotated[Path, typer.Option(help="Repository root.")] = Path("."),
