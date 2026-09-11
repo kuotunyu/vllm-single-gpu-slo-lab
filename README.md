@@ -57,7 +57,7 @@
 ## Claim ceilings（規格 §2.2 原文；發佈前 claims audit 逐條核對）
 
 1. 不宣稱多 replica、擴縮、生產可靠度（re-plan §4）。
-2. 不宣稱跨 GPU class 推論——只講實際量過的 class：4090，加上 A1 完成後的 L4（或 L40S）；H100／Blackwell 一律不外推（memo §5）。
+2. 不宣稱跨 GPU class 推論——只講實際量過的 RTX 4090；A1 雲端對照已取消（ADR 0014），L4、H100、Blackwell 一律不外推（memo §5）。
 3. 不宣稱任何 $／百萬 token，也不做「比 API 便宜」的比較——4090 是自有硬體，攤提與電價是假設而非量測，因此不計成本、只報實測能耗（ADR 0010）。
 4. 不宣稱 EAGLE-3 在 Qwen3-8B 上的效果——memo §2 只找到 AngelSlim 的 4B／14B／32B head；EAGLE-3 數字只屬於 Qwen3-4B，8B 只有 n-gram。
 5. 不宣稱 TMMLU+ 分數可與他人 leaderboard 比較——ikala leaderboard README 已 12 個月未更新（memo §4）；只報自跑數字與四個精度間的配對差。
@@ -104,11 +104,11 @@
 
 ### 還沒有
 
-- W4 spec-decode（8B n-gram；4B none、n-gram、EAGLE-3），GPU 時段待安排；突發下 TPOT 安全的 FP8 上限 C。
+- **剩餘工作、時間與開工方式見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：W4 spec-decode 完整版（8B none、n-gram；4B none、n-gram、EAGLE-3）、FP8 突發安全上限補點，GPU 合計約 12 小時，時段待使用者安排；W5、W6 不用 GPU。
 - 圖、model card；ledger 只有表頭。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
-- A1（RunPod L4）尚未開始；任何付費動作前逐筆先問。
+- A1（RunPod L4）已取消（ADR 0014）。
 
 ## Repository 佈局
 
@@ -160,7 +160,7 @@ uv run slo-lab reproduce-lite
 
 ## 里程碑
 
-W0 骨架（本 commit）→ W1 驗證清單 10 項與基線 → W2 四精度掃描與 TMMLU+ 切片 → W3 admission trace → W4 spec-decode、A1（付費前先問）→ W5 補 n、敏感度、claims audit → W6 誠實寫作與發佈前檢查。細節見設計規格與 `docs/decisions/`。
+W0 骨架（本 commit）→ W1 驗證清單 10 項與基線 → W2 四精度掃描與 TMMLU+ 切片 → W3 admission trace → W4 spec-decode → W5 補 n、敏感度、claims audit → W6 誠實寫作與發佈前檢查。細節見設計規格與 `docs/decisions/`。
 
 ## 授權
 
