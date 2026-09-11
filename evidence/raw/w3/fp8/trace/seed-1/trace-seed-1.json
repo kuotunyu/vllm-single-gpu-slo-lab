@@ -1,0 +1,30 @@
+{
+  "arrivals": 45625,
+  "sha256": "83a6a302f9ae09e1b9edc0d94e06523ab2199ddbbfec34265c60f7ded36827f2",
+  "rate_ref": 43.67,
+  "seed": 1,
+  "duration_s": 1500,
+  "phases": [
+    {
+      "phase": "pre",
+      "start_s": 0.0,
+      "end_s": 300.0,
+      "rate_rps": 21.835,
+      "arrivals": 6528
+    },
+    {
+      "phase": "burst",
+      "start_s": 300.0,
+      "end_s": 600.0,
+      "rate_rps": 65.505,
+      "arrivals": 19616
+    },
+    {
+      "phase": "recovery",
+      "start_s": 600.0,
+      "end_s": 1500.0,
+      "rate_rps": 21.835,
+      "arrivals": 19481
+    }
+  ]
+}

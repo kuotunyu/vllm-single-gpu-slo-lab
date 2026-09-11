@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 四精度完成（2026-09-11）；admission（W3）與 spec-decode（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
+> **狀態：W2 四精度與 W3 admission 完成（2026-09-11）；spec-decode（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
 >
 > | 精度 | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | r_sat | 單流 TPOT | 能耗 @ r_SLO | TMMLU+ 全集 | 對 BF16 配對差 |
 > |---|---|---|---|---|---|---|
@@ -13,7 +13,16 @@
 >
 > r_SLO 是 open-loop Poisson（108→132 tokens，每 cell 11–14 個 rate × 3 seeds × 5 min）在凍結規則下（所有 seed ≥ 95%、自最低 rate 連續向上）的值，四個 cell 的膝點都夾到 7–11% 以內。TMMLU+ 全集 19,680 題、同題配對、exact McNemar。FP8 對 BF16：SLO 容量 2.55 倍、每 token 能耗 42%、品質無法區分。4-bit 單流快約 2.5 倍，但飽和吞吐比 FP8 低 27%，品質顯著下降。
 >
-> 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡；admission 策略要等 W3。4090 不計 $／百萬 token（ADR 0010）。
+> 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡。4090 不計 $／百萬 token（ADR 0010）。
+>
+> **W3：1.5 倍、5 分鐘突發下的三種 admission 策略**（ADR 0013；seeded trace replay，三策略重播同一條 trace，各 3 seeds）：
+>
+> | 整段 SLO attainment | 原生排隊 | hard cap + 429 | 有界佇列 + 1 s 逾時 |
+> |---|---|---|---|
+> | FP8（C = 256） | 0.19 | 0.57 | 0.59 |
+> | BF16（C = 40） | 0.47 | 0.87 | 0.86 |
+>
+> 原生排隊在突發後要 3.5–14 分鐘才恢復，FP8 的佇列等待讓 TTFT p95 到 268 s；兩種限流讓 attainment 提高約 0.4、突發後 10 s 內恢復，代價是拒絕 12–21 % 的請求。限流在突發段本身有沒有用取決於上限 C：BF16 的 C = 40 在突發下仍守得住 TPOT（突發段 0.69），FP8 由 closed-loop 推得的 C = 256 在突發下 TPOT p95 升到 57 ms（突發段 0.01–0.05）。
 
 ## 一句話
 
@@ -95,7 +104,7 @@
 
 ### 還沒有
 
-- W3 admission 三策略在 burst trace 下的量測；W4 spec-decode 兩個 cell（n-gram、EAGLE-3）。
+- W4 spec-decode（8B n-gram；4B none、n-gram、EAGLE-3），GPU 時段待安排；突發下 TPOT 安全的 FP8 上限 C。
 - 圖、model card；ledger 只有表頭。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。

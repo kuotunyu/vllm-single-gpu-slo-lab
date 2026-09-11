@@ -1,0 +1,1061 @@
+2026-09-11 04:15:42,135 - inference_perf.config.config - INFO - Using configuration from: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/inference-perf.yaml
+2026-09-11 04:15:42,139 - inference_perf.config.config - INFO - Benchmarking with the following config:
+
+api:
+  type: completion
+  streaming: true
+  headers: null
+  slo_unit: null
+  slo_tpot_header: null
+  slo_ttft_header: null
+  response_format: null
+  session_id_header_key: null
+data:
+  type: random
+  path: null
+  corpus_file_path: null
+  input_distribution: null
+  output_distribution: null
+  shared_prefix: null
+  multimodal: null
+  trace:
+    file: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-seed-1.csv
+    format: AzurePublicDataset
+  otel_trace_replay: null
+  weka_trace_replay: null
+  conversation_replay: null
+  visionarena: null
+load:
+  type: trace_replay
+  interval: 0
+  stages:
+  - !!python/object:inference_perf.config.loadgen.config.StandardLoadStage
+    __dict__:
+      rate: 32.5875
+      duration: 240
+      num_requests: null
+      concurrency_level: null
+    __pydantic_extra__: null
+    __pydantic_fields_set__: !!set
+      duration: null
+      rate: null
+    __pydantic_private__: null
+  sweep: null
+  num_workers: 4
+  worker_max_concurrency: 4096
+  worker_max_tcp_connections: 4096
+  trace:
+    file: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-seed-1.csv
+    format: AzurePublicDataset
+  circuit_breakers: []
+  request_timeout: 300.0
+  lora_traffic_split: null
+  base_seed: 1
+metrics: null
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+    per_adapter: true
+    per_adapter_stage: false
+    percentiles:
+    - 0.1
+    - 1.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 75.0
+    - 90.0
+    - 95.0
+    - 99.0
+    - 99.9
+    use_server_output_tokens: false
+    max_error_messages: 100
+  prometheus: null
+  session_lifecycle:
+    summary: true
+    per_stage: true
+    per_session: false
+  goodput:
+    constraints:
+      ttft: 1.0
+      tpot: 0.05
+storage:
+  local_storage:
+    path: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf
+    report_file_prefix: null
+  google_cloud_storage: null
+  simple_storage_service: null
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-8B-FP8
+  base_url: http://127.0.0.1:8013
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-8B-FP8
+circuit_breakers: null
+
+
+2026-09-11 04:15:42,139 - inference_perf.client.filestorage.local - INFO - Report files will be stored at: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf
+2026-09-11 04:15:42,618 - inference_perf.utils.trace_reader - INFO - Loading traces from ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-seed-1.csv
+2026-09-11 04:15:42,660 - inference_perf.utils.trace_reader - INFO - Time taken to load traces: 0.04138326644897461 seconds
+2026-09-11 04:15:42,661 - inference_perf.datagen.random_datagen - INFO - Ignoring input and output distributions configurations as trace file ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-seed-1.csv is provided
+2026-09-11 04:15:42,692 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run started
+2026-09-11 04:15:42,693 - inference_perf.utils.trace_reader - INFO - Loading traces from ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-seed-1.csv
+2026-09-11 04:15:42,735 - inference_perf.utils.trace_reader - INFO - Time taken to load traces: 0.04184556007385254 seconds
+2026-09-11 04:15:44,381 - inference_perf.loadgen.load_generator - ERROR - [Worker 2] Failed to get request: Could not generate a prompt of exactly 108 tokens after 20 attempts (got 107). This usually means tokenizer.pretrained_model_name_or_path does not match the model the server is running.
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/loadgen/load_generator.py", line 228, in loop
+    request_data = LazyLoadDataMixin.get_request(self.datagen, request)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/datagen/base.py", line 278, in get_request
+    result = data_generator.load_lazy_data(data)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/datagen/random_datagen.py", line 125, in load_lazy_data
+    text = self._generate_exact_length_text(length)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/datagen/random_datagen.py", line 102, in _generate_exact_length_text
+    text, _ = generate_random_exact_length_text(self.rng, self.valid_token_ids, self.tokenizer, target_len)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/datagen/datagen_utils.py", line 148, in generate_random_exact_length_text
+    return converge_to_exact_length_text(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/datagen/datagen_utils.py", line 120, in converge_to_exact_length_text
+    raise ValueError(
+ValueError: Could not generate a prompt of exactly 108 tokens after 20 attempts (got 107). This usually means tokenizer.pretrained_model_name_or_path does not match the model the server is running.
+2026-09-11 04:17:49,898 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:18:05,239 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:18:03,785 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:18:17,966 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:18:38,479 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:18:44,809 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:18:47,170 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:18:51,118 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ServerDisconnectedError: Server disconnected
+2026-09-11 04:19:06,660 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:19:19,536 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:19:20,179 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:19:20,590 - inference_perf.client.modelserver.openai_client - ERROR - Client error during request:
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/inference_perf/client/modelserver/openai_client.py", line 387, in process_request
+    async with self.session.post(self.client.uri + data.get_route(), headers=headers, data=request_data) as resp:
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 1693, in __aenter__
+    self._resp: _RetType_co = await self._coro
+                              ^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 858, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client.py", line 836, in _connect_and_send_request
+    await resp.start(conn)
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/client_reqrep.py", line 558, in start
+    message, payload = await protocol.read()  # type: ignore[union-attr]
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "~/vllm-slo-lab/.venv-loadgen/lib/python3.12/site-packages/aiohttp/streams.py", line 705, in read
+    await self._waiter
+aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+2026-09-11 04:19:40,425 - inference_perf.loadgen.load_generator - INFO - Stage 0 - run completed
+Overall Progress ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 1/1 0:00:00 0:04:17
+2026-09-11 04:19:40,697 - inference_perf.reportgen.base - INFO - Generating Reports...
+2026-09-11 04:20:16,528 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf/summary_lifecycle_metrics.json
+2026-09-11 04:20:16,529 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf/stage_0_lifecycle_metrics.json
+2026-09-11 04:20:19,607 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf/per_request_lifecycle_metrics.json
+2026-09-11 04:20:19,608 - inference_perf.client.filestorage.local - INFO - Report saved to: ~/vllm-slo-lab/runs-w3-smoke/fp8-smoke/seed-1/trace-direct/ipf/config.yaml
+=== START_SUMMARY ===
+{
+  "benchmark_time_seconds": 256.1793788079999,
+  "load_summary": {
+    "count": 7820,
+    "schedule_delay": {
+      "mean": 0.0013728786390383484,
+      "min": -0.0008448789042176941,
+      "max": 0.08154549085293183,
+      "p0.1": -0.0008078231562724341,
+      "p1": -0.0006417259402292075,
+      "p5": -0.000308171770257104,
+      "p10": -7.89789431792087e-05,
+      "p25": 0.0004507589319473482,
+      "median": 0.0011540058161472189,
+      "p75": 0.001979706933639136,
+      "p90": 0.0030166627197559144,
+      "p95": 0.003694989244661428,
+      "p99": 0.00517289583640149,
+      "p99.9": 0.007901517854485111
+    }
+  },
+  "successes": {
+    "count": 7808,
+    "latency": {
+      "request_latency": {
+        "mean": 31.76375014725858,
+        "min": 2.7851879710001413,
+        "max": 63.03106157399998,
+        "p0.1": 2.8103923852298807,
+        "p1": 2.8531386994699504,
+        "p5": 3.0282610640499343,
+        "p10": 3.179316481700039,
+        "p25": 15.536141315499947,
+        "median": 32.97768139000004,
+        "p75": 48.22562164275007,
+        "p90": 56.36559306249999,
+        "p95": 59.815579623399934,
+        "p99": 62.74837427914993,
+        "p99.9": 62.94278780835595
+      },
+      "normalized_time_per_output_token": {
+        "mean": 0.2597142823247597,
+        "min": 0.0,
+        "max": 46.5723348060003,
+        "p0.1": 0.0,
+        "p1": 0.021588085532348845,
+        "p5": 0.022982205449242666,
+        "p10": 0.024194221866666553,
+        "p25": 0.11757152806545305,
+        "median": 0.24871249960985026,
+        "p75": 0.367969619996214,
+        "p90": 0.4323238715673886,
+        "p95": 0.45588750269944955,
+        "p99": 0.47874273115442795,
+        "p99.9": 2.2764585480965356
+      },
+      "time_per_output_token": {
+        "mean": 0.05166837405655928,
+        "min": 0.0,
+        "max": 1.0770698148571358,
+        "p0.1": 0.01279625714913814,
+        "p1": 0.021274558818167026,
+        "p5": 0.022627855412532892,
+        "p10": 0.023839403128720935,
+        "p25": 0.05687994180367044,
+        "median": 0.05720098033587676,
+        "p75": 0.05753349743893172,
+        "p90": 0.05816746922790702,
+        "p95": 0.05882455314133894,
+        "p99": 0.06033488087741444,
+        "p99.9": 0.1152500853707374
+      },
+      "time_to_first_token": {
+        "mean": 25.065555218259398,
+        "min": 0.04923634100009622,
+        "max": 55.552310986000066,
+        "p0.1": 0.05074792032398545,
+        "p1": 0.055355302679881785,
+        "p5": 0.06523347150002792,
+        "p10": 0.07403539860001729,
+        "p25": 8.050857193999946,
+        "median": 25.515686048999896,
+        "p75": 40.73982121000006,
+        "p90": 48.88836593219999,
+        "p95": 52.30407598459997,
+        "p99": 55.267713563999976,
+        "p99.9": 55.43750536724591
+      },
+      "inter_token_latency": {
+        "mean": 0.05089118995554755,
+        "min": 0.0,
+        "max": 0.3829480470001272,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.01888048279990926,
+        "p10": 0.02079973479981163,
+        "p25": 0.031156351000049654,
+        "median": 0.05602347099988947,
+        "p75": 0.06535305800002789,
+        "p90": 0.08502403000002232,
+        "p95": 0.09285389829990434,
+        "p99": 0.10805126241971265,
+        "p99.9": 0.19455390100213682
+      }
+    },
+    "throughput": {
+      "input_tokens_per_sec": 3291.69351539417,
+      "output_tokens_per_sec": 4014.1443264671043,
+      "total_tokens_per_sec": 7305.837841861275,
+      "requests_per_sec": 30.47864366105713,
+      "images_per_sec": 0.0,
+      "videos_per_sec": 0.0,
+      "audios_per_sec": 0.0
+    },
+    "request_size_bytes": {
+      "mean": 1103.4097079918033,
+      "min": 885.0,
+      "max": 1427.0,
+      "p0.1": 898.649,
+      "p1": 945.07,
+      "p5": 988.0,
+      "p10": 1011.0,
+      "p25": 1052.0,
+      "median": 1100.0,
+      "p75": 1152.0,
+      "p90": 1200.0,
+      "p95": 1230.6499999999996,
+      "p99": 1289.0,
+      "p99.9": 1371.1930000000011
+    },
+    "prompt_len": {
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "image": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "video": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "frames": null,
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "audio": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "seconds": null,
+      "bytes": null
+    },
+    "prompt_tokens": {
+      "total": 843264.0,
+      "cached": 0.0,
+      "uncached": 843264.0,
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "output_len": {
+      "mean": 131.70350922131146,
+      "min": 0.0,
+      "max": 263.0,
+      "p0.1": 0.0,
+      "p1": 118.14000000000001,
+      "p5": 128.0,
+      "p10": 130.0,
+      "p25": 131.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 235.9300000000003,
+      "p99.9": 240.0
+    },
+    "output_tokens": {
+      "total": 1030656.0,
+      "mean": 132.0,
+      "min": 132.0,
+      "max": 132.0,
+      "p0.1": 132.0,
+      "p1": 132.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.0,
+      "p99.9": 132.0
+    },
+    "token_count_mismatches": 1807,
+    "goodput_metrics": {
+      "goodput_percentage": 16.508709016393443,
+      "request_goodput": 5.031630594147367,
+      "token_goodput": 1207.2087981436796,
+      "good_requests": 1289,
+      "total_requests": 7808,
+      "ttft_attainment_percentage": 19.339139344262296,
+      "tpot_attainment_percentage": 19.55686475409836
+    }
+  },
+  "failures": {
+    "count": 12,
+    "request_latency": {
+      "mean": 0.006743679000048057,
+      "min": 0.0007023530001788458,
+      "max": 0.06256587500001842,
+      "p0.1": 0.0007024854951757788,
+      "p1": 0.0007036779501481761,
+      "p5": 0.0007089777500254967,
+      "p10": 0.0007168462999061376,
+      "p25": 0.0008223395000186429,
+      "median": 0.0016325935001759717,
+      "p75": 0.0022314222499062453,
+      "p90": 0.004037847199924728,
+      "p95": 0.030473579599970393,
+      "p99": 0.05614741592000886,
+      "p99.9": 0.06192402909201751
+    },
+    "prompt_len": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "p0.1": 0.0,
+      "p1": 0.0,
+      "p5": 0.0,
+      "p10": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "p99.9": 0.0
+    },
+    "by_label": {
+      "Connection Error": {
+        "count": 12,
+        "messages": [
+          {
+            "message": "Server disconnected"
+          },
+          {
+            "message": "[Errno 104] Connection reset by peer"
+          }
+        ]
+      }
+    }
+  }
+}
+=== END_SUMMARY ===
+=== START_STAGE_0 ===
+{
+  "benchmark_time_seconds": 256.1793788079999,
+  "load_summary": {
+    "count": 7820,
+    "schedule_delay": {
+      "mean": 0.0013728786390383484,
+      "min": -0.0008448789042176941,
+      "max": 0.08154549085293183,
+      "p0.1": -0.0008078231562724341,
+      "p1": -0.0006417259402292075,
+      "p5": -0.000308171770257104,
+      "p10": -7.89789431792087e-05,
+      "p25": 0.0004507589319473482,
+      "median": 0.0011540058161472189,
+      "p75": 0.001979706933639136,
+      "p90": 0.0030166627197559144,
+      "p95": 0.003694989244661428,
+      "p99": 0.00517289583640149,
+      "p99.9": 0.007901517854485111
+    },
+    "send_duration": 239.95384766799998,
+    "requested_rate": 32.5875,
+    "achieved_rate": 32.58960035856457
+  },
+  "successes": {
+    "count": 7808,
+    "latency": {
+      "request_latency": {
+        "mean": 31.76375014725858,
+        "min": 2.7851879710001413,
+        "max": 63.03106157399998,
+        "p0.1": 2.8103923852298807,
+        "p1": 2.8531386994699504,
+        "p5": 3.0282610640499343,
+        "p10": 3.179316481700039,
+        "p25": 15.536141315499947,
+        "median": 32.97768139000004,
+        "p75": 48.22562164275007,
+        "p90": 56.36559306249999,
+        "p95": 59.815579623399934,
+        "p99": 62.74837427914993,
+        "p99.9": 62.94278780835595
+      },
+      "normalized_time_per_output_token": {
+        "mean": 0.2597142823247597,
+        "min": 0.0,
+        "max": 46.5723348060003,
+        "p0.1": 0.0,
+        "p1": 0.021588085532348845,
+        "p5": 0.022982205449242666,
+        "p10": 0.024194221866666553,
+        "p25": 0.11757152806545305,
+        "median": 0.24871249960985026,
+        "p75": 0.367969619996214,
+        "p90": 0.4323238715673886,
+        "p95": 0.45588750269944955,
+        "p99": 0.47874273115442795,
+        "p99.9": 2.2764585480965356
+      },
+      "time_per_output_token": {
+        "mean": 0.05166837405655928,
+        "min": 0.0,
+        "max": 1.0770698148571358,
+        "p0.1": 0.01279625714913814,
+        "p1": 0.021274558818167026,
+        "p5": 0.022627855412532892,
+        "p10": 0.023839403128720935,
+        "p25": 0.05687994180367044,
+        "median": 0.05720098033587676,
+        "p75": 0.05753349743893172,
+        "p90": 0.05816746922790702,
+        "p95": 0.05882455314133894,
+        "p99": 0.06033488087741444,
+        "p99.9": 0.1152500853707374
+      },
+      "time_to_first_token": {
+        "mean": 25.065555218259398,
+        "min": 0.04923634100009622,
+        "max": 55.552310986000066,
+        "p0.1": 0.05074792032398545,
+        "p1": 0.055355302679881785,
+        "p5": 0.06523347150002792,
+        "p10": 0.07403539860001729,
+        "p25": 8.050857193999946,
+        "median": 25.515686048999896,
+        "p75": 40.73982121000006,
+        "p90": 48.88836593219999,
+        "p95": 52.30407598459997,
+        "p99": 55.267713563999976,
+        "p99.9": 55.43750536724591
+      },
+      "inter_token_latency": {
+        "mean": 0.05089118995554755,
+        "min": 0.0,
+        "max": 0.3829480470001272,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.01888048279990926,
+        "p10": 0.02079973479981163,
+        "p25": 0.031156351000049654,
+        "median": 0.05602347099988947,
+        "p75": 0.06535305800002789,
+        "p90": 0.08502403000002232,
+        "p95": 0.09285389829990434,
+        "p99": 0.10805126241971265,
+        "p99.9": 0.19455390100213682
+      }
+    },
+    "throughput": {
+      "input_tokens_per_sec": 3291.69351539417,
+      "output_tokens_per_sec": 4014.1443264671043,
+      "total_tokens_per_sec": 7305.837841861275,
+      "requests_per_sec": 30.47864366105713,
+      "images_per_sec": 0.0,
+      "videos_per_sec": 0.0,
+      "audios_per_sec": 0.0
+    },
+    "request_size_bytes": {
+      "mean": 1103.4097079918033,
+      "min": 885.0,
+      "max": 1427.0,
+      "p0.1": 898.649,
+      "p1": 945.07,
+      "p5": 988.0,
+      "p10": 1011.0,
+      "p25": 1052.0,
+      "median": 1100.0,
+      "p75": 1152.0,
+      "p90": 1200.0,
+      "p95": 1230.6499999999996,
+      "p99": 1289.0,
+      "p99.9": 1371.1930000000011
+    },
+    "prompt_len": {
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "image": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "video": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "frames": null,
+      "pixels": null,
+      "bytes": null,
+      "aspect_ratio": null
+    },
+    "audio": {
+      "count": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p0.1": 0.0,
+        "p1": 0.0,
+        "p5": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "p99.9": 0.0
+      },
+      "seconds": null,
+      "bytes": null
+    },
+    "prompt_tokens": {
+      "total": 843264.0,
+      "cached": 0.0,
+      "uncached": 843264.0,
+      "mean": 108.0,
+      "min": 108.0,
+      "max": 108.0,
+      "p0.1": 108.0,
+      "p1": 108.0,
+      "p5": 108.0,
+      "p10": 108.0,
+      "p25": 108.0,
+      "median": 108.0,
+      "p75": 108.0,
+      "p90": 108.0,
+      "p95": 108.0,
+      "p99": 108.0,
+      "p99.9": 108.0
+    },
+    "output_len": {
+      "mean": 131.70350922131146,
+      "min": 0.0,
+      "max": 263.0,
+      "p0.1": 0.0,
+      "p1": 118.14000000000001,
+      "p5": 128.0,
+      "p10": 130.0,
+      "p25": 131.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 235.9300000000003,
+      "p99.9": 240.0
+    },
+    "output_tokens": {
+      "total": 1030656.0,
+      "mean": 132.0,
+      "min": 132.0,
+      "max": 132.0,
+      "p0.1": 132.0,
+      "p1": 132.0,
+      "p5": 132.0,
+      "p10": 132.0,
+      "p25": 132.0,
+      "median": 132.0,
+      "p75": 132.0,
+      "p90": 132.0,
+      "p95": 132.0,
+      "p99": 132.0,
+      "p99.9": 132.0
+    },
+    "token_count_mismatches": 1807,
+    "goodput_metrics": {
+      "goodput_percentage": 16.508709016393443,
+      "request_goodput": 5.031630594147367,
+      "token_goodput": 1207.2087981436796,
+      "good_requests": 1289,
+      "total_requests": 7808,
+      "ttft_attainment_percentage": 19.339139344262296,
+      "tpot_attainment_percentage": 19.55686475409836
+    }
+  },
+  "failures": {
+    "count": 12,
+    "request_latency": {
+      "mean": 0.006743679000048057,
+      "min": 0.0007023530001788458,
+      "max": 0.06256587500001842,
+      "p0.1": 0.0007024854951757788,
+      "p1": 0.0007036779501481761,
+      "p5": 0.0007089777500254967,
+      "p10": 0.0007168462999061376,
+      "p25": 0.0008223395000186429,
+      "median": 0.0016325935001759717,
+      "p75": 0.0022314222499062453,
+      "p90": 0.004037847199924728,
+      "p95": 0.030473579599970393,
+      "p99": 0.05614741592000886,
+      "p99.9": 0.06192402909201751
+    },
+    "prompt_len": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "p0.1": 0.0,
+      "p1": 0.0,
+      "p5": 0.0,
+      "p10": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "p99.9": 0.0
+    },
+    "by_label": {
+      "Connection Error": {
+        "count": 12,
+        "messages": [
+          {
+            "message": "Server disconnected"
+          },
+          {
+            "message": "[Errno 104] Connection reset by peer"
+          }
+        ]
+      }
+    }
+  }
+}
+=== END_STAGE_0 ===
+                         Throughput and Goodput Summary                         
+┏━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━┓
+┃      ┃  Req ┃ Ach… ┃ Err… ┃      ┃   In ┃  Out ┃   Tot ┃ Goo… ┃   Req ┃ Tok… ┃
+┃ Sta… ┃ Rate ┃ Rate ┃ Rate ┃ Req… ┃ Tok… ┃ Tok… ┃ Toke… ┃    % ┃ Good… ┃ Goo… ┃
+┡━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━┩
+│    0 │ 32.6 │ 32.6 │ 0.2% │ 30.5 │ 329… │ 401… │ 7305… │ 16.… │   5.0 │ 120… │
+└──────┴──────┴──────┴──────┴──────┴──────┴──────┴───────┴──────┴───────┴──────┘
+                          Request & Token Latency (ms)                          
+┏━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━┓
+┃       ┃   Req ┃   Req ┃   Req ┃       ┃       ┃       ┃       ┃       ┃      ┃
+┃       ┃   Lat ┃   Lat ┃   Lat ┃  TTFT ┃  TTFT ┃  TTFT ┃   ITL ┃   ITL ┃  ITL ┃
+┃ Stage ┃  Mean ┃   Med ┃   P90 ┃  Mean ┃   Med ┃   P90 ┃  Mean ┃   Med ┃  P90 ┃
+┡━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━┩
+│     0 │ 3176… │ 3297… │ 5636… │ 2506… │ 2551… │ 4888… │  50.9 │  56.0 │ 85.0 │
+└───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┴──────┘
+                          Token Generation Speed (ms)                           
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃       ┃           ┃          ┃          ┃ Norm TPOT ┃ Norm TPOT ┃  Norm TPOT ┃
+┃ Stage ┃ TPOT Mean ┃ TPOT Med ┃ TPOT P90 ┃      Mean ┃       Med ┃        P90 ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│     0 │      51.7 │     57.2 │     58.2 │     259.7 │     248.7 │      432.3 │
+└───────┴───────────┴──────────┴──────────┴───────────┴───────────┴────────────┘
+                            Token Length Aggregates                             
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
+┃       ┃    Prompt ┃    Prompt ┃    Prompt ┃    Output ┃   Output ┃    Output ┃
+┃ Stage ┃      Mean ┃       Med ┃       P90 ┃      Mean ┃      Med ┃       P90 ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
+│     0 │     108.0 │     108.0 │     108.0 │     131.7 │    132.0 │     132.0 │
+└───────┴───────────┴───────────┴───────────┴───────────┴──────────┴───────────┘
+         Request Error Summary          
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ Stage ┃ Successes ┃ Connection Error ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│     0 │      7808 │               12 │
+└───────┴───────────┴──────────────────┘
+
+--- stderr ---
+None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.

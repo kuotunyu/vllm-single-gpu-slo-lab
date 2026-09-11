@@ -1,0 +1,42 @@
+api:
+  type: completion
+  streaming: true
+data:
+  type: random
+  trace:
+    file: ~/vllm-slo-lab/runs-w3/bf16/seed-3/trace-seed-3.csv
+    format: AzurePublicDataset
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-8B
+  base_url: http://127.0.0.1:8021
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-8B
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+  prometheus: null
+  goodput:
+    constraints:
+      ttft: 1.0
+      tpot: 0.05
+storage:
+  local_storage:
+    path: ~/vllm-slo-lab/runs-w3/bf16/seed-3/trace-passthrough/ipf
+load:
+  type: trace_replay
+  trace:
+    file: ~/vllm-slo-lab/runs-w3/bf16/seed-3/trace-seed-3.csv
+    format: AzurePublicDataset
+  interval: 0
+  stages:
+  - rate: 7.93
+    duration: 1500
+  num_workers: 4
+  worker_max_concurrency: 4096
+  worker_max_tcp_connections: 4096
+  request_timeout: 300.0
+  base_seed: 3
