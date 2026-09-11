@@ -8,7 +8,7 @@ echo "== time =="; date
 echo "== gpu =="; nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu,power.draw --format=csv,noheader
 echo "== quiet-gpu =="; "$HOME/vllm-slo-lab/.venv-slolab/bin/slo-lab" quiet-gpu --out /tmp/preflight-quiet.json | head -4
 echo "== weights in HF cache =="
-for m in models--Qwen--Qwen3-8B-AWQ models--JunHowie--Qwen3-8B-GPTQ-Int4 models--Qwen--Qwen3-8B models--Qwen--Qwen3-8B-FP8; do
+for m in models--Qwen--Qwen3-8B-AWQ models--JunHowie--Qwen3-8B-GPTQ-Int4 models--Qwen--Qwen3-8B models--Qwen--Qwen3-8B-FP8 models--Qwen--Qwen3-4B models--AngelSlim--Qwen3-4B_eagle3; do
   d="$HOME/.cache/huggingface/hub/$m/snapshots"
   if [ -d "$d" ]; then echo "ok  $m ($(du -sh "$d" | cut -f1))"; else echo "MISSING $m"; fi
 done
@@ -18,5 +18,5 @@ echo "== venvs =="
 "$HOME/vllm-slo-lab/.venv-loadgen/bin/inference-perf" --help >/dev/null 2>&1 && echo "inference-perf ok"
 echo "== disk =="; df -h /home | tail -1; du -sh "$HOME/vllm-slo-lab/runs-w2" 2>/dev/null
 echo "== eval set =="; wc -l "$REPO/eval/tmmluplus/full.jsonl"
-echo "== leftovers =="; pgrep -af "vllm serve|inference-perf|w2-|wsl/batch" | grep -v pgrep || echo "none"
+echo "== leftovers =="; pgrep -af "vllm serve|inference-perf|w2-|w3-|w4-|wsl/batch|slo-lab shim|fake_vllm" | grep -v pgrep || echo "none"
 echo "== io pressure =="; head -1 /proc/pressure/io

@@ -347,6 +347,16 @@ def run_stage_cmd(
     shim_pid: Annotated[
         int | None, typer.Option(help="trace: shim process id, for its CPU time.")
     ] = None,
+    specdec: Annotated[
+        str | None,
+        typer.Option(
+            help="W4: speculative-decoding label (none | ngram | eagle3) for the manifest."
+        ),
+    ] = None,
+    family: Annotated[
+        str | None,
+        typer.Option(help="W4: model family of the cell (fp8 | q4b), pairs it with its none cell."),
+    ] = None,
 ) -> None:
     """Warm up, sample power and /metrics, run inference-perf, adapt records, write manifest.json."""
     import json as _json
@@ -375,6 +385,8 @@ def run_stage_cmd(
         policy=policy,
         shim_stats_url=shim_stats_url,
         shim_pid=shim_pid,
+        specdec=specdec,
+        family=family,
     )
     if kind == "trace":
         phases = result.get("phase_summaries") or {}
@@ -439,6 +451,16 @@ def run_stage_cmd(
             )
         )
     raise typer.Exit(code=0 if result.get("records") else 1)
+
+
+@app.command("specdec-flags")
+def specdec_flags(
+    config: Annotated[Path, typer.Argument(help="config/specdec/<name>.yaml")],
+) -> None:
+    """Print the `--speculative-config` server argument for a spec-decode YAML ('' for none)."""
+    from slo_lab.harness.specdec import speculative_config_flag
+
+    typer.echo(speculative_config_flag(config))
 
 
 @app.command("reproduce-lite")

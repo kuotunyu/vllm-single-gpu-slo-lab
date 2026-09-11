@@ -40,20 +40,25 @@ W0–W3 已完成：四種精度的比較（W2）與三種流量控制策略的�
 
 ## 剩餘工作與時間
 
-先看 GPU 總預算：**約 12 小時，可以一晚做完，也可以拆成兩次**。
+先看 GPU 總預算（2026-09-11 晚間依 W2／W3 的每段實測重估；原估的 10 小時沒算進每段的 re-warm、inference-perf 收尾與每個 session 的啟動與 warm-up）：**全做約 14.5 小時（W4 五個 cell 約 13 小時 + FP8 補點 1.5 小時）；建議的刪減版約 11 小時（W4 約 9.4 小時 + 補點 1.5 小時）**。可以一晚做完，也可以拆成兩次。
 
 | 項目 | 需要 GPU | 預計時間 | 需要使用者做的事 |
 |---|---|---|---|
-| W4 開工前準備：計畫、程式、ADR 0015、CPU 演練 | 不用 | 約 3–4 小時（我做） | 無 |
+| W4 開工前準備：計畫、程式、ADR 0015、CPU 演練 | 不用 | **已完成（2026-09-11）** | 無 |
 | W4 GPU smoke | 需要 | 約 20 分鐘 | 同一晚 |
-| W4 完整版：5 個 cell | 需要 | 約 10 小時 | 排一晚 |
+| W4 完整版：5 個 cell，每個約 2.5 小時 | 需要 | 約 12.6 小時 | 排一晚（或兩晚） |
+| W4 刪減版：拿掉 `q4b-ngram` 與 open-loop 的 0.1 × 點 | 需要 | 約 9 小時 | 一晚 |
 | FP8 突發安全上限補點 | 需要 | 約 1.5 小時 | 可併入同一晚，或另排 |
 | W5 補分析與文件 | 不用 | 約半天（我做） | 無 |
 | W6 寫作與發佈前檢查 | 不用 | 約半天（我做） | 決定是否公開 |
 
-拆成兩次的做法：第一次 W4 約 10.5 小時（含 smoke），第二次 FP8 補點約 1.5 小時。
+每個 cell 的 2.5 小時怎麼來：closed-loop 五點約 0.55 小時（伺服器啟動 2.5 min、100 筆 warm-up 4.3 min、負載約 18 min、四次 re-warm、收尾）；open-loop 15 段約 1.95 小時（啟動、warm-up，每段 5 min 負載加約 2.4 min 的 re-warm、取樣與收尾）。全部可刪減的選項與代價在 ADR 0015 第 11 條。拆成兩次的做法：第一晚 W4（全做 13 小時或刪減版 9.4 小時，含 smoke），第二次 FP8 補點約 1.5 小時。
 
 ### W4：speculative decoding 完整版
+
+**狀態（2026-09-11）：開工前準備完成，GPU 時段待使用者安排。** 協定全部定案在 ADR 0015（`docs/decisions/0015-w4-specdec-protocol.md`），計畫與 GPU 段落在 `docs/superpowers/plans/2026-09-11-w4-specdec.md`，runbook 有 W4 節。程式：`scripts/wsl/w4-night.sh`（smoke 閘門 → 五個 cell）、`w4-cell-chain.sh`、`check_w4_smoke.py`、`w4-dryrun.sh`（CPU 演練，已跑通）；`batch.sh` 支援 shim、每段 seed、假引擎；harness 記 spec-decode 接受率與 preemption；`slo_lab.specdec_analysis` 做同 family 對 none cell 的配對表。下面 1–8 項的定案版本以 ADR 0015 為準；重點：prompt 用 inference-perf `synthetic`（Shakespeare 文本）；open-loop 的 rate 以同 family 的 none cell 的 r_sat 錨定，三個 cell 在相同 rate 與 seed 下配對；n-gram k = 3、lookup 2–4；所有 cell 經 passthrough shim；cell 順序 `fp8-none` → `fp8-ngram` → `q4b-none` → `q4b-eagle3` → `q4b-ngram`。
+
+開跑：`MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-logged.sh w4-night.sh`；刪減版寫成腳本檔，例如 `CELLS="fp8-none fp8-ngram q4b-none q4b-eagle3" MULTIPLIERS="0.25 0.5 0.75 0.9"`。收尾步驟在計畫的 Task B4（index.json、reproduce、ADR 0016、README、claims audit）。
 
 **要回答的問題**（規格 §3.1）：加速解碼在低負載與高負載下，對 TPOT 與容量各有什麼影響。
 

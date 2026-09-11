@@ -2,6 +2,7 @@ name: ngram
 method: ngram
 speculative_config:
   method: ngram
-  num_speculative_tokens: null    # frozen at W1 from the installed version's spec-decode docs
-  prompt_lookup_max: null
+  num_speculative_tokens: 3     # W4, ADR 0015: k = 3, the same draft length as EAGLE-3
+  prompt_lookup_max: 4          # vLLM docs example; 0.28 defaults both bounds to 5 ("arbitrarily chosen") when unset
+  prompt_lookup_min: 2          # 2- and 3-gram matches also draft; with only max set, 0.28 would use min = max
 applies_to: [qwen3_8b_default_precision, qwen3_4b]

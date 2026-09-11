@@ -44,11 +44,13 @@ from slo_lab.harness.ipf_config import (
 )
 from slo_lab.harness.metrics_scraper import (
     HISTOGRAMS,
+    SPEC_DECODE_PER_POS,
     MetricsScraper,
     fetch_metrics,
     histogram_delta,
     histogram_quantile_bounds,
     parse_histograms,
+    parse_labelled,
     parse_metrics,
 )
 from slo_lab.harness.shim_scraper import ShimScraper
@@ -247,6 +249,60 @@ def clock_offset_s() -> float:
     return time.time() - time.monotonic()
 
 
+SPEC_DECODE_COUNTERS = (
+    "vllm:spec_decode_num_drafts_total",
+    "vllm:spec_decode_num_draft_tokens_total",
+    "vllm:spec_decode_num_accepted_tokens_total",
+)
+
+
+def counter_delta(
+    before: dict[str, float] | None, after: dict[str, float] | None, name: str
+) -> float | None:
+    """``after - before`` of one cumulative counter; None when either snapshot lacks it."""
+    if not before or not after or name not in before or name not in after:
+        return None
+    return float(after[name]) - float(before[name])
+
+
+def spec_decode_summary(
+    before: dict[str, float] | None,
+    after: dict[str, float] | None,
+    per_pos_before: dict[str, float] | None = None,
+    per_pos_after: dict[str, float] | None = None,
+) -> dict[str, Any] | None:
+    """Draft acceptance over a stage from the server's spec-decode counters (W4, ADR 0015).
+
+    vLLM 0.28 counts drafts, draft tokens and accepted tokens (plus accepted tokens per draft
+    position); the acceptance rate is accepted / draft tokens and the mean acceptance length is
+    1 + accepted / drafts, both as vLLM's own logger computes them. None when the server exposes
+    no such counters (no speculative decoding); rates None when the stage drafted nothing.
+    """
+    deltas = {name: counter_delta(before, after, name) for name in SPEC_DECODE_COUNTERS}
+    if any(v is None for v in deltas.values()):
+        return None
+    drafts, draft_tokens, accepted = (deltas[name] for name in SPEC_DECODE_COUNTERS)
+    positions = sorted(
+        {*(per_pos_before or {}), *(per_pos_after or {})},
+        key=lambda p: (not p.isdigit(), int(p) if p.isdigit() else 0, p),
+    )
+    accepted_per_pos = [
+        float((per_pos_after or {}).get(p, 0.0)) - float((per_pos_before or {}).get(p, 0.0))
+        for p in positions
+    ]
+    return {
+        "drafts": drafts,
+        "draft_tokens": draft_tokens,
+        "accepted_tokens": accepted,
+        "acceptance_rate": round(accepted / draft_tokens, 6) if draft_tokens > 0 else None,
+        "mean_acceptance_length": round(1 + accepted / drafts, 6) if drafts > 0 else None,
+        "accepted_per_pos": accepted_per_pos,
+        "acceptance_per_pos": [
+            round(a / drafts, 6) if drafts > 0 else None for a in accepted_per_pos
+        ],
+    }
+
+
 def trace_stage_summary(
     run_dir: Path,
     records: Sequence[RequestRecord],
@@ -423,6 +479,8 @@ def run_stage(
     policy: str | None = None,
     shim_stats_url: str | None = None,
     shim_pid: int | None = None,
+    specdec: str | None = None,
+    family: str | None = None,
 ) -> dict[str, Any]:
     run_dir.mkdir(parents=True, exist_ok=True)
     started_at = datetime.now(UTC).isoformat(timespec="seconds")
@@ -462,10 +520,12 @@ def run_stage(
     ).start()
     metrics_before = None
     hist_before = None
+    pos_before: dict[str, float] | None = None
     try:
         text = fetch_metrics(metrics_url)
         metrics_before = parse_metrics(text)
         hist_before = parse_histograms(text)
+        pos_before = parse_labelled(text, SPEC_DECODE_PER_POS, "position")
     except Exception:
         pass
     host_before = _host_state()
@@ -538,10 +598,12 @@ def run_stage(
     power.stop()
     metrics_after = None
     hist_after = None
+    pos_after: dict[str, float] | None = None
     try:
         text = fetch_metrics(metrics_url)
         metrics_after = parse_metrics(text)
         hist_after = parse_histograms(text)
+        pos_after = parse_labelled(text, SPEC_DECODE_PER_POS, "position")
     except Exception:
         pass
     host_after = _host_state()
@@ -584,8 +646,16 @@ def run_stage(
             )
         },
         "platform": platform.platform(),
+        # W4 (ADR 0015 item 6): draft acceptance over the stage from the server's spec-decode
+        # counters (None on a server without speculative decoding) and the engine's preemptions
+        "spec_decode": spec_decode_summary(metrics_before, metrics_after, pos_before, pos_after),
+        "preemptions": counter_delta(metrics_before, metrics_after, "vllm:num_preemptions_total"),
     }
-    if trace_info is not None:
+    if specdec is not None:
+        result["specdec"] = specdec
+        result["family"] = family
+    if trace_info is not None or shim_scraper is not None or shim_pid is not None:
+        # the shim's own counters and CPU time, for every stage kind that ran through it
         cpu = (
             round(shim_cpu_after - shim_cpu_before, 2)
             if shim_cpu_before is not None and shim_cpu_after is not None
@@ -593,12 +663,17 @@ def run_stage(
         )
         result.update(
             {
-                "policy": policy,
-                "trace": trace_info,
-                "clock_offset_s": {"before": offset_before, "after": offset_after},
                 "shim_cpu_s": cpu,
                 "shim_rows": shim_scraper.rows if shim_scraper else 0,
                 "shim_final": shim_scraper.last if shim_scraper else None,
+            }
+        )
+    if trace_info is not None:
+        result.update(
+            {
+                "policy": policy,
+                "trace": trace_info,
+                "clock_offset_s": {"before": offset_before, "after": offset_after},
             }
         )
     if warm:

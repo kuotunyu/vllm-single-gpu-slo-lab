@@ -68,6 +68,23 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-lo
 - **時鐘**：佇列取樣以 `t_mono` 對齊逐筆紀錄；WSL2 的 wall clock 在一段 2.5 分鐘的測試中漂移約 7 s，不能用 `t_unix` 對齊。
 - **連接埠與行程**：chain 啟動時會 `pkill` 殘留的 vLLM、shim 與假引擎；跑之前確認沒有其他專案在 WSL 裡用 vLLM。
 
+## W4 speculative decoding（準備完成 2026-09-11，ADR 0015；GPU 時段待使用者安排）
+
+執行計畫：`docs/superpowers/plans/2026-09-11-w4-specdec.md`。五個 cell 全做約 13 小時 GPU（smoke 0.35 h，每個 cell 約 2.5 h）；拿掉 `q4b-ngram` 與 0.1 × 的點約 9.4 小時（刪減表在 ADR 0015 第 11 條）。**開跑前先把那張表給使用者看。**
+
+```bash
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w4-dryrun.sh            # CPU-only 全流程演練，約 25 分鐘，不用 GPU、不起 vLLM
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-logged.sh w4-night.sh  # GPU smoke，然後五個 cell（DRY=1 只印計畫）
+# 刪減版：寫成腳本檔再執行，例如 CELLS="fp8-none fp8-ngram q4b-none q4b-eagle3" MULTIPLIERS="0.25 0.5 0.75 0.9" bash .../run-logged.sh w4-night.sh
+```
+
+- `w4-night.sh` 先跑約 20 分鐘的 GPU smoke（`smoke-q4b-eagle3`：c = 1、c = 256、一段 open-loop；`smoke-fp8-ngram`：c = 1、一段 open-loop；warm-up 30），`scripts/wsl/check_w4_smoke.py` 不通過就停在 `SMOKE_FAILED`：草稿數 > 0、接受率在 (0, 1]、零 preemption、shim 零 502、manifest 標籤正確。smoke 時在加速的伺服器上 `curl -s http://127.0.0.1:8013/metrics | grep spec_decode`，把名稱補進 `evidence/metrics-names.txt`；名稱若與 `metrics_scraper.TRACKED` 不同，先修正、commit，刪掉 `runs-w4-smoke` 再重跑 smoke。
+- `w4-cell-chain.sh <cell> <model> <family> <specdec config> <max_num_seqs> [rate_ref]`：closed-loop（seed 1，一個 session）→ r_sat → open-loop 5 rates × 3 seeds 同一個 session（rate 以 family 的 none cell 的 r_sat 為準，讀 `runs-w4/closed-loop-cells/<cell>/r_sat.txt`）→ 可疑段隔離重跑（最多兩輪）→ promote 到 `evidence/raw/w4/<cell>/{closed-loop/seed-1,open-loop/seed-N}/`。`--speculative-config` 由 `slo-lab specdec-flags config/specdec/<name>.yaml` 產生，driver 不手寫 JSON。
+- `batch.sh` 新增：`SHIM=1`（所有段經 passthrough shim，8021；manifest 記 `shim_final.upstream_errors`）、`SPECDEC`／`FAMILY`（寫進每段 manifest）、段規格第四欄 seed（`ol:<rate>:<秒>:<seed>`，三個 seed 共用一個 session；session 層的 `serve.log`／`shim.log`／`quiet_gpu.json` 在 `seed-1`）、`REWARM`、`FAKE_ENGINE=1`（假引擎，CPU 演練）。
+- manifest 新欄位：`specdec`、`family`、`spec_decode`（drafts、draft_tokens、accepted_tokens、acceptance_rate、mean_acceptance_length、每個位置的接受率；沒開加速為 null）、`preemptions`；`metrics.csv` 多四欄（preemptions 與三個 spec-decode counter）。
+- 預期的伺服器警告：開 spec decode 時 vLLM 0.28 會印 `max_num_scheduled_tokens is set to 2048 ... may lead to suboptimal performance`，token budget 與 none cell 相同，不當錯誤處理（ADR 0015 第 5 條）。
+- 收尾：`analysis/tables/index.json` 加 `w4-fp8-specdec`（`evidence/raw/w4/fp8-none`、`evidence/raw/w4/fp8-ngram`）與 `w4-q4b-specdec`（三個 q4b cell），`reproduce-lite` 重建 `closed_loop.json`、`open_loop.json`、`specdec.json` 與 `tables.md` 的「Speculative decoding」節；結果寫 ADR 0016。
+
 ## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
 
 ```bash

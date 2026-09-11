@@ -237,7 +237,7 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
     s = m.get("summary") or {}
     pw = m.get("power_window") or {}
     hist = (m.get("server_histograms") or {}).get("time_to_first_token_seconds") or {}
-    return {
+    row: dict[str, Any] = {
         "cell": m["cell"],
         "seed": m["seed"],
         "records": m.get("records"),
@@ -266,6 +266,19 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
         "path": m.get("_path"),
         "_dir": m.get("_dir"),
     }
+    # W4 (ADR 0015): only manifests written with the labels carry them, so the W2 / W3 tables
+    # rebuilt by `make reproduce` do not change
+    if "specdec" in m:
+        row["specdec"] = m.get("specdec")
+    if "family" in m:
+        row["family"] = m.get("family")
+    if "spec_decode" in m:
+        sd = m.get("spec_decode") or {}
+        row["acceptance_rate"] = sd.get("acceptance_rate")
+        row["mean_acceptance_length"] = sd.get("mean_acceptance_length")
+    if "preemptions" in m:
+        row["preemptions"] = m.get("preemptions")
+    return row
 
 
 def analyze(manifests: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -413,13 +426,21 @@ def run(batch_dirs: list[Path], out: Path) -> dict[str, Any]:
         return {"manifests": len(manifests), "trace_rows": len(result["rows"])}
     closed, open_ = analyze(manifests)
     write_tables(out, closed, open_)
-    return {
+    summary: dict[str, Any] = {
         "manifests": len(manifests),
         "closed_rows": len(closed["rows"]),
         "open_rows": len(open_["rows"]),
         "closed_per_cell": closed["per_cell"],
         "open_per_cell": {k: v.get("r_slo") for k, v in open_["per_cell"].items()},
     }
+    if any(r.get("specdec") is not None for r in closed["rows"] + open_["rows"]):
+        # W4 (ADR 0015): pair every accelerated cell with the `none` cell of its family
+        from slo_lab.specdec_analysis import analyze_specdec, write_specdec_tables
+
+        spec = analyze_specdec(closed, open_)
+        write_specdec_tables(out, spec)
+        summary["specdec_families"] = sorted(spec["families"])
+    return summary
 
 
 def rebuild_from_index(root: Path, index_path: Path) -> list[str]:

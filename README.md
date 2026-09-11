@@ -104,7 +104,7 @@
 
 ### 還沒有
 
-- **剩餘工作、時間與開工方式見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：W4 spec-decode 完整版（8B none、n-gram；4B none、n-gram、EAGLE-3）、FP8 突發安全上限補點，GPU 合計約 12 小時，時段待使用者安排；W5、W6 不用 GPU。
+- **剩餘工作、時間與開工方式見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：W4 spec-decode 完整版（`fp8-none`、`fp8-ngram`、`q4b-none`、`q4b-eagle3`、`q4b-ngram`；協定 ADR 0015，driver、接受率指標、配對分析與 CPU 演練已完成）全做約 13 小時 GPU、刪減版約 9.4 小時，另有 FP8 突發安全上限補點 1.5 小時，時段待使用者安排；W5、W6 不用 GPU。
 - 圖、model card；ledger 只有表頭。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。

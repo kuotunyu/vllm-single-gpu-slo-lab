@@ -3,8 +3,12 @@
 Tracked (names frozen in ``evidence/metrics-names.txt``): ``num_requests_running``,
 ``num_requests_waiting``, ``kv_cache_usage_perc``, ``prefix_cache_queries_total``,
 ``prefix_cache_hits_total``, ``prompt_tokens_total``, ``generation_tokens_total``,
-``request_success_total``. Parsing is a tiny Prometheus text-format reader restricted to
-gauge/counter sample lines; labels are ignored because the server hosts one model.
+``request_success_total``; W4 (ADR 0015) adds ``num_preemptions_total`` and the three
+spec-decode counters a server with speculative decoding exposes (``spec_decode_num_drafts_total``,
+``spec_decode_num_draft_tokens_total``, ``spec_decode_num_accepted_tokens_total``; absent
+otherwise). Parsing is a tiny Prometheus text-format reader restricted to gauge/counter sample
+lines; labels are ignored because the server hosts one model, except ``parse_labelled`` for the
+per-position acceptance counter.
 
 ``parse_histograms`` additionally reads the server-side latency histograms (TTFT, queue time,
 time per output token, e2e). A before/after delta over a stage is the loadgen-independent view
@@ -31,7 +35,13 @@ TRACKED: tuple[str, ...] = (
     "vllm:prompt_tokens_total",
     "vllm:generation_tokens_total",
     "vllm:request_success_total",
+    # W4 (ADR 0015 item 6): appended so the existing metrics.csv columns keep their place
+    "vllm:num_preemptions_total",
+    "vllm:spec_decode_num_drafts_total",
+    "vllm:spec_decode_num_draft_tokens_total",
+    "vllm:spec_decode_num_accepted_tokens_total",
 )
+SPEC_DECODE_PER_POS = "vllm:spec_decode_num_accepted_tokens_per_pos_total"
 
 
 def parse_metrics(text: str, tracked: tuple[str, ...] = TRACKED) -> dict[str, float]:
@@ -66,6 +76,27 @@ def _label(labels: str, key: str) -> str | None:
         if k.strip() == key:
             return v.strip().strip('"')
     return None
+
+
+def parse_labelled(text: str, name: str, label: str) -> dict[str, float]:
+    """Sample values of one metric summed per value of ``label`` (e.g. draft ``position``)."""
+    out: dict[str, float] = {}
+    for line in text.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        name_part, _, value_part = line.rpartition(" ")
+        full, _, labels = name_part.partition("{")
+        if full.strip() != name:
+            continue
+        key = _label(labels, label)
+        if key is None:
+            continue
+        try:
+            value = float(value_part.strip())
+        except ValueError:
+            continue
+        out[key] = out.get(key, 0.0) + value
+    return out
 
 
 def parse_histograms(text: str, names: tuple[str, ...] = HISTOGRAMS) -> dict[str, dict[str, Any]]:

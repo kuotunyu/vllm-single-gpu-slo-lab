@@ -22,4 +22,7 @@
 | `--max-num-seqs` | 預設起，preemption 即下調 | FP8：256；AWQ：256；GPTQ-Int4：256（三者在 c = 256 皆無 preemption）；BF16：**40**（0.82 預算下 KV 僅 11,168–29,696 tokens，網格封頂於 40；峰值 KV 86.1%、零 preemption）。ADR 0009 |
 | 其他引擎旗標 | — | `--max-model-len 4096 --gpu-memory-utilization 0.82 --max-num-batched-tokens 2048`；`VLLM_WSL2_ENABLE_PIN_MEMORY=1`、`VLLM_USE_FLASHINFER_SAMPLER=0`、`HF_HUB_OFFLINE=1`（ADR 0002）。0.90 → 0.82 於 2026-09-09 中午（ADR 0007）：4090 與 Windows 桌面共用，0.90 只留 0.5 GiB 給桌面，桌面一活動就觸發 VidMm 分頁；夜間 0.90 的乾淨點保留為對照 |
 | Prompt 形狀 | 108 / 132 tokens、nonce、`ignore_eos`、thinking 關閉 | 同規格；inference-perf synthetic，completion API（chat 不支援，ADR 0005） |
-| Spec-decode `num_speculative_tokens` | 依安裝版本文件 | EAGLE-3：3；n-gram：依 `config/specdec/ngram.yaml` |
+| Spec-decode 參數 | 依安裝版本文件 | EAGLE-3：`num_speculative_tokens` 3（W1，ADR 0004）；n-gram：`num_speculative_tokens` 3、`prompt_lookup_max` 4、`prompt_lookup_min` 2（`config/specdec/ngram.yaml`；W4，ADR 0015。vLLM 0.28 兩者都沒給時預設 5／5，原始碼註明 arbitrarily chosen；只給 max 時 min = max） |
+| W4 prompt 語料（ADR 0015） | 自然文字（規格 §3.1：n-gram 與 EAGLE-3 都依賴文本） | inference-perf `synthetic`（Shakespeare 語料切片、每筆隨機起點）108 → 132 tokens、`ignore_eos`；不用 W3 的隨機 token。claim ceiling：低重複自然文字的下界，不外推到 RAG／摘要／程式碼 |
+| W4 網格（ADR 0015） | 規格 §3.3 open-loop 網格的子集 | closed-loop c ∈ {1, 8, 32, 128, 256}（seed 1，`num_requests` 同 W2 的表）；open-loop {0.1, 0.25, 0.5, 0.75, 0.9} × r_ref，seeds 1–3，每點 5 min、丟棄 60 s；**r_ref = 同 family 的 none cell 的 closed-loop r_sat**（`fp8-none`、`q4b-none`），同 family 的 cell 在相同 rate 與 seed 下配對；每 cell 兩個 session（closed-loop 一個、open-loop 三個 seed 共用一個）；所有段經 passthrough shim |
+| W4 cell 與順序（ADR 0015） | 規格 §3.1 部分因子 | `fp8-none`、`fp8-ngram`、`q4b-none`、`q4b-eagle3`、`q4b-ngram`（依價值排序，時段中斷先損失最不重要的）；4B `--max-num-seqs` 256，smoke 在 c = 256 零 preemption 才生效，否則 192 並寫 ADR |
