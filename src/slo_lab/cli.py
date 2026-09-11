@@ -536,6 +536,12 @@ def reproduce_lite(
     paired = rebuild_paired_tables(root, root / "analysis" / "tables" / "w2-quality-paired")
     if paired:
         typer.echo(f"paired quality table rebuilt: {', '.join(paired)} vs baseline")
+
+    from slo_lab.plots import rebuild_plots
+
+    plots = rebuild_plots(root)
+    if plots:
+        typer.echo(f"plots rebuilt: {', '.join(plots)}")
     if problems:
         for p in problems:
             typer.echo(f"problem: {p}", err=True)
