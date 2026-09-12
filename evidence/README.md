@@ -27,3 +27,5 @@ W3 結案（2026-09-11）加入：`raw/w3/{fp8,bf16}/trace/seed-{1,2,3}/`，每�
 W4（2026-09-12）加入：`raw/w4/<cell>/closed-loop/seed-1/` 與 `raw/w4/<cell>/open-loop/seed-{1,2,3}/`（cell 為 `fp8-none`、`fp8-ngram`、`q4b-none`、`q4b-eagle3`、`q4b-ngram`）。open-loop 的三個 seed 共用一個伺服器 session，session 層的 `vllm.log.gz`、`quiet_gpu.json`、`io-pressure.log` 只在 `seed-1`；每段 manifest 多了 `specdec`、`family`、`spec_decode`（草稿與接受計數）、`preemptions` 與 shim 計數，`metrics.csv` 多四欄。被可疑規則排除的段（`fp8-ngram` 的 c = 256 與 30／36 rps：cell 在 256 並行時超出 0.82 預算而分頁）仍提交，由分析器標記排除；被作廢重跑的段不提交。`raw/w4/smoke/` 是開跑前的 GPU smoke，不進結果表；`raw/w4/win-vram-2026-09-12.log` 是全程的 Windows 端顯存取樣。協定 ADR 0015，結果 ADR 0016。
 
 W5（2026-09-12）加入：`raw/w2/reparse-compare-2026-09-12.json`，W2 的 243 段以伺服器 token 數重解析後與提交紀錄的逐段比較（TPOT p95、attainment、計數不同的請求數）與各 cell 的 r_SLO 舊／新；全部不變，W2 紀錄維持原樣（ADR 0017）。
+
+Ledger（2026-09-12）：`analysis/ledger/runs.csv` 由 `reproduce-lite` 從 `analysis/tables/index.json` 列的批次目錄下的每個 `manifest.json` 重建（`slo_lab.ledger`），每段一列：日期、精度、admission 策略、spec-decode、流量、seed、狀態（取自重建後的表的可疑旗標與原因）、證據路徑。`cost.csv` 與 `spend.csv` 維持只有表頭：4090 不計 $（ADR 0010），沒有用過付費算力（ADR 0014）。

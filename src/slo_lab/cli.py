@@ -571,6 +571,11 @@ def reproduce_lite(
         rebuilt = rebuild_from_index(root, index_path)
         typer.echo(f"tables rebuilt from evidence: {', '.join(rebuilt) or '(none)'}")
 
+        from slo_lab.ledger import rebuild_runs_ledger
+
+        n_ledger = rebuild_runs_ledger(root, index_path)
+        typer.echo(f"run ledger rebuilt: {n_ledger} stages in analysis/ledger/runs.csv")
+
     from slo_lab.quality import rebuild_paired_tables
 
     paired = rebuild_paired_tables(root, root / "analysis" / "tables" / "w2-quality-paired")

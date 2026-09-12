@@ -70,3 +70,7 @@
 - **能耗**：r_SLO 點 316 W、32,100 output tok/Wh ≈ 31 Wh／百萬 output token；比 closed-loop c = 256 的 43,700 tok/Wh 低 27%（守 SLO 的代價）。
 - 注意：open-loop 表裡的 `achieved_rps` 與 `output_tok_per_s` 以「offer 時間落在量測窗」計，過載點（≥ 32.75 rps）的完成時間拖到窗外，這兩欄在過載段不代表服務速率。**2026-09-10 補上 `served_rps`**（以完成時間計，`slo_lab.batch_analysis.served_rps`，回溯適用於本批證據）：過載段的實際完成率是 33.9／34.3／35.7／39.4 rps（offered 43.7／54.6／65.5／87.3），全部**低於 closed-loop 的 r_sat 41.4**——Poisson 突發比等速閉環少了約 15% 的吞吐，且完成率隨佇列變深而微升（排程器批次變大）。這是 admission control（W3）要處理的現象本身。
 - **TMMLU+（FP8，三個 200 題切片，greedy、`/no_think`）**：122／119／125 正確 → 0.610／0.595／0.625（Wilson 95%：0.54–0.68、0.53–0.66、0.56–0.69），合計 366/600 = 0.610。`evidence/raw/w2/fp8/tmmluplus/`。這只是 FP8 的絕對值；規格要的是四精度的配對差，等 AWQ／GPTQ／BF16。**租戶註記**：18:44:50 起 Windows 端出現一個 4.0–4.5 GB 的 `python` GPU 程序（本機另一個專案），與 18:47:42–18:48:43 的三切片評分重疊，committed 衝到 27.8–28.2 GB > 24.5 GB（`win-vram-2026-09-09.log`）。greedy 解碼的答案不受速度影響，分數有效；但 8.9–12.9 題/秒的速度不代表 FP8 正常值（W1 乾淨時 29.5）。open-loop 三個 seed 在 18:42:38 已結束，未受影響。另一個 committed 超額點 17:09:03（27.3 GB）發生在 seed 3 伺服器啟動與 warm-up 交界，量測窗外。
+
+## 補記（2026-09-12，W4 結案時）
+
+第 2 點的「分析器規則待補」已補齊：`slo_lab.batch_analysis` 與 `slo_lab.admission_analysis` 把 `host_after.windows_gpu_memory.committed_mb` 超過 `quiet_gpu.json` 記錄的實體 VRAM 的段標為可疑並排除（W3 起）；W4 發現共用 session 的 seed-2、seed-3 目錄沒有自己的 `quiet_gpu.json`，分析器因此查不到實體值而漏標，已改為向同批的 `seed-*/quiet_gpu.json` 查（ADR 0016 偏離 8）。W4 的 8B n-gram cell 在 256 並行時把 committed 推到 24.9 到 27.2 GB，就是靠這條規則排除的。

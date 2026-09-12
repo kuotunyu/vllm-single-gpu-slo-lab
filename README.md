@@ -84,7 +84,7 @@
 
 ## 目前有什麼／還沒有什麼
 
-### 有（W0）
+### 有
 
 | 模組 | 內容 | 測試 |
 |---|---|---|
@@ -111,12 +111,12 @@
 | `evidence/raw/w2/fp8/crosscheck/` | `vllm bench serve` 交叉驗證：吞吐與 inference-perf 差 5–7%；只存純量摘要與原檔 sha256，不存生成文字 | — |
 | `slo_lab/quality.py` | 配對品質：exact McNemar（對數空間）與 paired bootstrap；`reproduce-lite` 重建 `analysis/tables/w2-quality-paired/` | 手算值與常態近似 |
 | `evidence/raw/w2/fp8/win-vram-2026-09-09.log`、`evidence/raw/w2/win-vram-2026-09-10.log` | Windows 端 VRAM（dedicated／shared／committed、桌面程序）每 30 s 取樣：FP8 白天量測期間，以及 W2 四精度全程（committed 最高 24,187 MB，未超過實體） | — |
-| CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（空 evidence 通過） | — |
+| CI | ruff check、ruff format --check、pytest、audit-secrets、`make reproduce`（從證據重建 `analysis/tables/index.json` 列的每張表、配對品質表、`evidence/plots/` 的圖與 `analysis/ledger/runs.csv`，diff 必須為空） | — |
 
 ### 還沒有
 
 - **剩餘工作見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：FP8 突發安全上限補點（C = 192，1.5 小時 GPU，另排）；W5 的 W2 重解析與 W6 發佈前檢查不用 GPU。
-- ledger 只有表頭。圖（W2 attainment 對 rate、W3 佇列時間線、W4 TPOT 與 attainment 對 rate）由 `reproduce-lite` 從證據重建（`evidence/plots/`，`slo_lab.plots`，無外部繪圖依賴）；model card 在 `docs/model-card.md`。
+- `analysis/ledger/cost.csv` 與 `spend.csv` 只有表頭，這是決定而不是缺漏：4090 不計 $（ADR 0010），也沒有用過任何付費算力（A1 取消，ADR 0014）。`runs.csv` 由 `reproduce-lite` 從證據重建，每段一列，狀態欄取自分析器的可疑旗標（`slo_lab.ledger`）。圖（W2 attainment 對 rate、W3 佇列時間線、W4 TPOT 與 attainment 對 rate）同樣由 `reproduce-lite` 重建（`evidence/plots/`，`slo_lab.plots`，無外部繪圖依賴）；model card 在 `docs/model-card.md`。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
 - A1（RunPod L4）已取消（ADR 0014）。
@@ -153,7 +153,7 @@ uv sync --all-extras          # dev + gpu extra（gpu extra 只在 WSL2 量測�
 make test                     # pytest
 make lint                     # ruff check + ruff format --check
 make audit-secrets            # 掃 IP／金鑰／token；有發現即失敗
-make reproduce-lite           # CPU-only：驗證 config、重算現有 evidence（W0：0 run）
+make reproduce-lite           # CPU-only：驗證 config，從 evidence 重建表、圖與 run ledger
 make reproduce                # reproduce-lite + evidence/ analysis/ 零 diff
 ```
 

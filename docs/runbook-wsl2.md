@@ -1,4 +1,4 @@
-# Runbook — WSL2 量測主機（W1 驗證版）
+# Runbook — WSL2 量測主機（W1–W4 量測版，2026-09-12）
 
 ## 已驗證環境（2026-09-08）
 
@@ -68,7 +68,7 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-lo
 - **時鐘**：佇列取樣以 `t_mono` 對齊逐筆紀錄；WSL2 的 wall clock 在一段 2.5 分鐘的測試中漂移約 7 s，不能用 `t_unix` 對齊。
 - **連接埠與行程**：chain 啟動時會 `pkill` 殘留的 vLLM、shim 與假引擎；跑之前確認沒有其他專案在 WSL 裡用 vLLM。
 
-## W4 speculative decoding（準備完成 2026-09-11，ADR 0015；GPU 時段待使用者安排）
+## W4 speculative decoding（協定 ADR 0015；量測完成 2026-09-12，結果 ADR 0016）
 
 執行計畫：`docs/superpowers/plans/2026-09-11-w4-specdec.md`。五個 cell 全做約 13 小時 GPU（smoke 0.35 h，每個 cell 約 2.5 h）；拿掉 `q4b-ngram` 與 0.1 × 的點約 9.4 小時（刪減表在 ADR 0015 第 11 條）。**開跑前先把那張表給使用者看。**
 
@@ -85,7 +85,12 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/run-lo
 - 預期的伺服器警告：開 spec decode 時 vLLM 0.28 會印 `max_num_scheduled_tokens is set to 2048 ... may lead to suboptimal performance`，token budget 與 none cell 相同，不當錯誤處理（ADR 0015 第 5 條）。
 - 收尾：`analysis/tables/index.json` 加 `w4-fp8-specdec`（`evidence/raw/w4/fp8-none`、`evidence/raw/w4/fp8-ngram`）與 `w4-q4b-specdec`（三個 q4b cell），`reproduce-lite` 重建 `closed_loop.json`、`open_loop.json`、`specdec.json` 與 `tables.md` 的「Speculative decoding」節；結果寫 ADR 0016。
 
-## 每次 batch 的順序（`scripts/wsl/batch.sh`；`harness/run.py` 的 Python 版尚未寫）
+## 2026-09-12 的補點與重解析
+
+- `w3-c192.sh`：W3 hard cap 的 FP8 補點，C = 192（非預註冊的探索性補點，ADR 0018），重播 W3 同一套 seeded trace，3 seeds，各一個 session；promote 到 `evidence/raw/w3/fp8-c192/trace/`，表 `w3-fp8-c192-admission`。
+- `reparse-w2.sh`：把 `runs-w2` 的 245 個 inference-perf 原始檔以現行 adapter（伺服器 `completion_tokens`）重解析到 `~/vllm-slo-lab/reparse-w2/`，再以 `slo-lab reparse-compare` 逐段與提交紀錄比較（ADR 0017：r_SLO 全部不變，紀錄不改）。
+
+## 每次 batch 的順序（`scripts/wsl/batch.sh`；規格的 `harness/run.py` 由這些 shell driver 代行，ADR 0001）
 
 ```bash
 # 在 Windows 端呼叫（路徑用 /mnt/c、/mnt/d；MSYS_NO_PATHCONV=1 避免 Git Bash 改寫路徑）
@@ -108,9 +113,11 @@ closed-loop 的 `num_requests` 依上一輪的 rps 取 ≥ 180 s（丟棄前 60 
 4. 若 policy 為 (ii)／(iii)：`slo-lab shim --upstream http://127.0.0.1:8013 --port 8021 --policy hard_cap --capacity <C>`；policy (i) 亦走 `--policy passthrough` 以保持 shim 開銷一致（W1 量到的中位數開銷在 ±2 ms 內）。
 5. `uv run slo-lab power-sample evidence/raw/<run_id>/power.csv --phase idle --duration-s 60`，之後 `--append --phase warmup`、`--append --phase measure`。
 6. Warm-up 100 sequential request；inference-perf 依 `config/traffic/*.yaml` 跑；scrape `/metrics`。
-7. 收集 → `records.jsonl`（adapter 未寫）→ `scripts/redact.py redact` 去敏 log → `manifest.json`。
+7. 收集 → `records.jsonl`（`slo_lab.harness` 的 inference-perf adapter，token 數取伺服器的 `completion_tokens`）→ `scripts/redact.py redact` 去敏 log → `manifest.json`。
 8. `make reproduce`；`make audit-secrets`。
 
-## 未完成
+## 已知未做（W4 結案時）
 
-- `harness/run.py` 編排、inference-perf adapter、metrics scraper、`vllm bench serve` 交叉驗證、nonce prompt 產生器。
+- 規格 §9 的 `harness/run.py`（Python 編排）沒有寫：W2 到 W4 的編排都由 `scripts/wsl/batch.sh` 與各週的 chain 腳本代行，已量完的三個軸不會再改寫成 Python。
+- 隔離重跑的 session log 未分檔（ADR 0009 缺陷 6）：W3、W4 的重跑都在新 session，舊 session 的 `serve.log` 已在重跑前 promote，沒有再遺失。
+- FP8 block kernel 的 4090 tuned config 未產生（ADR 0009）。
