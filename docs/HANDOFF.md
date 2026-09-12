@@ -62,7 +62,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 gh repo create kuotunyu/vllm-single-gpu-slo-lab --public --source . --remote origin --push
 ```
 
-或手動：在 GitHub 建空的 public repo（不要勾 README／LICENSE），然後 `git remote add origin git@github.com:kuotunyu/vllm-single-gpu-slo-lab.git` 與 `git push -u origin main`。推送後看 Actions 的 `CI` 是否全綠（ruff、pytest、audit、`make reproduce`），全綠才算發佈。GitHub About 草稿（精簡、不提名次）：
+或手動：在 GitHub 建空的 public repo（不要勾 README／LICENSE），然後 `git remote add origin https://github.com/kuotunyu/vllm-single-gpu-slo-lab.git`（或 SSH 形式；文件裡用 HTTPS 是因為 `make audit-secrets` 會把 `git@` 開頭的 SSH 位址當成 email 樣式） 與 `git push -u origin main`。推送後看 Actions 的 `CI` 是否全綠（ruff、pytest、audit、`make reproduce`），全綠才算發佈。GitHub About 草稿（精簡、不提名次）：
 
 > SLO-bounded capacity, energy and quality of Qwen3-8B on one desktop-shared RTX 4090 (vLLM 0.28, WSL2): four precisions, three admission policies, speculative decoding; every number rebuilt from committed evidence.
 
