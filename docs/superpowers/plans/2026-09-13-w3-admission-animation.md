@@ -51,7 +51,11 @@ from slo_lab.timeline import Bucket, Phase, bucket_records, downsample, phases_o
 
 def _ok(i: int, offered: float, ttft: float = 0.1) -> RequestRecord:
     return RequestRecord(
-        request_id=f"r{i}", offered_at_s=offered, outcome="ok", ttft_s=ttft, e2e_s=ttft + 1.0,
+        request_id=f"r{i}",
+        offered_at_s=offered,
+        outcome="ok",
+        ttft_s=ttft,
+        e2e_s=ttft + 1.0,
         output_tokens=132,
     )
 
@@ -113,8 +117,14 @@ def test_downsample_holds_the_latest_sample() -> None:
 
 
 def test_phases_of_reads_the_manifest_trace() -> None:
-    m = {"trace": {"phases": [{"phase": "pre", "start_s": 0, "end_s": 300},
-                              {"phase": "burst", "start_s": 300, "end_s": 600}]}}
+    m = {
+        "trace": {
+            "phases": [
+                {"phase": "pre", "start_s": 0, "end_s": 300},
+                {"phase": "burst", "start_s": 300, "end_s": 600},
+            ]
+        }
+    }
     assert phases_of(m) == [Phase("pre", 0.0, 300.0), Phase("burst", 300.0, 600.0)]
     assert phases_of({}) == []
     assert isinstance(Bucket(0.0, 10.0, 0, 0, 0, 0, ()), Bucket)
@@ -337,7 +347,13 @@ config.background_color = "#101418"
 
 class FontCheck(Scene):
     def construct(self):
-        self.add(Text("原生排隊 passthrough 1.5 倍突發 TTFT p95 ≤ 1 s", font="Microsoft JhengHei", font_size=36))
+        self.add(
+            Text(
+                "原生排隊 passthrough 1.5 倍突發 TTFT p95 ≤ 1 s",
+                font="Microsoft JhengHei",
+                font_size=36,
+            )
+        )
         self.wait(0.1)
 ```
 
@@ -572,7 +588,10 @@ def load_replay(root: Path, seed: int = 1) -> ReplayData:
     w3 = _table(root, "w3-fp8-admission")["fp8"]
     c192 = _table(root, "w3-fp8-c192-admission")["fp8-c192"]["hard_cap"]
     scoreboard = {p: _means(w3[p]) for p in POLICIES}
-    per_seed = {p: {k: list(w3[p]["per_seed"][k]) for k in _METRICS if k in w3[p]["per_seed"]} for p in POLICIES}
+    per_seed = {
+        p: {k: list(w3[p]["per_seed"][k]) for k in _METRICS if k in w3[p]["per_seed"]}
+        for p in POLICIES
+    }
     coda = {"c256": _means(w3["hard_cap"]), "c192": _means(c192)}
     coda["c256"]["tpot_p95_burst_s"] = _tpot_burst_mean(root, "w3-fp8-admission", "fp8")
     coda["c192"]["tpot_p95_burst_s"] = _tpot_burst_mean(root, "w3-fp8-c192-admission", "fp8-c192")
@@ -704,7 +723,9 @@ class W3AdmissionBurst(Scene):
     # ---- 1. title (3 s)
     def title_card(self) -> None:
         title = _t("一張 RTX 4090、1.5 倍 5 分鐘突發、三種 admission", 44, weight="BOLD")
-        sub = _t("SLO：TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（Qwen3-8B-FP8，vLLM 0.28，WSL2）", 26, MUTED)
+        sub = _t(
+            "SLO：TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（Qwen3-8B-FP8，vLLM 0.28，WSL2）", 26, MUTED
+        )
         sub.next_to(title, DOWN, buff=0.4)
         self.play(FadeIn(title, shift=UP * 0.2), run_time=0.8)
         self.play(FadeIn(sub), run_time=0.6)
@@ -714,8 +735,12 @@ class W3AdmissionBurst(Scene):
     # ---- 2. stage (8 s)
     def build_stage(self, data: ReplayData) -> dict:
         axis = NumberLine(
-            x_range=[0, TRACE_END_S, 300], length=TIMELINE_LEN, include_numbers=True,
-            font_size=20, color=MUTED, decimal_number_config={"num_decimal_places": 0},
+            x_range=[0, TRACE_END_S, 300],
+            length=TIMELINE_LEN,
+            include_numbers=True,
+            font_size=20,
+            color=MUTED,
+            decimal_number_config={"num_decimal_places": 0},
         ).shift(UP * 2.55)
         unit = _t("秒（trace 時間）", 18, MUTED).next_to(axis, RIGHT, buff=0.15)
         shades = VGroup()
@@ -723,33 +748,59 @@ class W3AdmissionBurst(Scene):
             x0, x1 = axis.n2p(ph.start_s)[0], axis.n2p(ph.end_s)[0]
             fill = "#3a2326" if ph.name == "burst" else "#1a2028"
             shades.add(
-                Rectangle(width=x1 - x0, height=1.1, fill_color=fill, fill_opacity=0.9, stroke_width=0)
-                .move_to([(x0 + x1) / 2, axis.get_y() + 0.75, 0])
+                Rectangle(
+                    width=x1 - x0, height=1.1, fill_color=fill, fill_opacity=0.9, stroke_width=0
+                ).move_to([(x0 + x1) / 2, axis.get_y() + 0.75, 0])
             )
         steps = VGroup()
         rate_max = max(data.rate_rps.values())
         for ph in data.phases:
             r = data.rate_rps[ph.name]
             y = axis.get_y() + 0.25 + 0.85 * (r / rate_max)
-            seg = Line([axis.n2p(ph.start_s)[0], y, 0], [axis.n2p(ph.end_s)[0], y, 0], color=INK, stroke_width=3)
+            seg = Line(
+                [axis.n2p(ph.start_s)[0], y, 0],
+                [axis.n2p(ph.end_s)[0], y, 0],
+                color=INK,
+                stroke_width=3,
+            )
             lab = _t(f"{r:.1f} rps", 18).next_to(seg, UP, buff=0.05)
             steps.add(VGroup(seg, lab))
-        caption = _t("到達率：0.5× → 1.5×（5 分鐘）→ 0.5× r_sat", 20, MUTED).next_to(shades, UP, buff=0.55)
+        caption = _t("到達率：0.5× → 1.5×（5 分鐘）→ 0.5× r_sat", 20, MUTED).next_to(
+            shades, UP, buff=0.55
+        )
         self.play(FadeIn(shades), Create(axis), FadeIn(unit), run_time=1.2)
         self.play(FadeIn(caption), run_time=0.4)
         for s in steps:
             self.play(GrowFromEdge(s[0], LEFT), FadeIn(s[1]), run_time=0.6)
         lanes: dict[str, dict] = {}
         for policy, y in zip(POLICIES, LANE_Y):
-            label = _t(LABELS[policy], 22, COLORS[policy]).move_to([-4.6, y + 0.42, 0]).align_to([-6.9, 0, 0], LEFT)
-            anchor = Line([BAR_LEFT_X, y - BAR_H / 2, 0], [BAR_LEFT_X, y + BAR_H / 2, 0], color=MUTED, stroke_width=2)
+            label = (
+                _t(LABELS[policy], 22, COLORS[policy])
+                .move_to([-4.6, y + 0.42, 0])
+                .align_to([-6.9, 0, 0], LEFT)
+            )
+            anchor = Line(
+                [BAR_LEFT_X, y - BAR_H / 2, 0],
+                [BAR_LEFT_X, y + BAR_H / 2, 0],
+                color=MUTED,
+                stroke_width=2,
+            )
             qlabel = _t("佇列", 16, MUTED).next_to(anchor, LEFT, buff=0.1)
             lanes[policy] = {"y": y, "label": label, "anchor": anchor, "qlabel": qlabel}
             self.play(FadeIn(label), Create(anchor), FadeIn(qlabel), run_time=0.45)
-        scale_note = _t("佇列長條為對數尺度；讀數為近 30 s 的滾動值", 16, MUTED).to_edge(DOWN, buff=0.25)
+        scale_note = _t("佇列長條為對數尺度；讀數為近 30 s 的滾動值", 16, MUTED).to_edge(
+            DOWN, buff=0.25
+        )
         self.play(FadeIn(scale_note), run_time=0.4)
         self.wait(0.6)
-        return {"axis": axis, "lanes": lanes, "shades": shades, "steps": steps, "caption": caption, "note": scale_note}
+        return {
+            "axis": axis,
+            "lanes": lanes,
+            "shades": shades,
+            "steps": steps,
+            "caption": caption,
+            "note": scale_note,
+        }
 
     # ---- 3. replay (30 s)
     def replay(self, data: ReplayData, stage: dict) -> None:
@@ -759,10 +810,13 @@ class W3AdmissionBurst(Scene):
             lambda: Line(
                 [axis.n2p(t.get_value())[0], axis.get_y() - 0.25, 0],
                 [axis.n2p(t.get_value())[0], axis.get_y() + 1.3, 0],
-                color=INK, stroke_width=2,
+                color=INK,
+                stroke_width=2,
             )
         )
-        clock = always_redraw(lambda: _t(f"t = {int(t.get_value()):4d} s", 22).move_to([5.9, axis.get_y() + 1.55, 0]))
+        clock = always_redraw(
+            lambda: _t(f"t = {int(t.get_value()):4d} s", 22).move_to([5.9, axis.get_y() + 1.55, 0])
+        )
         self.add(cursor, clock)
         dyn = VGroup()
         for policy in POLICIES:
@@ -770,14 +824,26 @@ class W3AdmissionBurst(Scene):
             y = stage["lanes"][policy]["y"]
             color = COLORS[policy]
             bar = always_redraw(
-                lambda lane=lane, y=y, color=color: Rectangle(
-                    width=max(0.02, _log_width(lane.queue_at(t.get_value()), data.queue_max)),
-                    height=BAR_H, fill_color=color, fill_opacity=0.85, stroke_width=0,
-                ).align_to([BAR_LEFT_X, 0, 0], LEFT).set_y(y)
+                lambda lane=lane, y=y, color=color: (
+                    Rectangle(
+                        width=max(0.02, _log_width(lane.queue_at(t.get_value()), data.queue_max)),
+                        height=BAR_H,
+                        fill_color=color,
+                        fill_opacity=0.85,
+                        stroke_width=0,
+                    )
+                    .align_to([BAR_LEFT_X, 0, 0], LEFT)
+                    .set_y(y)
+                )
             )
             qnum = Integer(0, font_size=22, color=INK)
-            qnum.add_updater(lambda m, lane=lane, y=y: m.set_value(int(lane.queue_at(t.get_value()))).next_to(
-                m.bar_ref, RIGHT, buff=0.12).set_y(y))
+            qnum.add_updater(
+                lambda m, lane=lane, y=y: (
+                    m.set_value(int(lane.queue_at(t.get_value())))
+                    .next_to(m.bar_ref, RIGHT, buff=0.12)
+                    .set_y(y)
+                )
+            )
             qnum.bar_ref = bar
             att = DecimalNumber(0, num_decimal_places=2, font_size=24, color=INK)
             att_label = _t("attainment", 16, MUTED)
@@ -785,17 +851,25 @@ class W3AdmissionBurst(Scene):
             ttft_label = _t("TTFT p95 (s)", 16, MUTED)
             rej = Integer(0, font_size=24, color=INK)
             rej_label = _t("429（累計）", 16, MUTED)
-            readouts = VGroup(
-                VGroup(att_label, att).arrange(DOWN, buff=0.05),
-                VGroup(ttft_label, ttft).arrange(DOWN, buff=0.05),
-                VGroup(rej_label, rej).arrange(DOWN, buff=0.05),
-            ).arrange(RIGHT, buff=0.55).move_to([5.2, y, 0])
+            readouts = (
+                VGroup(
+                    VGroup(att_label, att).arrange(DOWN, buff=0.05),
+                    VGroup(ttft_label, ttft).arrange(DOWN, buff=0.05),
+                    VGroup(rej_label, rej).arrange(DOWN, buff=0.05),
+                )
+                .arrange(RIGHT, buff=0.55)
+                .move_to([5.2, y, 0])
+            )
 
             def upd_att(m, lane=lane):
                 b = lane.bucket_at(t.get_value())
                 a = b.attainment
                 m.set_value(a if a is not None else 0.0)
-                m.set_color(GREEN if a is not None and a >= 0.95 else (RED if a is not None and a < 0.5 else INK))
+                m.set_color(
+                    GREEN
+                    if a is not None and a >= 0.95
+                    else (RED if a is not None and a < 0.5 else INK)
+                )
 
             def upd_ttft(m, lane=lane):
                 b = lane.bucket_at(t.get_value())
@@ -832,9 +906,18 @@ class W3AdmissionBurst(Scene):
                 n = lane.raw_buckets[i].rejected
                 if n > 0:
                     k = min(6, 1 + int(math.log2(n)))
-                    x0 = BAR_LEFT_X + _log_width(lane.queue_at(t.get_value()), 1.0 + max(1.0, lane.queue_at(t.get_value()))) + 0.15
+                    x0 = (
+                        BAR_LEFT_X
+                        + _log_width(
+                            lane.queue_at(t.get_value()),
+                            1.0 + max(1.0, lane.queue_at(t.get_value())),
+                        )
+                        + 0.15
+                    )
                     for _ in range(k):
-                        d = Dot(radius=0.05, color=RED).move_to([x0 + random.uniform(0, 0.3), y + random.uniform(-0.2, 0.2), 0])
+                        d = Dot(radius=0.05, color=RED).move_to(
+                            [x0 + random.uniform(0, 0.3), y + random.uniform(-0.2, 0.2), 0]
+                        )
                         d.birth = state["clock"]
                         d.vel = (random.uniform(0.6, 1.2), random.uniform(0.4, 1.0))
                         g.add(d)
@@ -858,7 +941,9 @@ class W3AdmissionBurst(Scene):
             f"time-to-recover：原生排隊 {int(known[0])}–{int(known[-1])} s（{unrec} 個 seed 未恢復）",
             "hard cap 0 s · 有界佇列 5–10 s",
         ]
-        note = VGroup(*[_t(s, 22, INK) for s in lines]).arrange(DOWN, buff=0.12).move_to([0, -3.0, 0])
+        note = (
+            VGroup(*[_t(s, 22, INK) for s in lines]).arrange(DOWN, buff=0.12).move_to([0, -3.0, 0])
+        )
         stage["note"].set_opacity(0)
         self.play(FadeIn(note), run_time=0.6)
         self.wait(3.4)
@@ -879,47 +964,86 @@ class W3AdmissionBurst(Scene):
             return base + (f"（{missing} seed 未恢復）" if missing else "")
 
         rows = [
-            [LABELS[p], f"{sb[p]['attainment']:.2f}", f"{sb[p]['goodput_rps']:.1f} rps",
-             f"{100 * sb[p]['rejection_rate']:.1f} %", ttr_text(p)]
+            [
+                LABELS[p],
+                f"{sb[p]['attainment']:.2f}",
+                f"{sb[p]['goodput_rps']:.1f} rps",
+                f"{100 * sb[p]['rejection_rate']:.1f} %",
+                ttr_text(p),
+            ]
             for p in POLICIES
         ]
-        table = Table(
-            rows,
-            col_labels=[_t(s, 22, MUTED) for s in ["策略", "attainment", "goodput", "拒絕率", "time-to-recover"]],
-            element_to_mobject=lambda s: _t(s, 24),
-            include_outer_lines=False, line_config={"stroke_color": MUTED, "stroke_width": 1},
-            h_buff=0.6, v_buff=0.35,
-        ).scale(0.8).next_to(head, DOWN, buff=0.5)
+        table = (
+            Table(
+                rows,
+                col_labels=[
+                    _t(s, 22, MUTED)
+                    for s in ["策略", "attainment", "goodput", "拒絕率", "time-to-recover"]
+                ],
+                element_to_mobject=lambda s: _t(s, 24),
+                include_outer_lines=False,
+                line_config={"stroke_color": MUTED, "stroke_width": 1},
+                h_buff=0.6,
+                v_buff=0.35,
+            )
+            .scale(0.8)
+            .next_to(head, DOWN, buff=0.5)
+        )
         for i, p in enumerate(POLICIES):
             table.get_rows()[i + 1][0].set_color(COLORS[p])
             a = sb[p]["attainment"]
             table.get_rows()[i + 1][1].set_color(GREEN if a >= 0.5 else RED)
         self.play(FadeIn(head), run_time=0.5)
-        self.play(Create(table.get_horizontal_lines()), Create(table.get_vertical_lines()), run_time=0.8)
+        self.play(
+            Create(table.get_horizontal_lines()), Create(table.get_vertical_lines()), run_time=0.8
+        )
         self.play(FadeIn(table.get_col_labels()), run_time=0.4)
         for i in range(3):
             self.play(FadeIn(table.get_rows()[i + 1]), run_time=0.6)
-        takeaway = _t("限流讓 attainment 提高約 0.4、突發後 10 s 內恢復；代價是拒絕 12–21 % 的請求", 22, INK).to_edge(DOWN, buff=0.7)
+        takeaway = _t(
+            "限流讓 attainment 提高約 0.4、突發後 10 s 內恢復；代價是拒絕 12–21 % 的請求", 22, INK
+        ).to_edge(DOWN, buff=0.7)
         self.play(FadeIn(takeaway), run_time=0.5)
         self.wait(3.2)
 
     # ---- 6. coda: C = 256 vs C = 192 (12 s)
     def coda(self, data: ReplayData) -> None:
-        head = _t("同一條到達序列，只改 hard cap 的上限：C = 256 → C = 192（ADR 0018）", 32, weight="BOLD").to_edge(UP, buff=0.6)
+        head = _t(
+            "同一條到達序列，只改 hard cap 的上限：C = 256 → C = 192（ADR 0018）", 32, weight="BOLD"
+        ).to_edge(UP, buff=0.6)
         self.play(FadeIn(head), run_time=0.5)
         rows = []
-        for key, label, y in (("c256", "C = 256（closed-loop 的平台）", 1.0), ("c192", "C = 192", -0.9)):
+        for key, label, y in (
+            ("c256", "C = 256（closed-loop 的平台）", 1.0),
+            ("c192", "C = 192", -0.9),
+        ):
             m = data.coda[key]
             tpot_ms = 1000 * m["tpot_p95_burst_s"]
             lab = _t(label, 26, INK).move_to([-4.6, y + 0.7, 0])
             scale = 5.0 / 60.0
-            bar = Rectangle(width=tpot_ms * scale, height=0.5, fill_color=RED if tpot_ms > 50 else GREEN,
-                            fill_opacity=0.9, stroke_width=0).align_to([-6.0, 0, 0], LEFT).set_y(y)
-            val = _t(f"突發段 TPOT p95 {tpot_ms:.1f} ms", 24, RED if tpot_ms > 50 else GREEN).next_to(bar, RIGHT, buff=0.2)
-            nums = _t(
-                f"突發段 attainment {m['attainment_burst']:.2f} · 整段 {m['attainment']:.2f} · 拒絕率 {100 * m['rejection_rate']:.1f} %",
-                22, MUTED,
-            ).move_to([-6.0 + 0.0, y - 0.6, 0]).align_to([-6.0, 0, 0], LEFT)
+            bar = (
+                Rectangle(
+                    width=tpot_ms * scale,
+                    height=0.5,
+                    fill_color=RED if tpot_ms > 50 else GREEN,
+                    fill_opacity=0.9,
+                    stroke_width=0,
+                )
+                .align_to([-6.0, 0, 0], LEFT)
+                .set_y(y)
+            )
+            val = _t(
+                f"突發段 TPOT p95 {tpot_ms:.1f} ms", 24, RED if tpot_ms > 50 else GREEN
+            ).next_to(bar, RIGHT, buff=0.2)
+            nums = (
+                _t(
+                    f"突發段 attainment {m['attainment_burst']:.2f} · 整段 {m['attainment']:.2f} · 拒絕率 {100 * m['rejection_rate']:.1f} %",
+                    22,
+                    MUTED,
+                )
+                .move_to([-6.0 + 0.0, y - 0.6, 0])
+                .align_to([-6.0, 0, 0], LEFT)
+            )
             rows.append((lab, bar, val, nums))
         thr_x = -6.0 + 50 * (5.0 / 60.0)
         thr = Line([thr_x, 1.7, 0], [thr_x, -1.8, 0], color=RED, stroke_width=2)
@@ -930,14 +1054,20 @@ class W3AdmissionBurst(Scene):
             self.play(GrowFromEdge(bar, LEFT), run_time=0.9)
             self.play(FadeIn(val), FadeIn(nums), run_time=0.5)
             self.wait(0.6)
-        msg = _t("上限要用突發下仍 TPOT 安全的並行取，不是 closed-loop 的平台", 26, INK, weight="BOLD").to_edge(DOWN, buff=0.7)
+        msg = _t(
+            "上限要用突發下仍 TPOT 安全的並行取，不是 closed-loop 的平台", 26, INK, weight="BOLD"
+        ).to_edge(DOWN, buff=0.7)
         self.play(FadeIn(msg), run_time=0.5)
         self.wait(4.0)
 
     # ---- 7. end card (4 s)
     def end_card(self) -> None:
         lines = [
-            _t("示意動畫：數字出自 analysis/tables/w3-fp8-admission 與 w3-fp8-c192-admission", 24, INK),
+            _t(
+                "示意動畫：數字出自 analysis/tables/w3-fp8-admission 與 w3-fp8-c192-admission",
+                24,
+                INK,
+            ),
             _t("由 make reproduce 從提交的證據重建；ADR 0013、0018", 24, INK),
             _t("github.com/kuotunyu/vllm-single-gpu-slo-lab", 28, MUTED),
         ]

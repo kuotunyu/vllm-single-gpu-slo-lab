@@ -15,8 +15,8 @@ uv pip install --python .venv-manim/Scripts/python.exe -r scripts/manim/requirem
 
 ```bash
 .venv-manim/Scripts/manim -qh --disable_caching scripts/manim/w3_admission.py W3AdmissionBurst
-# -> media/videos/w3_admission/1080p30/W3AdmissionBurst.mp4
-cp media/videos/w3_admission/1080p30/W3AdmissionBurst.mp4 docs/media/w3-admission-burst.mp4
+# -> media/videos/w3_admission/1080p60/W3AdmissionBurst.mp4（Manim 0.21 的 -qh 是 1080p60）
+ffmpeg -y -i media/videos/w3_admission/1080p60/W3AdmissionBurst.mp4 -r 30 -c:v libx264 -crf 20 -preset slow -pix_fmt yuv420p -movflags +faststart -an docs/media/w3-admission-burst.mp4
 ffmpeg -y -i docs/media/w3-admission-burst.mp4 -vf "fps=12,scale=640:-1:flags=lanczos,palettegen=max_colors=128" media/palette.png
 ffmpeg -y -i docs/media/w3-admission-burst.mp4 -i media/palette.png -filter_complex "fps=12,scale=640:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5" docs/media/w3-admission-burst.gif
 ```
@@ -27,6 +27,12 @@ ffmpeg -y -i docs/media/w3-admission-burst.mp4 -i media/palette.png -filter_comp
 
 - `w3_data.py`：讀 seed 1 的三個策略目錄（`evidence/raw/w3/fp8/trace/seed-1/trace-<policy>/`）、`analysis/tables/w3-fp8-admission/admission.json`、`analysis/tables/w3-fp8-c192-admission/admission.json`，用 `slo_lab.timeline` 分桶（10 s 桶、30 s 滾動讀數、5 s 的佇列格點）；不 import manim，`tests/test_w3_anim_data.py` 在 CI 驗證它讀出的值與表相同。
 - `w3_admission.py`：場景 `W3AdmissionBurst`，只畫，不算：標題卡 → 時間軸與三條泳道 → 30 s 重播（25 分鐘壓縮）→ 恢復時間 → 記分板 → C = 256 對 C = 192 → 結尾卡。佇列長條是對數尺度（原生排隊最高 9,479 筆，有界佇列最高 79 筆，線性尺度看不到後者）。
+
+## 沒有 LaTeX 時的注意事項
+
+- `DecimalNumber`／`Integer` 預設用 MathTex 畫數字，要傳 `mob_class=Text`；它們的 `unit=` 一律走 LaTeX，不能用，單位放到旁邊的標籤。
+- `NumberLine(include_numbers=True)` 的刻度要傳 `label_constructor=Text`（`decimal_number_config` 裡不能放 `mob_class`，會和它自己傳的衝突）。
+- 出現 `FileNotFoundError: [WinError 2]` 幾乎都是 LaTeX 被呼叫；`media/Tex/` 有 `.tex` 檔就是證據。
 
 ## 核對表（渲染後人工核對）
 

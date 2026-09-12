@@ -94,6 +94,11 @@ def test_scan_tree_skips_excluded_dirs_and_binaries(tmp_path):
     (tmp_path / ".git" / "config").write_text(f"url = {PUBLIC_IP}\n", encoding="utf-8")
     (tmp_path / "runs").mkdir()
     (tmp_path / "runs" / "x.txt").write_text(HF_TOKEN + "\n", encoding="utf-8")
+    # the animation environment and Manim's working directory (2026-09-13) are skipped too
+    (tmp_path / ".venv-manim" / "Lib").mkdir(parents=True)
+    (tmp_path / ".venv-manim" / "Lib" / "site.py").write_text(f"# {PUBLIC_IP}\n", encoding="utf-8")
+    (tmp_path / "media" / "texts").mkdir(parents=True)
+    (tmp_path / "media" / "texts" / "t.svg").write_text(f"<!-- {PUBLIC_IP} -->\n", encoding="utf-8")
     (tmp_path / "blob.bin").write_bytes(b"\0\0" + PUBLIC_IP.encode() + b"\0")
     findings = scan_tree(tmp_path)
     assert [(str(f.path).replace("\\", "/"), f.pattern) for f in findings] == [

@@ -26,6 +26,10 @@
 >
 > **補點（ADR 0018，非預註冊）**：FP8 的 hard cap 改 C = 192 重播同一套 trace（3 seeds）：突發段 TPOT p95 降到 45 ms，突發段 attainment 0.49（C = 256 為 0.01），整段 0.78（W3 最高的有界佇列為 0.59），goodput 高 36 %，拒絕率只多 1 個百分點，三個 seed 同號。只量了這一個 C 值，邊際只有 5 ms。
 >
+> ![W3 admission 示意動畫：三種 admission 重播同一條突發 trace，再比 C = 256 與 C = 192](docs/media/w3-admission-burst.gif)
+>
+> 示意動畫（Manim Community，`scripts/manim/`）：三種 admission 重播同一條突發 trace，再比 C = 256 與 C = 192。數字全部出自 `analysis/tables/w3-*-admission/`；完整版 `docs/media/w3-admission-burst.mp4`。動畫不是證據，不在 `make reproduce` 的範圍。
+>
 > **W4：speculative decoding**（ADR 0015 協定、ADR 0016 結果；同 family 的加速 cell 與 none cell 在相同 offered rate 與 seed 下配對，Shakespeare 自然文字 prompt，全部經 passthrough shim）：
 >
 > | cell | 接受率 | 單流 TPOT | rps 比：c = 8 / 32 / 128 / 256 | 同 rate 的 TPOT p95 差（低負載段） | r_sat |

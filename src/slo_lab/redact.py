@@ -81,7 +81,9 @@ DEFAULT_EXCLUDE_DIRS: frozenset[str] = frozenset(
     {
         ".git",
         ".venv",
+        ".venv-manim",  # the explainer animation's environment (scripts/manim/README.md)
         "venv",
+        "media",  # Manim's working directory: partial movie files, cached text SVGs
         ".ruff_cache",
         ".pytest_cache",
         ".mypy_cache",

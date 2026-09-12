@@ -82,3 +82,9 @@ ffmpeg -y -i media/videos/w3_admission/1080p30/W3AdmissionBurst.mp4 -i media/pal
 - Manim 的 CJK 字型：Pango 找不到 Microsoft JhengHei 時會用預設字型，文字仍可讀；渲染前先用 `manim` 的 `Text` 試一幀。
 - 檔案大小：1080p 30 fps 75 s 的 mp4 以 Manim 預設 libx264 約 5–10 MB；GIF 依內容變動大，先量再決定裁不裁。
 - 時間：資料模組與測試約 1 小時，場景撰寫與調整約 3–4 小時，渲染每次 3–6 分鐘（CPU）。
+
+## 實作備註（2026-09-13）
+
+- 佇列長條改為**對數尺度**：原生排隊最高 9,479 筆、有界佇列最高 79 筆，線性尺度看不到後者；畫面底部的註記寫明。
+- 這台機器沒有 LaTeX：Manim 的數字物件改用 Pango（`mob_class=Text`、`label_constructor=Text`），單位放進標籤（`DecimalNumber` 的 `unit=` 只能走 LaTeX）。
+- 實際片長約 65 s（分鏡的停留時間略短於估計）。Manim 0.21 的 `-qh` 輸出 1080p60，提交的 mp4 以 ffmpeg 重新編碼成 1080p30（2.6 MB）；GIF 640 px、12 fps、2.4 MB，不需要裁段。
