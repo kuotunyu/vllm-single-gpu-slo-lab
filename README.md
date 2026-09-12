@@ -78,6 +78,77 @@
 - **重複**：每 cell n ≥ 3 個 seed（paired）；分位數 percentile bootstrap、比例 Wilson interval；負結果照登。
 - **部分因子**（ADR 0001）：精度軸全做；admission 軸在預設精度與 BF16；decoding 軸在預設精度 8B 與 Qwen3-4B。
 
+## 量測系統怎麼接
+
+負載產生器、admission shim 與 vLLM 都在 WSL2 裡，harness 在同一台機器上啟動負載、背景取樣並收集每一段的紀錄；Windows 端另外取樣桌面共用的顯存。每段的 run dir 去敏、gzip 後提交到 `evidence/raw/`，之後的一切（表、圖、ledger）都只從那裡重建。
+
+```mermaid
+flowchart LR
+    subgraph win["Windows 11 宿主（桌面與 4090 共用）"]
+        vram["scripts/win/vram-sampler.ps1<br/>Windows 端 committed 顯存，每 30 s"]
+    end
+    subgraph wsl["WSL2 Ubuntu-bench，一張 RTX 4090"]
+        harness["slo-lab run-stage（harness）<br/>warm-up 與單流 probe → 背景取樣 → 負載 → 收集"]
+        ipf["inference-perf 0.6.1<br/>Poisson open-loop、closed-loop、seeded trace replay"]
+        shim["slo-lab shim :8021<br/>passthrough／hard cap + 429／有界佇列 + 逾時"]
+        vllm["vLLM 0.28 :8013<br/>--gpu-memory-utilization 0.82"]
+        samp["背景取樣<br/>NVML 功耗每 1 s · /metrics 每 5 s · shim 計數"]
+        harness -. 啟動 .-> ipf
+        ipf -- "HTTP，串流" --> shim
+        shim -- "每請求一條連線" --> vllm
+        harness -. 取樣 .-> samp
+        samp -. 讀 .-> vllm
+        samp -. 讀 .-> shim
+    end
+    harness --> stage["每段一個 run dir<br/>records.jsonl · manifest.json · metrics.csv · shim.csv · power.csv"]
+    vram --> stage
+    stage -- "promote：去敏、gzip、sha256" --> ev[("evidence/raw/**（提交）")]
+    classDef box fill:#eef3f8,stroke:#4a5568,stroke-width:1.5px,color:#1a202c
+    classDef store fill:#fff7e6,stroke:#b7791f,stroke-width:1.5px,color:#1a202c
+    class harness,ipf,shim,vllm,samp,vram box
+    class stage,ev store
+```
+
+### Admission 三策略的請求流程
+
+W3 的三種策略只差在 shim 怎麼處理一個新請求（協定 ADR 0012；結果 ADR 0013、0018）：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as inference-perf（trace replay）
+    participant S as slo-lab shim :8021
+    participant V as vLLM :8013
+    C->>S: POST /v1/completions（串流）
+    alt 原生排隊（passthrough）
+        S->>V: 直接轉發，每請求一條連線
+        Note over V: vLLM 自己的佇列無上限：突發時排到百秒，TTFT 全部超標
+        V-->>S: 串流回應
+        S-->>C: 200
+    else hard cap + 429（C = 256，補點 C = 192）
+        alt 在途請求 < C
+            S->>V: 轉發
+            V-->>S: 串流回應
+            S-->>C: 200
+        else 已達 C
+            S-->>C: 429 + Retry-After（立即，不排隊；計為未達）
+        end
+    else 有界佇列 + 逾時（Q = 256，T = 1 s）
+        alt 在途請求 < C
+            S->>V: 轉發
+            V-->>S: 串流回應
+            S-->>C: 200
+        else 佇列未滿
+            Note over S: 最多等 T = 1 s，有空位就轉發（TTFT 含排隊時間）
+            S->>V: 轉發
+            V-->>S: 串流回應
+            S-->>C: 200
+        else 逾時或佇列已滿
+            S-->>C: 429（計為未達）
+        end
+    end
+```
+
 ## Claim ceilings（規格 §2.2 原文；發佈前 claims audit 逐條核對）
 
 1. 不宣稱多 replica、擴縮、生產可靠度（re-plan §4）。

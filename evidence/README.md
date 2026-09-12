@@ -2,6 +2,48 @@
 
 `evidence/raw/**`、`evidence/runpod/**`、`evidence/quant/**` **全部提交**；`make reproduce` 只讀這裡與 `config/cost.yaml`，在無 GPU、無網路的 CI 上重算 ledger、CI、表與圖，diff 必須為空。
 
+## 證據到重建的資料流
+
+`make reproduce` 只讀提交的證據與表的索引，重算所有表、圖與 run ledger，再以 `git diff` 要求零差異；README 的每個數字都經 `analysis/claims_audit.md` 對回表與證據路徑。
+
+```mermaid
+flowchart TD
+    raw[("evidence/raw/**<br/>每段：records.jsonl.gz · manifest.json · metrics.csv · shim.csv · power.csv<br/>每 session：vllm.log.gz · quiet_gpu.json")]
+    idx["analysis/tables/index.json<br/>表名 → 證據目錄"]
+    lite["slo-lab reproduce-lite<br/>CPU、無 GPU、無網路；CI 每次 push 執行"]
+    ba["batch_analysis<br/>closed-loop：r_sat、C<br/>open-loop：attainment、r_SLO、敏感度網格<br/>可疑規則：probe 漂移、W／util、committed 超過實體"]
+    aa["admission_analysis<br/>相位 attainment、goodput、拒絕率、time-to-recover"]
+    sa["specdec_analysis<br/>同 family 對 none cell 的配對"]
+    qa["quality<br/>TMMLU+ 配對差、exact McNemar"]
+    tables["analysis/tables/（每張表一個目錄）<br/>*.json、tables.md"]
+    plots["evidence/plots/*.svg<br/>純 Python 產生"]
+    ledger["analysis/ledger/runs.csv<br/>每段一列，含可疑狀態"]
+    ci{"git diff --exit-code -- evidence analysis<br/>差異必須為空"}
+    audit["analysis/claims_audit.md<br/>README 每個數字 → 表 → 證據路徑、n、CI"]
+    raw --> lite
+    idx --> lite
+    lite --> ba
+    lite --> aa
+    lite --> sa
+    lite --> qa
+    ba --> tables
+    aa --> tables
+    sa --> tables
+    qa --> tables
+    tables --> plots
+    tables --> ledger
+    tables --> ci
+    plots --> ci
+    ledger --> ci
+    audit -. 逐條對回 .-> tables
+    classDef store fill:#fff7e6,stroke:#b7791f,stroke-width:1.5px,color:#1a202c
+    classDef code fill:#eef3f8,stroke:#4a5568,stroke-width:1.5px,color:#1a202c
+    classDef gate fill:#e6f4ea,stroke:#2f855a,stroke-width:1.5px,color:#1a202c
+    class raw,idx,tables,plots,ledger,audit store
+    class lite,ba,aa,sa,qa code
+    class ci gate
+```
+
 每個 run 一個目錄 `evidence/raw/<run_id>/`（RunPod 同 contract 放 `evidence/runpod/`）：
 
 | 檔案 | 內容 | 狀態 |
