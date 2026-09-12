@@ -170,11 +170,3 @@ uv run slo-lab power-sample power.csv --phase idle --duration-s 60      # 需 NV
 uv run slo-lab shim --upstream http://localhost:8000 --policy bounded_queue --capacity <C>
 uv run slo-lab reproduce-lite
 ```
-
-## 里程碑
-
-W0 骨架（2026-09-03）→ W1 驗證清單 10 項與基線（09-09）→ W2 四精度掃描與 TMMLU+ 全集（09-11）→ W3 admission trace（09-11；C = 192 補點 09-12）→ W4 spec-decode（09-12）→ W5 重解析、圖、敏感度、claims audit、model card、run ledger（09-12）→ W6 誠實寫作與發佈前檢查（09-12；公開與否由作者決定）。細節見設計規格與 `docs/decisions/0001`–`0018`。
-
-## 授權
-
-程式碼與文件 Apache-2.0（kuotunyu, 2026）。Qwen3 權重 Apache-2.0；GPTQ-Int4、EAGLE-3 head、TMMLU+ 授權 W1 核對，見 `docs/licences.md`。
