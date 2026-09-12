@@ -34,6 +34,8 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | W6 發佈前檢查 | 見下節；乾淨 clone 的 CI 模擬（2026-09-12 21:44–21:55，commit `de7a685`）全過：sync、ruff、179 個測試、audit 乾淨、`make reproduce` 零 diff | — |
 | 解說動畫（2026-09-13） | 三支 Manim Community 動畫：W2 膝點、W3 admission、W4 speculative decoding（`docs/media/`，README 各段嵌入 GIF），示意用、不進 reproduce／CI；資料模組 `slo_lab.timeline` 與三個載入器測試在 CI；使用者要求不做標題卡與裝飾性特效 | 設計 `docs/superpowers/specs/2026-09-13-w3-admission-animation-design.md`、`2026-09-13-w2-w4-animations-design.md`；計畫 `docs/superpowers/plans/2026-09-13-w3-admission-animation.md`、`2026-09-13-w2-w4-animations.md` |
 | W6 收尾（2026-09-13） | 版本 1.0.0 與 GitHub Release v1.0.0（結案版）；LIBG README 分工段落草稿 `docs/libg-readme-paragraph.md`（規格 W6 交付物，依規格不推送到 LIBG，由其作者決定）；五份計畫的勾選框依實際執行補齊 | — |
+| 圖解（2026-09-13） | 三張 Mermaid 圖：量測系統架構與 admission 三策略時序圖（README「量測系統怎麼接」）、證據到重建的資料流（`evidence/README.md`）；純文字、GitHub 原生渲染、不放數字 | ADR 0012 補記 |
+| README 精簡（2026-09-13） | 依使用者要求把 README 縮成：一句話、三張結果表（動畫收進可展開區塊）、不宣稱的事、怎麼量的（架構圖；時序圖收進可展開區塊）、重現；模組與證據清單移到 `docs/inventory.md`；GitHub About 改為正體中文、不強調 4090 | — |
 
 逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4 與 2026-09-12 的收尾：`2026-09-11-w4-specdec.md` 的 run log）。
 
@@ -67,7 +69,9 @@ gh repo create kuotunyu/vllm-single-gpu-slo-lab --public --source . --remote ori
 
 或手動：在 GitHub 建空的 public repo（不要勾 README／LICENSE），然後 `git remote add origin https://github.com/kuotunyu/vllm-single-gpu-slo-lab.git`（或 SSH 形式；文件裡用 HTTPS 是因為 `make audit-secrets` 會把 `git@` 開頭的 SSH 位址當成 email 樣式） 與 `git push -u origin main`。推送後看 Actions 的 `CI` 是否全綠（ruff、pytest、audit、`make reproduce`），全綠才算發佈。GitHub About 草稿（精簡、不提名次）：
 
-> SLO-bounded capacity, energy and quality of Qwen3-8B on one desktop-shared RTX 4090 (vLLM 0.28, WSL2): four precisions, three admission policies, speculative decoding; every number rebuilt from committed evidence.
+> 在 SLO 約束下量測 Qwen3-8B 在單張 GPU 上的容量、能耗與品質：四種精度、三種 admission 策略、speculative decoding；每個數字都由提交的證據以 make reproduce 重建。
+
+（2026-09-13 依使用者要求改為正體中文為主、專有名詞保留原文、不強調 4090；原英文版已由這段取代。）
 
 不需要 Git LFS，不需要改寫歷史。
 
