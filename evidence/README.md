@@ -29,3 +29,5 @@ W4（2026-09-12）加入：`raw/w4/<cell>/closed-loop/seed-1/` 與 `raw/w4/<cell
 W5（2026-09-12）加入：`raw/w2/reparse-compare-2026-09-12.json`，W2 的 243 段以伺服器 token 數重解析後與提交紀錄的逐段比較（TPOT p95、attainment、計數不同的請求數）與各 cell 的 r_SLO 舊／新；全部不變，W2 紀錄維持原樣（ADR 0017）。
 
 Ledger（2026-09-12）：`analysis/ledger/runs.csv` 由 `reproduce-lite` 從 `analysis/tables/index.json` 列的批次目錄下的每個 `manifest.json` 重建（`slo_lab.ledger`），每段一列：日期、精度、admission 策略、spec-decode、流量、seed、狀態（取自重建後的表的可疑旗標與原因）、證據路徑。`cost.csv` 與 `spend.csv` 維持只有表頭：4090 不計 $（ADR 0010），沒有用過付費算力（ADR 0014）。
+
+W3 補點（2026-09-12 晚）加入：`raw/w3/fp8-c192/trace/seed-{1,2,3}/`，FP8 的 hard cap 改 C = 192 重播與 `raw/w3/fp8/` 相同的三條 seeded trace（每個 seed 目錄只有 `trace-hard_cap/`），其餘檔案結構同 W3；表 `analysis/tables/w3-fp8-c192-admission/`；`raw/w3/win-vram-2026-09-12-c192.log` 是這次的 Windows 端顯存取樣。非預註冊的探索性補點，ADR 0018。

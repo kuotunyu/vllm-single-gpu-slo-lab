@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 四精度、W3 admission、W4 speculative decoding 三軸完成（2026-09-12）。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
+> **狀態：W2 四精度、W3 admission、W4 speculative decoding 三軸完成（2026-09-12，含 W3 的 FP8 C = 192 補點）；量測與分析全部結束。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
 >
 > | 精度 | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | r_sat | 單流 TPOT | 能耗 @ r_SLO | TMMLU+ 全集 | 對 BF16 配對差 |
 > |---|---|---|---|---|---|---|
@@ -23,6 +23,8 @@
 > | BF16（C = 40） | 0.47 | 0.87 | 0.86 |
 >
 > 原生排隊在突發後要 3.5–14 分鐘才恢復，FP8 的佇列等待讓 TTFT p95 到 268 s；兩種限流讓 attainment 提高約 0.4、突發後 10 s 內恢復，代價是拒絕 12–21 % 的請求。限流在突發段本身有沒有用取決於上限 C：BF16 的 C = 40 在突發下仍守得住 TPOT（突發段 0.69），FP8 由 closed-loop 推得的 C = 256 在突發下 TPOT p95 升到 57 ms（突發段 0.01–0.05）。
+>
+> **補點（ADR 0018，非預註冊）**：FP8 的 hard cap 改 C = 192 重播同一套 trace（3 seeds）：突發段 TPOT p95 降到 45 ms，突發段 attainment 0.49（C = 256 為 0.01），整段 0.78（W3 最高的有界佇列為 0.59），goodput 高 36 %，拒絕率只多 1 個百分點，三個 seed 同號。只量了這一個 C 值，邊際只有 5 ms。
 >
 > **W4：speculative decoding**（ADR 0015 協定、ADR 0016 結果；同 family 的加速 cell 與 none cell 在相同 offered rate 與 seed 下配對，Shakespeare 自然文字 prompt，全部經 passthrough shim）：
 >
@@ -115,7 +117,7 @@
 
 ### 還沒有
 
-- **剩餘工作見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：FP8 突發安全上限補點（C = 192，1.5 小時 GPU，另排）；W5 的 W2 重解析與 W6 發佈前檢查不用 GPU。
+- **量測與分析全部完成（2026-09-12）**。剩下的只有作者的兩個決定：是否公開到 GitHub、是否清掉量測主機的原始輸出；發佈前檢查的結果與步驟在 [`docs/HANDOFF.md`](docs/HANDOFF.md)。
 - `analysis/ledger/cost.csv` 與 `spend.csv` 只有表頭，這是決定而不是缺漏：4090 不計 $（ADR 0010），也沒有用過任何付費算力（A1 取消，ADR 0014）。`runs.csv` 由 `reproduce-lite` 從證據重建，每段一列，狀態欄取自分析器的可疑旗標（`slo_lab.ledger`）。圖（W2 attainment 對 rate、W3 佇列時間線、W4 TPOT 與 attainment 對 rate）同樣由 `reproduce-lite` 重建（`evidence/plots/`，`slo_lab.plots`，無外部繪圖依賴）；model card 在 `docs/model-card.md`。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
@@ -171,7 +173,7 @@ uv run slo-lab reproduce-lite
 
 ## 里程碑
 
-W0 骨架（本 commit）→ W1 驗證清單 10 項與基線 → W2 四精度掃描與 TMMLU+ 切片 → W3 admission trace → W4 spec-decode → W5 補 n、敏感度、claims audit → W6 誠實寫作與發佈前檢查。細節見設計規格與 `docs/decisions/`。
+W0 骨架（2026-09-03）→ W1 驗證清單 10 項與基線（09-09）→ W2 四精度掃描與 TMMLU+ 全集（09-11）→ W3 admission trace（09-11；C = 192 補點 09-12）→ W4 spec-decode（09-12）→ W5 重解析、圖、敏感度、claims audit、model card、run ledger（09-12）→ W6 誠實寫作與發佈前檢查（09-12；公開與否由作者決定）。細節見設計規格與 `docs/decisions/0001`–`0018`。
 
 ## 授權
 

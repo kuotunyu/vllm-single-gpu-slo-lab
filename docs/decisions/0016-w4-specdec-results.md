@@ -125,5 +125,5 @@ n-gram 對 none 的 open-loop 配對（4B；3 seeds 平均）：
 
 ## 尚未量測
 
-- FP8 突發安全上限 C = 192（ADR 0013）。
+- FP8 突發安全上限 C = 192（ADR 0013）。（2026-09-12 晚補記：已量，ADR 0018。）
 - 其他 k 或 lookup 範圍、其他語料、spec decode × admission、× BF16／AWQ。

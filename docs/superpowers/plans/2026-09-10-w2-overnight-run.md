@@ -368,7 +368,7 @@ rm -f .git/index.lock && git add -A && GIT_ASK_YESNO=false git -c user.name=kuot
 **Files:**
 - Modify: `D:\AI-Portfolio\CC_github部隊\_portfolio_control\docs\inventory\2026-09-02-arsenal-v3-inventory.md` (§19 補記), `…\project-registry.md` (lab row)
 - Modify: `C:\Users\3Hml\.claude\projects\D--AI-Portfolio\memory\portfolio-inventory-snapshot.md`
-- Modify + publish: `C:\Users\3Hml\.claude\projects\D--AI-Portfolio\2ca314bc-35ae-404a-8e70-998f59664031\tool-results\artifact-ca431bf0-1788377722-93d2.html` (url `https://claude.ai/code/artifact/ca431bf0-b18d-400b-a553-c9d3e4d33ed0`)
+- Modify + publish: `C:\Users\3Hml\.claude\projects\D--AI-Portfolio\2ca314bc-35ae-404a-8e70-998f59664031\tool-results\artifact-ca431bf0-1788377722-93d2.html` (url `<private dashboard artifact; link removed 2026-09-12, the artifact no longer resolves>`)
 
 - [ ] **Step 1: Ledger 補記** — one bullet: window used, cells done, headline table, suspects, tenant windows, lab commit hash, next steps (W3 admission trace, W4 spec-decode, cost table owner input, publish prep incl. the 117 MB+ evidence size decision). Registry row: status text → "W2 complete (four precisions)". Commit the control tower with the same author flags.
 

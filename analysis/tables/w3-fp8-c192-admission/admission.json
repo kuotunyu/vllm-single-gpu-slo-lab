@@ -1,0 +1,164 @@
+{
+  "rows": [
+    {
+      "cell": "fp8-c192",
+      "policy": "hard_cap",
+      "seed": 1,
+      "records": 45624,
+      "offered": 45624,
+      "attainment": 0.784543,
+      "attainment_ci95": [
+        0.780747,
+        0.788292
+      ],
+      "goodput_rps": 23.862667,
+      "rejection_rate": 0.214229,
+      "attainment_pre": 0.998285,
+      "attainment_burst": 0.500994,
+      "attainment_recovery": 0.99846,
+      "goodput_burst_rps": 32.756667,
+      "rejection_burst": 0.49819,
+      "ttft_p95_pre_s": 0.097957,
+      "ttft_p95_burst_s": 0.20457,
+      "tpot_p95_burst_s": 0.044258,
+      "ttft_p95_recovery_s": 0.100684,
+      "time_to_recover_s": 0.0,
+      "time_to_recover_attainment_s": 0.0,
+      "shim_cpu_util": 0.0773,
+      "probe_tpot_median_s": 0.019871907022900925,
+      "windows_committed_mb": 22928.0,
+      "physical_vram_mib": 24564.0,
+      "path": "trace/seed-1/trace-hard_cap/manifest.json",
+      "suspect": false,
+      "suspect_reasons": []
+    },
+    {
+      "cell": "fp8-c192",
+      "policy": "hard_cap",
+      "seed": 2,
+      "records": 45874,
+      "offered": 45874,
+      "attainment": 0.780442,
+      "attainment_ci95": [
+        0.776631,
+        0.784207
+      ],
+      "goodput_rps": 23.868,
+      "rejection_rate": 0.217007,
+      "attainment_pre": 0.99905,
+      "attainment_burst": 0.489159,
+      "attainment_recovery": 0.997362,
+      "goodput_burst_rps": 31.96,
+      "rejection_burst": 0.506964,
+      "ttft_p95_pre_s": 0.100753,
+      "ttft_p95_burst_s": 0.276498,
+      "tpot_p95_burst_s": 0.044945,
+      "ttft_p95_recovery_s": 0.114812,
+      "time_to_recover_s": 0.0,
+      "time_to_recover_attainment_s": 0.0,
+      "shim_cpu_util": 0.0881,
+      "probe_tpot_median_s": 0.020092104629771325,
+      "windows_committed_mb": 22985.0,
+      "physical_vram_mib": 24564.0,
+      "path": "trace/seed-2/trace-hard_cap/manifest.json",
+      "suspect": false,
+      "suspect_reasons": []
+    },
+    {
+      "cell": "fp8-c192",
+      "policy": "hard_cap",
+      "seed": 3,
+      "records": 45733,
+      "offered": 45733,
+      "attainment": 0.776288,
+      "attainment_ci95": [
+        0.772446,
+        0.780085
+      ],
+      "goodput_rps": 23.668,
+      "rejection_rate": 0.221984,
+      "attainment_pre": 0.997175,
+      "attainment_burst": 0.48276,
+      "attainment_recovery": 0.997736,
+      "goodput_burst_rps": 31.643333,
+      "rejection_burst": 0.516273,
+      "ttft_p95_pre_s": 0.102289,
+      "ttft_p95_burst_s": 0.205967,
+      "tpot_p95_burst_s": 0.046398,
+      "ttft_p95_recovery_s": 0.115336,
+      "time_to_recover_s": 0.0,
+      "time_to_recover_attainment_s": 0.0,
+      "shim_cpu_util": 0.084,
+      "probe_tpot_median_s": 0.020072460164122185,
+      "windows_committed_mb": 23425.0,
+      "physical_vram_mib": 24564.0,
+      "path": "trace/seed-3/trace-hard_cap/manifest.json",
+      "suspect": false,
+      "suspect_reasons": []
+    }
+  ],
+  "per_cell_policy": {
+    "fp8-c192": {
+      "hard_cap": {
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "n": 3,
+        "per_seed": {
+          "attainment": [
+            0.784543,
+            0.780442,
+            0.776288
+          ],
+          "goodput_rps": [
+            23.862667,
+            23.868,
+            23.668
+          ],
+          "rejection_rate": [
+            0.214229,
+            0.217007,
+            0.221984
+          ],
+          "attainment_burst": [
+            0.500994,
+            0.489159,
+            0.48276
+          ],
+          "attainment_recovery": [
+            0.99846,
+            0.997362,
+            0.997736
+          ],
+          "ttft_p95_burst_s": [
+            0.20457,
+            0.276498,
+            0.205967
+          ],
+          "time_to_recover_s": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_to_recover_attainment_s": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "mean": {
+          "attainment": 0.780424,
+          "goodput_rps": 23.799556,
+          "rejection_rate": 0.21774,
+          "attainment_burst": 0.490971,
+          "attainment_recovery": 0.997853,
+          "ttft_p95_burst_s": 0.229012,
+          "time_to_recover_s": 0.0,
+          "time_to_recover_attainment_s": 0.0
+        }
+      }
+    }
+  }
+}

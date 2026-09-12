@@ -42,7 +42,7 @@
 | 軸 | 結果 | 出處 |
 |---|---|---|
 | 精度（W2） | r_SLO：BF16 10.26、FP8 26.2、AWQ 22.61、GPTQ-Int4 22.70 req/s；能耗 @ r_SLO：74.6／31.2／36.2／36.3 Wh／百萬 token；TMMLU+ 全集 0.5911／0.5909／0.5797／0.5703，FP8 對 BF16 配對差 −0.02 pts（p = 0.945） | ADR 0009 |
-| Admission（W3） | 1.5 倍、5 分鐘突發下整段 attainment：FP8 原生排隊 0.19、hard cap 0.57、有界佇列 0.59；BF16 0.47、0.87、0.86；限流 10 s 內恢復，原生排隊 3.5–14 分鐘 | ADR 0013 |
+| Admission（W3） | 1.5 倍、5 分鐘突發下整段 attainment：FP8 原生排隊 0.19、hard cap 0.57、有界佇列 0.59；BF16 0.47、0.87、0.86；限流 10 s 內恢復，原生排隊 3.5–14 分鐘；補點：FP8 hard cap 改 C = 192 後突發段 TPOT p95 45 ms、突發段 attainment 0.49（C = 256 為 0.01）、整段 0.78（非預註冊） | ADR 0013、0018 |
 | Speculative decoding（W4） | 接受率：8B n-gram 0.52、4B EAGLE-3 0.27、4B n-gram 0.53；單流 TPOT 1.72×／1.45×／1.12×，c = 128 起吞吐 0.85×／0.66×／0.73×；同 rate 的 attainment 與粗網格 r_SLO 和 none 相同，TPOT p95 升 1.6 到 10 ms（EAGLE-3 在 12 rps 以下降 2 ms 為唯一例外）；8B n-gram 在 256 並行時超出 0.82 預算而分頁 | ADR 0015、0016 |
 
 ## What this does not show（規格 §2.2，發佈時逐條保留）

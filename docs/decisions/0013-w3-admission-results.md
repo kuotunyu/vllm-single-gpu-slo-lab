@@ -47,5 +47,5 @@
 
 ## 尚未量測
 
-- W4：speculative decoding，完整版（8B n-gram；4B none、n-gram、EAGLE-3），使用者 2026-09-11 同意做完整版，GPU 時段由使用者另行安排，約 10 小時。
-- 突發下 TPOT 安全的 FP8 上限 C（例如 192），以及更短的 T。
+- W4：speculative decoding，完整版（8B n-gram；4B none、n-gram、EAGLE-3），使用者 2026-09-11 同意做完整版，GPU 時段由使用者另行安排，約 10 小時。（2026-09-12 補記：已完成，ADR 0015、0016。）
+- 突發下 TPOT 安全的 FP8 上限 C（例如 192），以及更短的 T。（2026-09-12 補記：C = 192 已量，ADR 0018：突發段 TPOT p95 45 ms、突發段 attainment 0.49、整段 0.78；更短的 T 與其他 C 仍未量。）
