@@ -83,7 +83,6 @@ DEFAULT_EXCLUDE_DIRS: frozenset[str] = frozenset(
         ".venv",
         ".venv-manim",  # the explainer animation's environment (scripts/manim/README.md)
         "venv",
-        "media",  # Manim's working directory: partial movie files, cached text SVGs
         ".ruff_cache",
         ".pytest_cache",
         ".mypy_cache",
@@ -157,6 +156,10 @@ MAX_DECOMPRESSED_BYTES = 512_000_000
 # Third-party benchmark text committed verbatim (TMMLU+ is MIT, ADR 0003). Its networking exam
 # questions quote example addresses (subnet masks, 192.168.x.x), which are question content, not
 # infrastructure; every other pattern (keys, tokens, e-mail) still applies to these files.
+# Skipped only at the repository root: Manim's working directory (partial movie files, cached
+# text SVGs). ``docs/media`` holds the committed animations and stays in the scan.
+DEFAULT_EXCLUDE_TOP_DIRS: frozenset[str] = frozenset({"media"})
+
 DATASET_TEXT_DIRS: tuple[str, ...] = ("eval/tmmluplus/",)
 DATASET_ALLOWED_PATTERNS: frozenset[str] = frozenset({"ipv4"})
 
@@ -169,13 +172,17 @@ def iter_text_files(
     root: Path,
     *,
     exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS,
+    exclude_top_dirs: frozenset[str] = DEFAULT_EXCLUDE_TOP_DIRS,
     max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> Iterable[Path]:
     """Every scannable file under ``root``: plain text, plus gzip-compressed text (``*.gz``)."""
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        if any(part in exclude_dirs for part in path.relative_to(root).parts[:-1]):
+        rel = path.relative_to(root).parts
+        if any(part in exclude_dirs for part in rel[:-1]):
+            continue
+        if len(rel) > 1 and rel[0] in exclude_top_dirs:
             continue
         try:
             if path.stat().st_size > max_bytes:
