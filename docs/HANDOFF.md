@@ -1,17 +1,17 @@
-# 交接文件：vllm-single-gpu-slo-lab（2026-09-12 晚，結案版）
+# 交接文件：vllm-single-gpu-slo-lab（2026-09-13，結案並公開版）
 
 之後回來時先讀這份。它說明專案做到哪裡、還剩什麼（只剩使用者的兩個決定）、怎麼公開、以及這個專案踩過的坑。前一版（2026-09-11，W4 開工前）的內容已由 ADR 0015–0018 與各週計畫取代。
 
 ## 一句話現況
 
-W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，含 FP8 C = 192 補點）、兩種加速解碼（W4）都有結果、證據與 ADR；W5 的重解析、圖、model card、claims audit、run ledger 都做完；W6 的發佈前檢查已做完並在乾淨 clone 上模擬過 CI。**剩下的只有使用者的兩個決定：要不要公開到 GitHub、要不要清掉量測主機的 run 目錄。** 不再需要任何 GPU 時間。
+W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，含 FP8 C = 192 補點）、兩種加速解碼（W4）都有結果、證據與 ADR；W5 的重解析、圖、model card、claims audit、run ledger 都做完；W6 的發佈前檢查已做完並在乾淨 clone 上模擬過 CI。**2026-09-12 深夜依使用者決定公開到 GitHub（<https://github.com/kuotunyu/vllm-single-gpu-slo-lab>），Actions 的 CI 第一次就全綠；contributors 只有 kuotunyu。** 剩下的只有清掉量測主機的 run 目錄（使用者已同意，但永久刪除檔案由使用者自己執行，指令在下方）。不再需要任何 GPU 時間。
 
 ## 位置
 
 | 項目 | 位置 |
 |---|---|
-| 專案 repo（本機 git，90 個左右的 commit，無 remote） | `D:\AI-Portfolio\CC_github部隊\vllm-single-gpu-slo-lab` |
-| GitHub | **沒有**。從未推送，`kuotunyu` 底下沒有這個 repo；是否公開由使用者決定（見「公開步驟」） |
+| 專案 repo（本機 git，remote `origin` 指向 GitHub） | `D:\AI-Portfolio\CC_github部隊\vllm-single-gpu-slo-lab` |
+| GitHub | <https://github.com/kuotunyu/vllm-single-gpu-slo-lab>（public，2026-09-12 23:53 首次推送，CI 全綠；About 與 topics 已設；contributors 只有 kuotunyu） |
 | 量測環境 | WSL2 發行版 `Ubuntu-bench`，`~/vllm-slo-lab`：`.venv`（vLLM 0.28.0）、`.venv-slolab`（本 repo 的 editable install）、`.venv-loadgen`（inference-perf 0.6.1） |
 | 原始量測輸出（只在量測主機，repo 內有 gzip 副本與 sha256） | `~/vllm-slo-lab/runs-w2`（117 GB）、`runs-w3`（36 GB）、`runs-w4`（48 GB）、`runs-w3-c192`（8.5 GB）、`runs-w4-smoke`（0.3 GB）、`reparse-w2`（0.25 GB）；磁碟剩約 154 GB |
 | 控制塔（帳本、專案登記表） | `D:\AI-Portfolio\CC_github部隊\_portfolio_control`（本機；2026-09-12 晚已更新 W4–W6 的紀錄） |
@@ -43,8 +43,8 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 
 ## 還剩什麼（只有使用者能做）
 
-1. **是否公開到 GitHub。** 檢查都做完了，見下節；公開只需要建 repo、加 remote、push，然後看 Actions。
-2. **是否清掉量測主機的 run 目錄**，約可釋放 200 GB。W2 重解析已完成，`runs-w2` 沒有其他用途；W3、W4、C = 192 的原始逐筆檔在 repo 內都有 gzip 副本與 sha256。指令（在 WSL）：`rm -rf ~/vllm-slo-lab/runs-w2 ~/vllm-slo-lab/runs-w3 ~/vllm-slo-lab/runs-w4 ~/vllm-slo-lab/runs-w3-c192 ~/vllm-slo-lab/runs-w4-smoke ~/vllm-slo-lab/reparse-w2`。
+1. ~~是否公開到 GitHub~~ 已公開（2026-09-12）。
+2. **清掉量測主機的 run 目錄**（使用者 2026-09-13 已同意；永久刪除檔案由使用者自己執行），約可釋放 210 GB。W2 重解析已完成，`runs-w2` 沒有其他用途；W3、W4、C = 192 的原始逐筆檔在 repo 內都有 gzip 副本與 sha256。指令（在 WSL）：`rm -rf ~/vllm-slo-lab/runs-w2 ~/vllm-slo-lab/runs-w3 ~/vllm-slo-lab/runs-w4 ~/vllm-slo-lab/runs-w3-c192 ~/vllm-slo-lab/runs-w4-smoke ~/vllm-slo-lab/reparse-w2`。
 
 ## W6 發佈前檢查結果（2026-09-12）
 
@@ -56,7 +56,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 - **私人資訊**：私人儀表板網址已移除；`docs/superpowers/plans/` 裡的本機路徑（`D:\...`、`/mnt/d/...`）與 WSL 使用者名稱是說明文字，不含機密。
 - **claims audit**：`analysis/claims_audit.md` 22 列，每列對回證據路徑、n、CI 與 claim ceiling；README 的每個數字都在表內。
 
-### 公開步驟（使用者執行；約 5 分鐘加 CI 約 10 分鐘）
+### 公開步驟（已於 2026-09-12 執行，留作紀錄）
 
 ```bash
 gh repo create kuotunyu/vllm-single-gpu-slo-lab --public --source . --remote origin --push
