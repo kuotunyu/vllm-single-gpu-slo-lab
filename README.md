@@ -15,6 +15,10 @@
 >
 > 這些數字**只對這組旗標、WSL2、這張與 Windows 桌面共用的 4090 成立**，能耗只含 GPU 板卡。4090 不計 $／百萬 token（ADR 0010）。
 >
+> ![W2 示意動畫：四精度的 attainment 對 offered rate、FP8 的膝點、SLO 敏感度、四精度總表](docs/media/w2-knee.gif)
+>
+> 示意動畫（Manim Community，`scripts/manim/`）：四精度的 attainment 對 offered rate、FP8 的膝點由 TPOT 決定、SLO 敏感度網格、四精度總表。數字全部出自 `analysis/tables/w2-*/`；完整版 `docs/media/w2-knee.mp4`。動畫不是證據，不在 `make reproduce` 的範圍。
+>
 > **W3：1.5 倍、5 分鐘突發下的三種 admission 策略**（ADR 0013；seeded trace replay，三策略重播同一條 trace，各 3 seeds）：
 >
 > | 整段 SLO attainment | 原生排隊 | hard cap + 429 | 有界佇列 + 1 s 逾時 |
@@ -39,6 +43,10 @@
 > | 4B + n-gram | 0.53 | 9.7 ms（none 10.7，1.12×） | 1.09 / 1.04 / 0.73 / 0.67 | +1.6 到 +4.1 ms（5 到 24 rps） | 32.1 rps（none 47.6） |
 >
 > 三個加速 cell 都是單流與小批次變快、c = 128 起吞吐反轉為 0.6 到 0.85 倍；穩態 Poisson 下同 rate 的 attainment 與粗網格 r_SLO 和 none 相同，TPOT 中位數降 0.6 到 4 ms、p95 除了 EAGLE-3 的 12 rps 以下之外都升高，三個 seed 同號：**典型請求變快、尾端變慢，在以 p95 定義的 SLO 下容量沒有增加**。8B 的 n-gram 在 256 並行時超出 0.82 記憶體預算而讓桌面分頁，高負載點量不到（ADR 0016）。
+>
+> ![W4 示意動畫：接受率、closed-loop 吞吐比、同 rate 的 TPOT 差](docs/media/w4-specdec.gif)
+>
+> 示意動畫（Manim Community，`scripts/manim/`）：接受率、closed-loop 的吞吐比對並行數、open-loop 同 rate 配對的 TPOT 中位數與 p95 差。數字全部出自 `analysis/tables/w4-*-specdec/`；完整版 `docs/media/w4-specdec.mp4`。動畫不是證據，不在 `make reproduce` 的範圍。
 
 ## 一句話
 

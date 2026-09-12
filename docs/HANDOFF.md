@@ -32,7 +32,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | W3 補點（非預註冊） | FP8 hard cap 改 C = 192 重播同一套突發 trace：突發段 TPOT p95 45 ms（C = 256 為 58）、突發段 attainment 0.49（0.01）、整段 0.78（0.57）、goodput +36 %、拒絕率只多 1 個百分點，三 seed 同號、零重跑 | ADR 0018 |
 | W5 其餘 | 7 張 SVG 圖、model card、授權盤點、claims audit 1–22 列、run ledger（`analysis/ledger/runs.csv`，每段一列）都由 `reproduce-lite` 重建或已填 | — |
 | W6 發佈前檢查 | 見下節；乾淨 clone 的 CI 模擬（2026-09-12 21:44–21:55，commit `de7a685`）全過：sync、ruff、179 個測試、audit 乾淨、`make reproduce` 零 diff | — |
-| 解說動畫（2026-09-13） | W3 admission 的 Manim Community 動畫（`docs/media/w3-admission-burst.{mp4,gif}`，README 的 W3 段嵌入 GIF），示意用、不進 reproduce／CI；資料模組 `slo_lab.timeline` 與載入器測試在 CI | 設計 `docs/superpowers/specs/2026-09-13-w3-admission-animation-design.md`、計畫 `docs/superpowers/plans/2026-09-13-w3-admission-animation.md` |
+| 解說動畫（2026-09-13） | 三支 Manim Community 動畫：W2 膝點、W3 admission、W4 speculative decoding（`docs/media/`，README 各段嵌入 GIF），示意用、不進 reproduce／CI；資料模組 `slo_lab.timeline` 與三個載入器測試在 CI；使用者要求不做標題卡與裝飾性特效 | 設計 `docs/superpowers/specs/2026-09-13-w3-admission-animation-design.md`、`2026-09-13-w2-w4-animations-design.md`；計畫 `docs/superpowers/plans/2026-09-13-w3-admission-animation.md`、`2026-09-13-w2-w4-animations.md` |
 
 逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4 與 2026-09-12 的收尾：`2026-09-11-w4-specdec.md` 的 run log）。
 

@@ -32,4 +32,4 @@ Ledger（2026-09-12）：`analysis/ledger/runs.csv` 由 `reproduce-lite` 從 `an
 
 W3 補點（2026-09-12 晚）加入：`raw/w3/fp8-c192/trace/seed-{1,2,3}/`，FP8 的 hard cap 改 C = 192 重播與 `raw/w3/fp8/` 相同的三條 seeded trace（每個 seed 目錄只有 `trace-hard_cap/`），其餘檔案結構同 W3；表 `analysis/tables/w3-fp8-c192-admission/`；`raw/w3/win-vram-2026-09-12-c192.log` 是這次的 Windows 端顯存取樣。非預註冊的探索性補點，ADR 0018。
 
-示意動畫（2026-09-13）：`docs/media/` 的 mp4／gif 由 `scripts/manim/` 從表與紀錄畫出（Manim Community），只重述表內的數字，不屬於證據、不在 `make reproduce` 的 diff 範圍；`tests/test_w3_anim_data.py` 在 CI 驗證動畫讀到的值與表相同。
+示意動畫（2026-09-13）：`docs/media/` 的三組 mp4／gif（W2 膝點、W3 admission、W4 speculative decoding）由 `scripts/manim/` 從表與紀錄畫出（Manim Community），只重述表內的數字，不屬於證據、不在 `make reproduce` 的 diff 範圍；`tests/test_w{2,3,4}_anim_data.py` 在 CI 驗證動畫讀到的值與表相同。
