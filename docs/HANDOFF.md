@@ -4,7 +4,7 @@
 
 ## 一句話現況
 
-W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，含 FP8 C = 192 補點）、兩種加速解碼（W4）都有結果、證據與 ADR；W5 的重解析、圖、model card、claims audit、run ledger 都做完；W6 的發佈前檢查已做完並在乾淨 clone 上模擬過 CI。**2026-09-12 深夜依使用者決定公開到 GitHub（<https://github.com/kuotunyu/vllm-single-gpu-slo-lab>），Actions 的 CI 第一次就全綠；contributors 只有 kuotunyu。** 剩下的只有清掉量測主機的 run 目錄（使用者已同意，但永久刪除檔案由使用者自己執行，指令在下方）。不再需要任何 GPU 時間。
+W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，含 FP8 C = 192 補點）、兩種加速解碼（W4）都有結果、證據與 ADR；W5 的重解析、圖、model card、claims audit、run ledger 都做完；W6 的發佈前檢查已做完並在乾淨 clone 上模擬過 CI。**2026-09-12 深夜依使用者決定公開到 GitHub（<https://github.com/kuotunyu/vllm-single-gpu-slo-lab>），Actions 的 CI 第一次就全綠；contributors 只有 kuotunyu。** 量測主機的 run 目錄已由使用者於 2026-09-13 清掉（釋放約 209 GB）；GitHub Release v1.0.0 已建立。**沒有未完成的項目**，不再需要任何 GPU 時間。
 
 ## 位置
 
@@ -13,7 +13,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | 專案 repo（本機 git，remote `origin` 指向 GitHub） | `D:\AI-Portfolio\CC_github部隊\vllm-single-gpu-slo-lab` |
 | GitHub | <https://github.com/kuotunyu/vllm-single-gpu-slo-lab>（public，2026-09-12 23:53 首次推送，CI 全綠；About 與 topics 已設；contributors 只有 kuotunyu；Release v1.0.0 於 2026-09-13） |
 | 量測環境 | WSL2 發行版 `Ubuntu-bench`，`~/vllm-slo-lab`：`.venv`（vLLM 0.28.0）、`.venv-slolab`（本 repo 的 editable install）、`.venv-loadgen`（inference-perf 0.6.1） |
-| 原始量測輸出（只在量測主機，repo 內有 gzip 副本與 sha256） | `~/vllm-slo-lab/runs-w2`（117 GB）、`runs-w3`（36 GB）、`runs-w4`（48 GB）、`runs-w3-c192`（8.5 GB）、`runs-w4-smoke`（0.3 GB）、`reparse-w2`（0.25 GB）；磁碟剩約 154 GB |
+| 原始量測輸出 | 已於 2026-09-13 刪除（`runs-w2`、`runs-w3`、`runs-w4`、`runs-w3-c192`、`runs-w4-smoke`、`reparse-w2`，共約 209 GB；repo 內有全部段落的 gzip 副本與 sha256）。量測主機只剩 dry-run 與 smoke 的輸出約 3.5 GB（`runs`、`runs-w3-dryrun`、`runs-w3-smoke*`、`runs-w4-dryrun`），可留可刪；磁碟剩約 363 GB |
 | 控制塔（帳本、專案登記表） | `D:\AI-Portfolio\CC_github部隊\_portfolio_control`（本機；2026-09-12 晚已更新 W4–W6 的紀錄） |
 | 儀表板 | 舊的私人儀表板連結 2026-09-12 已查無此 artifact，連結已自本文件與 W2 計畫移除 |
 
@@ -43,10 +43,11 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 - 2026-09-12 凌晨：「電腦開著給你盡情地跑，遇到問題自己判斷，一路做到結束」→ W4 五個 cell 全做（12 小時 46 分 GPU）。
 - 2026-09-12 晚：「你來判斷這個專案還有哪些需要做的事，請都完成」→ 我的判斷：做 FP8 C = 192 補點（唯一剩下的 GPU 項目，1.5 小時，開跑前已列出）、補 run ledger、W6 檢查與 CI 模擬、更新控制塔；**不推送、不刪 run 目錄**（這兩件仍是使用者的決定）。
 
-## 還剩什麼（只有使用者能做）
+## 還剩什麼
 
-1. ~~是否公開到 GitHub~~ 已公開（2026-09-12）。
-2. **清掉量測主機的 run 目錄**（使用者 2026-09-13 已同意；永久刪除檔案由使用者自己執行），約可釋放 210 GB。W2 重解析已完成，`runs-w2` 沒有其他用途；W3、W4、C = 192 的原始逐筆檔在 repo 內都有 gzip 副本與 sha256。指令（在 WSL）：`rm -rf ~/vllm-slo-lab/runs-w2 ~/vllm-slo-lab/runs-w3 ~/vllm-slo-lab/runs-w4 ~/vllm-slo-lab/runs-w3-c192 ~/vllm-slo-lab/runs-w4-smoke ~/vllm-slo-lab/reparse-w2`。
+1. ~~是否公開到 GitHub~~ 已公開（2026-09-12），Release v1.0.0（2026-09-13）。
+2. ~~清掉量測主機的 run 目錄~~ 使用者已於 2026-09-13 執行，釋放約 209 GB。
+3. 可選：`docs/libg-readme-paragraph.md` 的草稿要不要放進 LIBG 的 README，由 LIBG 作者決定。
 
 ## W6 發佈前檢查結果（2026-09-12）
 
