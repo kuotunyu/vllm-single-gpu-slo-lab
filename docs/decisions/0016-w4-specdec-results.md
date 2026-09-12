@@ -16,7 +16,14 @@
 3. **n-gram 讓同預算下的 KV cache 少 25 %。** 同一組 FP8 旗標，沒開加速 KV 76,112 tokens（W3、`fp8-none`），開 n-gram 56,832 tokens：vLLM 0.28 為每個請求保留 k = 3 個草稿 slot 的緩衝，占掉 0.82 預算的一部分。c = 256 滿載需要 61,440 tokens，`fp8-ngram` 在 c = 256 可能 preemption；旗標不改（ADR 0015 第 5 條），manifest 的 `preemptions` 記錄實際發生數，這是「同記憶體預算下加速的代價」的一部分。4B + EAGLE-3 的 KV 為 79,424 tokens，高於滿載需求。
 4. **取樣設定**：inference-perf 的請求只帶 `max_tokens`、`ignore_eos`、`stream`，不帶 temperature；vLLM 0.28 預設套用 checkpoint 的 `generation_config.json`，Qwen3-8B-FP8 與 Qwen3-4B 都是 temperature 0.6、top_p 0.95、top_k 20。五個 cell 相同；接受率是 rejection sampling 在這組取樣參數下的值（warm-up 探針另用 temperature 0）。
 5. **smoke 數字（不進結果表）**：4B + EAGLE-3 接受率 0.26、平均接受長度 1.77–1.80（每個位置 0.47／0.22／0.09；模型卡在對話 benchmark 上報 2.08，本 lab 是 Shakespeare 續寫），20 rps 時 TPOT p50 11.4 ms／p95 15.4 ms，c = 256 只有 18.2 rps、TPOT p95 70 ms；8B FP8 + n-gram 接受率 0.52、平均接受長度 2.57（0.64／0.51／0.43），單流 TPOT p50 12.4 ms（W2 直連沒加速 18.9 ms），20 rps 時 p95 27.3 ms。五段都零 preemption、shim 零 502。
-6. **時程**：smoke 04:05–04:20（含兩次伺服器啟動），閘門 `SMOKE_OK`；`fp8-none` 04:20 開始。
+6. **時程**：smoke 04:05–04:20（含兩次伺服器啟動），閘門 `SMOKE_OK`；`fp8-none` 04:20–06:26（20 段全乾淨）；`fp8-ngram` 06:26 起。
+
+## 量測中的偏離（08:34 停鏈、08:36 續跑）
+
+7. **n-gram 在 256 並行時超出記憶體預算，桌面卡分頁。** `fp8-ngram` 的 c = 256 段一開始，WSL VM 的獨占顯存從 20.9 GB 跳到 24.1 GB（vLLM 剖析時的預算是 0.82 × 24.5 = 20.1 GB），Windows committed 25.4–26.6 GB 超過實體 24.5 GB，桌面被換出、引擎步長變慢（28 rps、attainment 0.22、TPOT p95 92 ms）。三個獨立 session（原始加兩輪重跑）數字相同，證明是 cell 的性質而非租戶。依可疑規則排除；c = 128（26.7 rps，TPOT p95 49 ms）成為 `fp8-ngram` 的 r_sat（下界）。open-loop 的 30 與 36 rps 段（過載、256 個在跑）同樣分頁，同樣排除；**同預算下 n-gram 的高負載點在這張與桌面共用的卡上量不到**，這本身是結果。
+8. **分析漏洞與修正。** 共用 session 的 `quiet_gpu.json` 只在 seed-1 目錄，分析器對 seed-2、seed-3 的段查不到實體 VRAM，committed 規則因此對它們失效：`fp8-ngram` seed 2、3 的過載段沒被標，且它們的低負載段（seed 為主序下排在第一個過載段之後）也在超額狀態下量測。修正：分析器改為同時查同一 cell 的其他 `seed-*` 目錄（加測試；重新分析後三個 seed 的六個過載段全部標為可疑）；seed 2、3 的 4／10／20 rps 段作廢重跑。低負載段在超額狀態下的數字與 seed 1 乾淨段相同（分頁換出的是閒置桌面），但規則一視同仁。
+9. **open-loop 改為 rate 為主序**（所有 seed 的 4 rps 先跑，再 10、20、30、36），讓過載段落在 session 最後，不再汙染同 session 的低負載段。ADR 0015 寫的是 seed 為主序；各段獨立（各自 re-warm、丟棄 60 s），順序不影響乾淨段的數字。
+10. **重跑輪數**：`fp8-ngram` 續跑不再重跑已確認的分頁段（`RERUN_MAX=0`，三個 session 已足夠），三個 q4b cell 用一輪（`RERUN_MAX=1`，協定上限是兩輪）。原因：每一輪過載段的重跑約 55 分鐘且結果可預期。
 
 ## 量測品質
 
