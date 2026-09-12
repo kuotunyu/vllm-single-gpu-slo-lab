@@ -141,8 +141,16 @@ def served_rps(records_path: Path, *, discard_first_s: float, window_end_s: floa
 
 
 def _physical_vram_mib(stage_dir: Path) -> float | None:
-    """Physical card size from the batch's ``quiet_gpu.json`` (NVML ``memory_total_mib``)."""
-    for candidate in (stage_dir.parent / "quiet_gpu.json", stage_dir / "quiet_gpu.json"):
+    """Physical card size from the batch's ``quiet_gpu.json`` (NVML ``memory_total_mib``).
+
+    W4 shares one server session across seeds, so the session's ``quiet_gpu.json`` sits in the
+    first seed's directory only; a stage under ``seed-2`` or ``seed-3`` looks in its sibling seed
+    directories as well. Without this the committed-VRAM rule silently never applied to those
+    stages (2026-09-12, the n-gram cell's paged overload stages of seeds 2 and 3).
+    """
+    candidates = [stage_dir.parent / "quiet_gpu.json", stage_dir / "quiet_gpu.json"]
+    candidates += sorted(stage_dir.parent.parent.glob("seed-*/quiet_gpu.json"))
+    for candidate in candidates:
         if candidate.exists():
             try:
                 total = json.loads(candidate.read_text(encoding="utf-8")).get("memory_total_mib")

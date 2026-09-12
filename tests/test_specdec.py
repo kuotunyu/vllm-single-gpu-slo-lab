@@ -396,3 +396,20 @@ def test_run_writes_specdec_tables_beside_the_closed_and_open_tables(tmp_path: P
     assert "specdec_families" not in plain_summary
     assert not (plain_out / "specdec.json").exists()
     assert "Speculative decoding" not in (plain_out / "tables.md").read_text(encoding="utf-8")
+
+
+def test_physical_vram_is_read_from_the_shared_session_seed_dir(tmp_path: Path) -> None:
+    """W4 shares one server session across seeds: quiet_gpu.json lives in seed-1 only, and the
+    committed-VRAM rule must still apply to the stages under seed-2 and seed-3 (2026-09-12: the
+    n-gram cell's overload stages of seeds 2 and 3 went unflagged because physical was None)."""
+    from slo_lab.batch_analysis import _physical_vram_mib
+
+    cell = tmp_path / "fp8-ngram"
+    (cell / "seed-1" / "ol-rate-4.02").mkdir(parents=True)
+    (cell / "seed-2" / "ol-rate-4.02").mkdir(parents=True)
+    (cell / "seed-1" / "quiet_gpu.json").write_text(
+        json.dumps({"memory_total_mib": 24564.0}), encoding="utf-8"
+    )
+    assert _physical_vram_mib(cell / "seed-1" / "ol-rate-4.02") == 24564.0
+    assert _physical_vram_mib(cell / "seed-2" / "ol-rate-4.02") == 24564.0
+    assert _physical_vram_mib(tmp_path / "elsewhere" / "seed-2" / "stage") is None

@@ -133,12 +133,24 @@ if [ -n "$RATE_REF_ARG" ]; then RATE_REF="$RATE_REF_ARG"; else
 fi
 log "rate_ref=$RATE_REF (multipliers: $MULTIPLIERS; seeds: $OPEN_SEEDS; $STAGE_S s per stage)"
 OL_ROOT="$ROOT/open-loop-cells"
+# Rate-major order (every seed of the lowest rate first, the overload rates last): an accelerated
+# cell can grow past its memory budget once 256 requests run, and the session then stays in VRAM
+# oversubscription (2026-09-12, fp8-ngram: seed-major order left seeds 2 and 3's low-rate stages
+# after the first overload stage). OPEN_ORDER=seed restores the W2 order.
 specs=""
-for seed in $OPEN_SEEDS; do
-  for m in $MULTIPLIERS; do
-    specs="$specs ol:$(awk -v r="$RATE_REF" -v m="$m" 'BEGIN{printf "%.2f", r*m}'):$STAGE_S:$seed"
+if [ "${OPEN_ORDER:-rate}" = seed ]; then
+  for seed in $OPEN_SEEDS; do
+    for m in $MULTIPLIERS; do
+      specs="$specs ol:$(awk -v r="$RATE_REF" -v m="$m" 'BEGIN{printf "%.2f", r*m}'):$STAGE_S:$seed"
+    done
   done
-done
+else
+  for m in $MULTIPLIERS; do
+    for seed in $OPEN_SEEDS; do
+      specs="$specs ol:$(awk -v r="$RATE_REF" -v m="$m" 'BEGIN{printf "%.2f", r*m}'):$STAGE_S:$seed"
+    done
+  done
+fi
 first_seed=$(echo "$OPEN_SEEDS" | awk '{print $1}')
 # shellcheck disable=SC2086
 batch open-loop "$OL_ROOT" "$first_seed" $specs
