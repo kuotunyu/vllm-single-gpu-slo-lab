@@ -1,8 +1,9 @@
 """`slo-lab` command line (typer).
 
-W0: `attainment`, `capacity` and `cost` compute for real on the canonical record/CSV formats;
-`quiet-gpu`, `power-sample` and `shim` are the W1 entry points for the WSL2 host;
-`reproduce-lite` validates configs and rebuilds whatever evidence exists (none yet).
+`attainment`, `capacity` and `cost` compute on the canonical record/CSV formats; `quiet-gpu`,
+`power-sample`, `shim`, `run-stage`, `make-trace` and `specdec-flags` are the measurement-host
+entry points; `reproduce-lite` validates configs and rebuilds every table, plot and the run
+ledger from the committed evidence (`make reproduce` then requires a zero diff).
 """
 
 from __future__ import annotations
@@ -121,7 +122,9 @@ def capacity(
 @app.command()
 def cost(
     output_tok_per_s: Annotated[float, typer.Option(help="Output tok/s at r_SLO.")],
-    config: Annotated[Path, typer.Option(help="config/cost.yaml")] = Path("config/cost.yaml"),
+    config: Annotated[
+        Path, typer.Option(help="cost config YAML (see config/cost.yaml.example)")
+    ] = Path("config/cost.yaml.example"),
     power_csv: Annotated[Path | None, typer.Option(help="power.csv from the sampler.")] = None,
     phase: Annotated[str, typer.Option(help="Phase label of the measurement window.")] = "measure",
     p_avg_w: Annotated[float | None, typer.Option(help="Mean board power if no CSV.")] = None,
@@ -521,18 +524,8 @@ def reproduce_lite(
             problems.append(f"{path}: {exc}")
     typer.echo(f"configs parsed: {len(yaml_files)}")
 
-    from slo_lab.cost import load_cost_config
-
-    cost_path = root / "config" / "cost.yaml"
-    if cost_path.exists():
-        cfg = load_cost_config(cost_path)
-        typer.echo(f"cost config status: {cfg.status}")
-    else:
-        problems.append("config/cost.yaml missing")
-
-    for name in ("runs.csv", "cost.csv", "spend.csv"):
-        if not (root / "analysis" / "ledger" / name).exists():
-            problems.append(f"analysis/ledger/{name} missing")
+    if not (root / "analysis" / "ledger" / "runs.csv").exists():
+        problems.append("analysis/ledger/runs.csv missing")
 
     n_runs = 0
     for area in ("raw", "runpod"):

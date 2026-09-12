@@ -88,12 +88,10 @@ def test_cost_report_without_peak_and_with_placeholder_config():
     assert rep.usd_per_m_output_tok_naive is None
     assert rep.utilisation_u is None
     assert rep.blended_usd_per_m_output_tok_at_r_slo is None
-    assert rep.caveats[0].startswith("config/cost.yaml still holds owner-input placeholders")
+    assert rep.caveats[0].startswith("cost config still holds owner-input placeholders")
 
 
-def test_shipped_cost_yaml_is_marked_placeholder():
-    cfg = load_cost_config(REPO / "config" / "cost.yaml")
-    assert cfg.is_placeholder
+def test_shipped_cost_example_is_marked_placeholder():
     example = load_cost_config(REPO / "config" / "cost.yaml.example")
     assert example.is_placeholder
 

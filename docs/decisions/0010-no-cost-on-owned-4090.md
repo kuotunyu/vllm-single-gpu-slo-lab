@@ -17,3 +17,7 @@
 - README 的「一句話」、「30 秒結論」、實驗設計表、claim ceiling 3 與 6、「還沒有」、里程碑依此改寫。
 - 能耗只含 GPU 板卡、不含主機，這條 ceiling 不變（Wh 數字是下限）。
 - 沒有 $ 數字，自然不做「比 API 便宜」的比較。
+
+## 補記（2026-09-13）
+
+A1 取消（ADR 0014）後不會再有租用 GPU 的量測，第 3 點保留的東西整理為：`slo_lab.cost` 與 `slo-lab cost` 指令保留，`config/cost.yaml.example` 保留為欄位範例；`config/cost.yaml`（owner-input 佔位檔）與只有表頭的 `analysis/ledger/cost.csv`、`spend.csv` 移除，`reproduce-lite` 不再要求它們存在。

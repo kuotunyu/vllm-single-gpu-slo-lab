@@ -36,6 +36,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | W6 收尾（2026-09-13） | 版本 1.0.0 與 GitHub Release v1.0.0（結案版）；LIBG README 分工段落草稿 `docs/libg-readme-paragraph.md`（規格 W6 交付物，依規格不推送到 LIBG，由其作者決定）；五份計畫的勾選框依實際執行補齊 | — |
 | 圖解（2026-09-13） | 三張 Mermaid 圖：量測系統架構與 admission 三策略時序圖（README「量測系統怎麼接」）、證據到重建的資料流（`evidence/README.md`）；純文字、GitHub 原生渲染、不放數字 | ADR 0012 補記 |
 | README 精簡（2026-09-13） | 依使用者要求把 README 縮成：一句話、三張結果表（動畫收進可展開區塊）、實驗方法（架構圖；時序圖收進可展開區塊）、重現性；claim ceilings 自 README 移除（仍在 `docs/model-card.md` 與 claims audit）；模組與證據清單移到 `docs/inventory.md`；GitHub About 改為正體中文、不強調 4090 | — |
+| 檔案整理（2026-09-13） | 移除：RunPod runbook、`evidence/{runpod,quant,tables}` 佔位目錄、`config/traffic/cloud_2p5x.yaml` 與 W1 smoke 設定、`config/cost.yaml` 與空的 `cost.csv`／`spend.csv`（`reproduce-lite` 不再要求）、六個沒有引用的一次性腳本；第一代 W2 driver 歸檔到 `scripts/wsl/archive/`；模組清單移到 `docs/inventory.md` | ADR 0010 補記 |
 
 逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4 與 2026-09-12 的收尾：`2026-09-11-w4-specdec.md` 的 run log）。
 

@@ -6,13 +6,13 @@
 |---|---|---|
 | `slo_lab/slo.py` | canonical per-request 記錄、joint SLO 判定、offered-denominator attainment、goodput、拒絕率、r_SLO、SLO 敏感度網格 | 手算小樣本 |
 | `slo_lab/stats.py` | percentile bootstrap CI、paired-difference bootstrap、Wilson interval | 手算值 |
-| `slo_lab/cost.py` | 規格 §6 公式、`config/cost.yaml` 讀取、power.csv 梯形積分與 idle 基線、實測值 + utilisation-naive 值 + 1/U 警語、Wh/M token；4090 不計 $，保留給租用 GPU（ADR 0010） | 手算值 |
+| `slo_lab/cost.py` | 規格 §6 公式、cost YAML 讀取（範例 `config/cost.yaml.example`）、power.csv 梯形積分與 idle 基線、實測值 + utilisation-naive 值 + 1/U 警語、Wh/M token；4090 不計 $，保留給租用 GPU（ADR 0010） | 手算值 |
 | `slo_lab/admission/` | 三策略（passthrough／hard cap + 429／bounded FIFO queue + timeout）與 aiohttp reverse-proxy shim | 純 asyncio 語意 + loopback fake upstream |
 | `slo_lab/power/sampler.py` | 1 s NVML 取樣寫 CSV；無 NVML 時明確報錯 | 注入 fake reader／clock |
 | `slo_lab/quiet_gpu.py` | 拒跑判定 + NVML／nvidia-smi 快照 JSON | 注入 fake process 清單 |
 | `slo_lab/redact.py` + `scripts/redact.py` | 去敏與 `make audit-secrets` 掃描（IP、私鑰、SSH 公鑰、RunPod key／host、HF token、email），含 gzip 檔與大檔（ADR 0011） | 動態組字串 + 掃描本 repo |
 | `scripts/compress_evidence.py` | 逐筆紀錄與 server log 以決定性 gzip 提交，讀取端以 `open_evidence_text` 透明解壓（ADR 0011） | 無損、決定性、壓縮前後讀出相同 |
-| `config/` | cost（placeholder；4090 不使用，ADR 0010）、engine 五 cell + common、admission 三策略、traffic 四份（含 `burst25` 與保留的 `cloud_2p5x`）、specdec 三份 | YAML 解析與內容 |
+| `config/` | `cost.yaml.example`（欄位範例，ADR 0010）、engine 五 cell + common、admission 三策略、traffic 四份（`closed_loop`、`open_loop_sweep`、`burst25`、`burst-smoke`）、specdec 三份 | YAML 解析與內容 |
 | `evidence/metrics-names.txt` | 104 個 vLLM metric 名：96 個於 2026-09-09 由 live `/metrics` 凍結，8 個 spec-decode counter 於 2026-09-12 的 W4 smoke 補記 | — |
 | `evidence/raw/w4/` + `slo_lab/specdec_analysis.py` | W4 五個 cell 的 closed-loop 與 open-loop（3 seeds）證據、smoke、Windows 端顯存取樣；配對分析（同 family 對 none cell）與接受率；表 `analysis/tables/w4-*-specdec/`、圖 `evidence/plots/w4-*.svg` | 配對、缺基準、可疑段、決定性 |
 | `slo_lab/tmmluplus.py` + `scripts/tmmluplus_eval.py` | TMMLU+ 分層不重疊切片（3 × 200，seed 20260908，SHA-256 凍結於 `eval/tmmluplus/`）與離線評分（greedy、`/no_think`、Wilson CI） | 合成 CSV：不重疊、比例、決定性、雜湊 |
@@ -31,7 +31,7 @@
 
 ## 已知未做（都是決定，不是漏做）
 
-- `analysis/ledger/cost.csv` 與 `spend.csv` 只有表頭：4090 不計 $（ADR 0010），也沒有用過任何付費算力（A1 取消，ADR 0014）。`runs.csv` 由 `reproduce-lite` 從證據重建，每段一列，狀態欄取自分析器的可疑旗標（`slo_lab.ledger`）。
+- 成本與支出 ledger（`cost.csv`、`spend.csv`）與 `config/cost.yaml` 已於 2026-09-13 移除：4090 不計 $（ADR 0010），也沒有用過任何付費算力（A1 取消，ADR 0014）；`slo_lab.cost` 與 `config/cost.yaml.example` 保留給日後租用 GPU 時使用。`runs.csv` 由 `reproduce-lite` 從證據重建，每段一列，狀態欄取自分析器的可疑旗標（`slo_lab.ledger`）。
 - `harness/run.py` 的 Python 編排由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
 - A1（RunPod L4 雲端對照）已取消（ADR 0014）。

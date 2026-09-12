@@ -139,7 +139,8 @@ def test_cost_command_with_power_csv(tmp_path):
 
 def test_cost_command_needs_power():
     result = runner.invoke(
-        app, ["cost", "--output-tok-per-s", "1", "--config", str(REPO / "config" / "cost.yaml")]
+        app,
+        ["cost", "--output-tok-per-s", "1", "--config", str(REPO / "config" / "cost.yaml.example")],
     )
     assert result.exit_code == 1
 
@@ -185,18 +186,13 @@ def test_reproduce_lite_on_the_repo_rebuilds_the_indexed_tables():
     assert "tables rebuilt from evidence: w2-fp8-closed-loop, w2-fp8-closed-loop-exploratory" in (
         result.output
     )
-    assert "cost config status: owner_input_pending" in result.output
 
 
 def test_reproduce_lite_rebuilds_attainment_for_a_run(tmp_path):
     root = tmp_path
     (root / "config").mkdir()
-    (root / "config" / "cost.yaml").write_text(
-        (REPO / "config" / "cost.yaml").read_text(encoding="utf-8"), encoding="utf-8"
-    )
     (root / "analysis" / "ledger").mkdir(parents=True)
-    for name in ("runs.csv", "cost.csv", "spend.csv"):
-        (root / "analysis" / "ledger" / name).write_text("run_id\n", encoding="utf-8")
+    (root / "analysis" / "ledger" / "runs.csv").write_text("run_id\n", encoding="utf-8")
     run_dir = root / "evidence" / "raw" / "2026-09-03-fp8-native-r1-s0"
     write_records_jsonl(run_dir / "records.jsonl", _records(n=70, rejected=5))
     result = runner.invoke(app, ["reproduce-lite", "--root", str(root)])

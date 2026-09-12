@@ -27,6 +27,8 @@ FP8 完成：closed-loop（ADR 0006／0007：r_sat = 41.4 rps at 0.82，下界�
 - 長批次前仍問一次「其他 session 有沒有在用 GPU」；規格寫的「00:00–08:00 是 SOP cron」目前並不存在（`crontab -l` 空）。
 - 磁碟飽和另有一種症狀（W1／smoke：整批 request 出現相同的 1–3 s TTFT，`/proc/pressure/io` full > 50%），`scripts/wsl/io-sampler.sh` 會每 10 s 記到批次目錄的 `io-pressure.log`。
 
+2026-09-13 整理：第一代的 `w2-chain.sh`、`w2-refine.sh`、`w2-followup.sh`、`w2-followup-night.sh`、`tmmlu-only.sh` 移到 `scripts/wsl/archive/`（只作 W2 證據來源的紀錄，不再維護）；現行 driver 是下面的 `w2-night.sh`／`w2-cell-chain.sh`／`refine-cell.sh`。
+
 ## 整夜無人值守（`scripts/wsl/w2-night.sh`，2026-09-09 起）
 
 執行計畫（逐步、含失敗處置與收尾）：`docs/superpowers/plans/2026-09-10-w2-overnight-run.md`。起跑前 `scripts/wsl/preflight.sh`，停止一切 `scripts/wsl/stop-chain.sh`。
@@ -45,7 +47,6 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/.../scripts/wsl/w2-nig
 
 - `run-logged.sh <script>`：把鏈的輸出寫到 ext4 上的日誌並更新 `runs-w2/w2-night-latest.log`；`watch-night.sh` 只挑里程碑與失敗行。Windows 端的 `| tr | grep | tee` 會區塊緩衝、整段遺失，不要再用。
 - `refine-cell.sh <cell> <model> <max_num_seqs> <r_sat> "<multipliers>" <seeds...>`：只在既有 open-loop 目錄補指定倍率的 rate，沿用同一套 stage、可疑規則與 promote。
-- `tmmlu-only.sh <cell> <model> <max_num_seqs>`：單獨起伺服器跑 TMMLU+ 全集。
 - `promote-crosscheck.sh`：`vllm bench serve` 的結果只搬純量摘要與原檔 sha256；`generated_texts` 會重現訓練資料片段，不進 repo。
 - `chain-status.sh`、`stage-summary.sh <batch dir>`、`stop-chain.sh`、`preflight.sh`：查進度、摘要、在 stage 邊界停止、起跑前檢查。
 

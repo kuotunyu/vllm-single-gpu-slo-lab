@@ -36,7 +36,8 @@ CostStatus = Literal["owner_input_pending", "owner_provided"]
 
 
 class CostConfig(BaseModel):
-    """`config/cost.yaml`. Field names are the spec's; extra keys (source notes) are kept."""
+    """A cost config YAML (see `config/cost.yaml.example`). Field names are the spec's; extra keys
+    (source notes) are kept."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -256,7 +257,7 @@ def cost_report(
         "power term is a lower bound (claim ceiling 6).",
     ]
     if cfg.is_placeholder:
-        caveats.insert(0, "config/cost.yaml still holds owner-input placeholders; do not publish.")
+        caveats.insert(0, "cost config still holds owner-input placeholders; do not publish.")
     naive = naive_wh = u = None
     if peak is not None:
         naive = usd_per_million_output_tokens(

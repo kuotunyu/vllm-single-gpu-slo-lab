@@ -1,12 +1,12 @@
 """Run ledger (``analysis/ledger/runs.csv``): one row per measured stage, rebuilt from evidence.
 
-The design spec's evidence contract (§9) has ``make reproduce`` recompute three ledgers. Two of
-them stay header-only by decision: ``cost.csv`` because the owned 4090 carries no $ figure
-(ADR 0010) and ``spend.csv`` because no paid compute was ever used (A1 cancelled, ADR 0014).
-``runs.csv`` is rebuilt here from every ``manifest.json`` under the batch directories listed in
-``analysis/tables/index.json``; the status column comes from the rebuilt tables' suspect flags, so
-a stage the analyzer excluded is visible in the ledger with its reasons. Rows are sorted by
-``run_id`` and written with a fixed column order, so the file is deterministic and diffs clean.
+The design spec's evidence contract (§9) planned three ledgers; the cost and spend ledgers were
+dropped because the owned GPU carries no $ figure (ADR 0010) and no paid compute was ever used
+(A1 cancelled, ADR 0014). ``runs.csv`` is rebuilt here from every ``manifest.json`` under the
+batch directories listed in ``analysis/tables/index.json``; the status column comes from the
+rebuilt tables' suspect flags, so a stage the analyzer excluded is visible in the ledger with its
+reasons. Rows are sorted by ``run_id`` and written with a fixed column order, so the file is
+deterministic and diffs clean.
 """
 
 from __future__ import annotations

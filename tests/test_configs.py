@@ -41,13 +41,6 @@ def test_burst25_headline_trace_matches_spec_proposal():
     assert cfg["seeds"] is None  # frozen in preregistration at W1
 
 
-def test_cloud_2p5x_trace_is_retained_not_headline():
-    cfg = load("traffic/cloud_2p5x.yaml")
-    assert cfg["headline"] is False
-    stages = [(s["rate_multiplier"], s["duration_s"]) for s in cfg["stages"]]
-    assert stages == [(0.5, 300), (2.5, 600), (0.5, 600)]
-
-
 def test_open_and_closed_loop_grids():
     open_loop = load("traffic/open_loop_sweep.yaml")
     # 7 preregistered multipliers plus the 0.55-0.70 refinement of ADR 0008

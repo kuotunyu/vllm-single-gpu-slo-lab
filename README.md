@@ -143,7 +143,7 @@ sequenceDiagram
 
 ```bash
 uv sync --all-extras          # vLLM 與 torch 不在依賴裡：本套件只做 CPU 端的分析、shim 與量測工具
-make test                     # 191 個測試
+make test                     # 190 個測試
 make audit-secrets            # 掃 IP／金鑰／token
 make reproduce                # 從 evidence/ 重建所有表、圖與 run ledger，diff 必須為空（CI 每次 push 執行）
 ```
