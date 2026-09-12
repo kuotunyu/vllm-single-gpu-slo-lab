@@ -4,7 +4,7 @@
 
 在 SLO 約束下（TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms），量 Qwen3-8B 在單張 GPU 上的容量、能耗、品質與流量控制：四種精度、三種 admission 策略、speculative decoding。每個數字都由提交的證據以 `make reproduce` 重建，出處在 `analysis/claims_audit.md`。
 
-量測條件：vLLM 0.28、WSL2、一張與桌面共用的 RTX 4090、`--gpu-memory-utilization 0.82`、108 → 132 tokens、open-loop Poisson、每點 3 seeds。數字只對這組條件成立，不外推的範圍在「不宣稱的事」。
+量測條件：vLLM 0.28、WSL2、一張與桌面共用的 RTX 4090、`--gpu-memory-utilization 0.82`、108 → 132 tokens、open-loop Poisson、每點 3 seeds。數字只對這組條件成立；適用範圍與限制在 `docs/model-card.md`。
 
 ## 結果
 
@@ -61,18 +61,7 @@ FP8：SLO 容量是 BF16 的 2.55 倍、每 token 能耗 42 %、品質無法區�
 動畫只重述表內數字，不是證據（完整版 `docs/media/w4-specdec.mp4`）。
 </details>
 
-## 不宣稱的事
-
-1. 不宣稱多 replica、擴縮、生產可靠度。
-2. 不外推到其他 GPU：只講實際量過的這一張。
-3. 不報 $／百萬 token，不做「比 API 便宜」的比較：自有硬體的攤提與電價是假設，只報實測能耗（ADR 0010）。
-4. 不宣稱 EAGLE-3 在 Qwen3-8B 上的效果：EAGLE-3 只量了 Qwen3-4B。
-5. 不與他人的 TMMLU+ leaderboard 比較：只報自跑數字與精度間的配對差。
-6. 能耗只含 GPU 板卡，是整機能耗的下限。
-7. 不宣稱 WSL2 數字等於裸機 Linux：pinned memory 開關與 torch 原生 sampler 下量測，WSL2 開銷未分離。
-8. 不宣稱 thinking 模式下的延遲：全部關閉 thinking。
-
-## 怎麼量的
+## 實驗方法
 
 | 軸 | 水準 | 問題 |
 |---|---|---|
@@ -150,7 +139,7 @@ sequenceDiagram
 ```
 </details>
 
-## 重現
+## 重現性
 
 ```bash
 uv sync --all-extras          # vLLM 與 torch 不在依賴裡：本套件只做 CPU 端的分析、shim 與量測工具

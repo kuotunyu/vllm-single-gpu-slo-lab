@@ -35,7 +35,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | 解說動畫（2026-09-13） | 三支 Manim Community 動畫：W2 膝點、W3 admission、W4 speculative decoding（`docs/media/`，README 各段嵌入 GIF），示意用、不進 reproduce／CI；資料模組 `slo_lab.timeline` 與三個載入器測試在 CI；使用者要求不做標題卡與裝飾性特效 | 設計 `docs/superpowers/specs/2026-09-13-w3-admission-animation-design.md`、`2026-09-13-w2-w4-animations-design.md`；計畫 `docs/superpowers/plans/2026-09-13-w3-admission-animation.md`、`2026-09-13-w2-w4-animations.md` |
 | W6 收尾（2026-09-13） | 版本 1.0.0 與 GitHub Release v1.0.0（結案版）；LIBG README 分工段落草稿 `docs/libg-readme-paragraph.md`（規格 W6 交付物，依規格不推送到 LIBG，由其作者決定）；五份計畫的勾選框依實際執行補齊 | — |
 | 圖解（2026-09-13） | 三張 Mermaid 圖：量測系統架構與 admission 三策略時序圖（README「量測系統怎麼接」）、證據到重建的資料流（`evidence/README.md`）；純文字、GitHub 原生渲染、不放數字 | ADR 0012 補記 |
-| README 精簡（2026-09-13） | 依使用者要求把 README 縮成：一句話、三張結果表（動畫收進可展開區塊）、不宣稱的事、怎麼量的（架構圖；時序圖收進可展開區塊）、重現；模組與證據清單移到 `docs/inventory.md`；GitHub About 改為正體中文、不強調 4090 | — |
+| README 精簡（2026-09-13） | 依使用者要求把 README 縮成：一句話、三張結果表（動畫收進可展開區塊）、實驗方法（架構圖；時序圖收進可展開區塊）、重現性；claim ceilings 自 README 移除（仍在 `docs/model-card.md` 與 claims audit）；模組與證據清單移到 `docs/inventory.md`；GitHub About 改為正體中文、不強調 4090 | — |
 
 逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4 與 2026-09-12 的收尾：`2026-09-11-w4-specdec.md` 的 run log）。
 
