@@ -48,7 +48,7 @@ GPU 只剩一項可選的 FP8 補點（約 1.5 小時）；W4 實跑 12 小時 4
 | W4 開工前準備：計畫、程式、ADR 0015、CPU 演練 | 不用 | **已完成（2026-09-11）** | 無 |
 | W4 GPU smoke 與完整版 5 個 cell | 需要 | **已完成（2026-09-12 04:05–16:51，12 小時 46 分，ADR 0016）** | 無 |
 | FP8 突發安全上限補點 | 需要 | 約 1.5 小時 | 可併入同一晚，或另排 |
-| W5 補分析與文件 | 不用 | 約半天（我做） | 無 |
+| W5 補分析與文件 | 不用 | 第 1 項（W2 重解析）、第 2 項（圖）、model card 已完成；剩 README 敘事的最後潤飾 | 無 |
 | W6 寫作與發佈前檢查 | 不用 | 約半天（我做） | 決定是否公開 |
 
 每個 cell 的 2.5 小時怎麼來：closed-loop 五點約 0.55 小時（伺服器啟動 2.5 min、100 筆 warm-up 4.3 min、負載約 18 min、四次 re-warm、收尾）；open-loop 15 段約 1.95 小時（啟動、warm-up，每段 5 min 負載加約 2.4 min 的 re-warm、取樣與收尾）。全部可刪減的選項與代價在 ADR 0015 第 11 條。拆成兩次的做法：第一晚 W4（全做 13 小時或刪減版 9.4 小時，含 smoke），第二次 FP8 補點約 1.5 小時。
@@ -104,7 +104,7 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash <寫一個腳本檔，內容�
 3. claims audit 更新、`docs/model-card.md`、README 的敘事。
 4. 可選：每段紀錄數都比 trace 列數少 1 筆的原因（ADR 0013）。
 
-**W5 進度（2026-09-12 凌晨，W4 量測進行中順手做的）**：`docs/model-card.md` 草稿（缺 W4 列）；`docs/licences.md` 補齊 GPTQ 與 EAGLE-3 head 的授權（head 的 HF repo 內附 `License_AngelSlim_model_and_dataset.txt`，Apache-2.0）；`slo_lab.plots` 以純 Python 產生 SVG（W2 attainment 對 rate、W3 佇列時間線；W4 的圖在表存在時自動加），`reproduce-lite` 重建、`make reproduce` diff；W5 第 4 項查過 inference-perf 原始碼：trace 列數與請求數相同（`get_request_count` = 列數），少的那一筆發生在派發之後，未再追，影響 0.002 %。W5 第 1 項（重解析 W2）：`scripts/wsl/reparse-w2.sh` 在 W4 結束後啟動（讀 117 GB 原始檔，約 2 小時），結果與後續處置見本文件末尾的補記或 ADR。
+**W5 進度（2026-09-12 凌晨，W4 量測進行中順手做的）**：`docs/model-card.md` 草稿（缺 W4 列）；`docs/licences.md` 補齊 GPTQ 與 EAGLE-3 head 的授權（head 的 HF repo 內附 `License_AngelSlim_model_and_dataset.txt`，Apache-2.0）；`slo_lab.plots` 以純 Python 產生 SVG（W2 attainment 對 rate、W3 佇列時間線；W4 的圖在表存在時自動加），`reproduce-lite` 重建、`make reproduce` diff；W5 第 4 項查過 inference-perf 原始碼：trace 列數與請求數相同（`get_request_count` = 列數），少的那一筆發生在派發之後，未再追，影響 0.002 %。**W5 第 1 項（重解析 W2）已完成（2026-09-12 16:57–17:40，ADR 0017）**：243 段全部以伺服器 token 數重算，計數不同的請求 1.7 到 2.8 %，TPOT p95 最多降 0.2 ms，五個 cell 的 r_SLO 全部不變，因此 W2 的紀錄與表不改；比較檔在 `evidence/raw/w2/reparse-compare-2026-09-12.json`。量測主機的 `runs-w2` 已可在使用者同意後刪除。
 
 ### W6：寫作與發佈前檢查（不用 GPU）
 
