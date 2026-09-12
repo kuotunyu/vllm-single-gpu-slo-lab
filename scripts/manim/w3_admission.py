@@ -34,15 +34,11 @@ from manim import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from style import BG, GREEN, INK, MUTED, RED, bottom_note, source_card
+from style import text as _t
 from w3_data import POLICIES, TRACE_END_S, Lane, ReplayData, load_replay
 
 ROOT = Path(__file__).resolve().parents[2]
-FONT = "Microsoft JhengHei"
-BG = "#101418"
-INK = "#e8ecf1"
-MUTED = "#8a94a3"
-RED = "#ff4d4d"
-GREEN = "#7bc96f"
 COLORS = {"passthrough": "#e4572e", "hard_cap": "#4c9be8", "bounded_queue": "#7bc96f"}
 LABELS = {
     "passthrough": "原生排隊（passthrough）",
@@ -58,10 +54,6 @@ BAR_LEFT_X = -6.9
 READOUT_X = 3.9
 REPLAY_TO_BURST_END_S = 18.0
 REPLAY_RECOVERY_S = 12.0
-
-
-def _t(s: str, size: int = 28, color: str = INK, weight: str = "NORMAL") -> Text:
-    return Text(s, font=FONT, font_size=size, color=color, weight=weight)
 
 
 def _log_width(queued: float, queue_max: float) -> float:
@@ -136,19 +128,12 @@ class W3AdmissionBurst(Scene):
             )
             lanes[policy] = {"y": y, "label": label, "anchor": anchor}
             self.play(FadeIn(label), Create(anchor), run_time=0.45)
-        scale_note = VGroup(
-            _t(
+        scale_note = bottom_note(
+            [
                 "SLO：TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（Qwen3-8B-FP8，vLLM 0.28，一張 RTX 4090，WSL2）",
-                16,
-                MUTED,
-            ),
-            _t(
                 "佇列長條為對數尺度（vLLM waiting + shim waiting）；讀數為近 30 s 的滾動值",
-                16,
-                MUTED,
-            ),
-        ).arrange(DOWN, buff=0.08)
-        scale_note.to_edge(DOWN, buff=0.2)
+            ]
+        )
         self.play(FadeIn(scale_note), run_time=0.4)
         self.wait(0.6)
         return {
@@ -373,11 +358,12 @@ class W3AdmissionBurst(Scene):
 
     # ---- 7. end card (4 s)
     def end_card(self) -> None:
-        lines = [
-            _t("示意動畫：數字出自 analysis/tables/w3-fp8-admission 與 w3-fp8-c192-admission", 24),
-            _t("由 make reproduce 從提交的證據重建；ADR 0013、0018", 24),
-            _t("github.com/kuotunyu/vllm-single-gpu-slo-lab", 28, MUTED),
-        ]
-        g = VGroup(*lines).arrange(DOWN, buff=0.3)
+        g = source_card(
+            [
+                "示意動畫：數字出自 analysis/tables/w3-fp8-admission 與 w3-fp8-c192-admission",
+                "由 make reproduce 從提交的證據重建；ADR 0013、0018",
+                "github.com/kuotunyu/vllm-single-gpu-slo-lab",
+            ]
+        )
         self.play(FadeIn(g), run_time=0.8)
         self.wait(3.2)
