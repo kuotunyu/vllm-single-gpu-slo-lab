@@ -99,12 +99,16 @@ def test_scan_tree_skips_excluded_dirs_and_binaries(tmp_path):
     (tmp_path / ".venv-manim" / "Lib" / "site.py").write_text(f"# {PUBLIC_IP}\n", encoding="utf-8")
     (tmp_path / "media" / "texts").mkdir(parents=True)
     (tmp_path / "media" / "texts" / "t.svg").write_text(f"<!-- {PUBLIC_IP} -->\n", encoding="utf-8")
+    # a nested media/ (the committed animations under docs/) is scanned
+    (tmp_path / "docs" / "media").mkdir(parents=True)
+    (tmp_path / "docs" / "media" / "note.txt").write_text(f"{PUBLIC_IP}\n", encoding="utf-8")
     (tmp_path / "blob.bin").write_bytes(b"\0\0" + PUBLIC_IP.encode() + b"\0")
     findings = scan_tree(tmp_path)
     assert [(str(f.path).replace("\\", "/"), f.pattern) for f in findings] == [
-        ("logs/dirty.log", "ipv4")
+        ("docs/media/note.txt", "ipv4"),
+        ("logs/dirty.log", "ipv4"),
     ]
-    assert scan_tree(tmp_path, exclude_dirs=DEFAULT_EXCLUDE_DIRS | {"logs"}) == []
+    assert scan_tree(tmp_path, exclude_dirs=DEFAULT_EXCLUDE_DIRS | {"logs", "docs"}) == []
 
 
 def test_scan_tree_reads_gzip_and_files_over_the_old_2mb_cap(tmp_path):
