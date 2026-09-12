@@ -26,7 +26,7 @@ ffmpeg -y -i docs/media/w3-admission-burst.mp4 -i media/palette.png -filter_comp
 ## 場景與資料
 
 - `w3_data.py`：讀 seed 1 的三個策略目錄（`evidence/raw/w3/fp8/trace/seed-1/trace-<policy>/`）、`analysis/tables/w3-fp8-admission/admission.json`、`analysis/tables/w3-fp8-c192-admission/admission.json`，用 `slo_lab.timeline` 分桶（10 s 桶、30 s 滾動讀數、5 s 的佇列格點）；不 import manim，`tests/test_w3_anim_data.py` 在 CI 驗證它讀出的值與表相同。
-- `w3_admission.py`：場景 `W3AdmissionBurst`，只畫，不算：標題卡 → 時間軸與三條泳道 → 30 s 重播（25 分鐘壓縮）→ 恢復時間 → 記分板 → C = 256 對 C = 192 → 結尾卡。佇列長條是對數尺度（原生排隊最高 9,479 筆，有界佇列最高 79 筆，線性尺度看不到後者）。
+- `w3_admission.py`：場景 `W3AdmissionBurst`，只畫，不算：時間軸與三條泳道（SLO 條件在畫面底部）→ 30 s 重播（25 分鐘壓縮）→ 恢復時間 → 記分板 → C = 256 對 C = 192 → 出處卡。沒有標題卡、沒有裝飾性特效（使用者要求直接進正題）。佇列長條是對數尺度（原生排隊最高 9,479 筆，有界佇列最高 79 筆，線性尺度看不到後者）。
 
 ## 沒有 LaTeX 時的注意事項
 

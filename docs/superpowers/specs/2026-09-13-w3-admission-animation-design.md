@@ -88,3 +88,4 @@ ffmpeg -y -i media/videos/w3_admission/1080p30/W3AdmissionBurst.mp4 -i media/pal
 - 佇列長條改為**對數尺度**：原生排隊最高 9,479 筆、有界佇列最高 79 筆，線性尺度看不到後者；畫面底部的註記寫明。
 - 這台機器沒有 LaTeX：Manim 的數字物件改用 Pango（`mob_class=Text`、`label_constructor=Text`），單位放進標籤（`DecimalNumber` 的 `unit=` 只能走 LaTeX）。
 - 實際片長約 65 s（分鏡的停留時間略短於估計）。Manim 0.21 的 `-qh` 輸出 1080p60，提交的 mp4 以 ffmpeg 重新編碼成 1080p30（2.6 MB）；GIF 640 px、12 fps、2.4 MB，不需要裁段。
+- 使用者看過 README 後的回饋（2026-09-13）：不要開頭的標題卡、不要意義不明的特效。修改：拿掉標題卡（SLO 條件改為畫面底部的一行小字），拿掉 429 的紅點特效（累計數字已足夠）；其餘只留淡入與長條成長。

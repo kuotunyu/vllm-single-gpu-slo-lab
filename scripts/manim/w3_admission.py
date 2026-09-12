@@ -8,7 +8,6 @@ Render: .venv-manim/Scripts/manim -qh --disable_caching scripts/manim/w3_admissi
 from __future__ import annotations
 
 import math
-import random
 import sys
 from pathlib import Path
 
@@ -19,9 +18,7 @@ from manim import (
     UP,
     Create,
     DecimalNumber,
-    Dot,
     FadeIn,
-    FadeOut,
     GrowFromEdge,
     Integer,
     Line,
@@ -76,9 +73,7 @@ def _log_width(queued: float, queue_max: float) -> float:
 class W3AdmissionBurst(Scene):
     def construct(self) -> None:
         self.camera.background_color = BG
-        random.seed(3)
         data = load_replay(ROOT)
-        self.title_card()
         stage = self.build_stage(data)
         self.replay(data, stage)
         self.recovery_notes(data, stage)
@@ -88,18 +83,6 @@ class W3AdmissionBurst(Scene):
         self.coda(data)
         self.clear()
         self.end_card()
-
-    # ---- 1. title (3 s)
-    def title_card(self) -> None:
-        title = _t("一張 RTX 4090、1.5 倍 5 分鐘突發、三種 admission", 44, weight="BOLD")
-        sub = _t(
-            "SLO：TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（Qwen3-8B-FP8，vLLM 0.28，WSL2）", 26, MUTED
-        )
-        sub.next_to(title, DOWN, buff=0.4)
-        self.play(FadeIn(title, shift=UP * 0.2), run_time=0.8)
-        self.play(FadeIn(sub), run_time=0.6)
-        self.wait(1.6)
-        self.play(FadeOut(title), FadeOut(sub), run_time=0.5)
 
     # ---- 2. stage (8 s)
     def build_stage(self, data: ReplayData) -> dict:
@@ -153,10 +136,19 @@ class W3AdmissionBurst(Scene):
             )
             lanes[policy] = {"y": y, "label": label, "anchor": anchor}
             self.play(FadeIn(label), Create(anchor), run_time=0.45)
-        scale_note = _t(
-            "佇列長條為對數尺度（vLLM waiting + shim waiting）；讀數為近 30 s 的滾動值", 16, MUTED
-        )
-        scale_note.to_edge(DOWN, buff=0.25)
+        scale_note = VGroup(
+            _t(
+                "SLO：TTFT p95 ≤ 1 s 且 TPOT p95 ≤ 50 ms（Qwen3-8B-FP8，vLLM 0.28，一張 RTX 4090，WSL2）",
+                16,
+                MUTED,
+            ),
+            _t(
+                "佇列長條為對數尺度（vLLM waiting + shim waiting）；讀數為近 30 s 的滾動值",
+                16,
+                MUTED,
+            ),
+        ).arrange(DOWN, buff=0.08)
+        scale_note.to_edge(DOWN, buff=0.2)
         self.play(FadeIn(scale_note), run_time=0.4)
         self.wait(0.6)
         return {
@@ -247,46 +239,13 @@ class W3AdmissionBurst(Scene):
             att.add_updater(upd_att)
             ttft.add_updater(upd_ttft)
             rej.add_updater(upd_rej)
-            sparks = self._sparks(lane, y, t, data.queue_max)
-            dyn.add(bar, qnum, cols, sparks)
+            dyn.add(bar, qnum, cols)
         self.add(dyn)
         burst_end = next(p.end_s for p in data.phases if p.name == "burst")
         self.play(t.animate.set_value(burst_end), run_time=REPLAY_TO_BURST_END_S, rate_func=linear)
         self.play(t.animate.set_value(TRACE_END_S), run_time=REPLAY_RECOVERY_S, rate_func=linear)
         stage["dyn"] = dyn
         stage["cursor"] = (cursor, clock_label, clock)
-
-    def _sparks(self, lane: Lane, y: float, t: ValueTracker, queue_max: float) -> VGroup:
-        """Red dots leaving the lane while a bucket has 429s; count grows with log2(rejected)."""
-        group = VGroup()
-        state = {"bucket": -1, "clock": 0.0}
-
-        def updater(g: VGroup, dt: float) -> None:
-            state["clock"] += dt
-            i = lane.raw_bucket_index(t.get_value())
-            if i != state["bucket"]:
-                state["bucket"] = i
-                n = lane.raw_buckets[i].rejected
-                if n > 0:
-                    k = min(6, 1 + int(math.log2(n)))
-                    x0 = BAR_LEFT_X + _log_width(lane.queue_at(t.get_value()), queue_max) + 0.9
-                    for _ in range(k):
-                        d = Dot(radius=0.05, color=RED).move_to(
-                            [x0 + random.uniform(0, 0.3), y + random.uniform(-0.2, 0.2), 0]
-                        )
-                        d.birth = state["clock"]
-                        d.vel = (random.uniform(0.6, 1.2), random.uniform(0.4, 1.0))
-                        g.add(d)
-            for d in list(g.submobjects):
-                age = state["clock"] - d.birth
-                if age > 1.0:
-                    g.remove(d)
-                    continue
-                d.shift([d.vel[0] * dt, d.vel[1] * dt, 0])
-                d.set_opacity(1.0 - age)
-
-        group.add_updater(updater)
-        return group
 
     # ---- 4. recovery notes (hold 4 s)
     def recovery_notes(self, data: ReplayData, stage: dict) -> None:
