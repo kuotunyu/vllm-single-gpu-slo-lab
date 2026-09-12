@@ -3,12 +3,13 @@ message: "If you use this lab, cite it as below."
 title: "vllm-single-gpu-slo-lab"
 type: software
 version: 0.0.1
-date-released: "2026-09-03"
+date-released: "2026-09-12"
 license: Apache-2.0
 repository-code: "https://github.com/kuotunyu/vllm-single-gpu-slo-lab"
 authors:
   - name: kuotunyu
 abstract: >-
-  SLO-constrained capacity, admission-control and cost measurements for vLLM on a single GPU
-  (Qwen3-8B precisions, three admission policies, speculative decoding), with bootstrap and
-  Wilson confidence intervals and a reproducible evidence contract. W0 skeleton: no results yet.
+  SLO-bounded capacity, energy and quality measurements of Qwen3-8B on one desktop-shared
+  RTX 4090 (vLLM 0.28, WSL2): four precisions (BF16, FP8, AWQ, GPTQ-Int4), three admission
+  policies under a burst trace, and speculative decoding (n-gram, EAGLE-3), with bootstrap and
+  Wilson confidence intervals; every number is rebuilt from committed evidence by make reproduce.
