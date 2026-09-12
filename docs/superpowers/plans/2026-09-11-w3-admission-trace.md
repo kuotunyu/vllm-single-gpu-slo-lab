@@ -125,17 +125,17 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 ### Task B0: Pre-flight (when the user says 開始)
 
-- [ ] `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab/scripts/wsl/preflight.sh` → GPU idle, quiet-gpu ok, weights cached for `Qwen/Qwen3-8B-FP8` and `Qwen/Qwen3-8B`, disk free > 50 GB, no leftover vLLM or shim.
-- [ ] Start the Windows VRAM sampler: `powershell -File scripts\win\vram-sampler.ps1 -Out <scratch>\win-vram-2026-09-11.log -IntervalSeconds 30 -Samples 2000` in the background.
+- [x] `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash /mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab/scripts/wsl/preflight.sh` → GPU idle, quiet-gpu ok, weights cached for `Qwen/Qwen3-8B-FP8` and `Qwen/Qwen3-8B`, disk free > 50 GB, no leftover vLLM or shim.
+- [x] Start the Windows VRAM sampler: `powershell -File scripts\win\vram-sampler.ps1 -Out <scratch>\win-vram-2026-09-11.log -IntervalSeconds 30 -Samples 2000` in the background.
 
 ### Task B1: GPU smoke (≈ 15 min, inside `w3-night.sh`)
 
-- [ ] Checks: both smoke manifests exist; passthrough smoke has zero 429; bounded smoke has 429s with reason `queue_full` or `queue_timeout` in `shim_final`; `shim_cpu_s / load_wall_s` < 0.8; the passthrough pre-phase TPOT p95 is within 15 % of W2's direct 21.84 rps stage (29–31 ms). A failure here stops the chain (`SMOKE_FAILED`) and goes to Task B3.
+- [x] Checks: both smoke manifests exist; passthrough smoke has zero 429; bounded smoke has 429s with reason `queue_full` or `queue_timeout` in `shim_final`; `shim_cpu_s / load_wall_s` < 0.8; the passthrough pre-phase TPOT p95 is within 15 % of W2's direct 21.84 rps stage (29–31 ms). A failure here stops the chain (`SMOKE_FAILED`) and goes to Task B3.
 
 ### Task B2: Main chain
 
-- [ ] Launch: `run-logged.sh w3-night.sh` (ext4 log, `runs-w3/w3-night-latest.log`), watcher on `watch-night.sh`.
-- [ ] Expected timing (from W2's measured wrap-up of about 10 s per 1,000 requests):
+- [x] Launch: `run-logged.sh w3-night.sh` (ext4 log, `runs-w3/w3-night-latest.log`), watcher on `watch-night.sh`.
+- [x] Expected timing (from W2's measured wrap-up of about 10 s per 1,000 requests):
 
 | block | stages | ≈ time |
 |---|---|---|
@@ -146,13 +146,13 @@ A second finding: the shim's upstream `aiohttp.ClientSession` used the default c
 
 ### Task B3: Monitoring and failure playbook
 
-- [ ] After each stage: manifest exists, `inference_perf_returncode` 0, records ≈ trace rows, `phase_summaries` present, probe TPOT within 15 % of the session's first stage, Windows committed < physical.
-- [ ] Failures: server not ready → re-run the chain (stages with manifests are skipped); shim died → the stage has 502s: quarantine the stage dir and re-run; quiet-gpu refused 5 times → wait 10 min and relaunch; suspect stage → quarantine to `runs-w3/quarantine/`, re-run at the end of the cell (max 2 rounds).
+- [x] After each stage: manifest exists, `inference_perf_returncode` 0, records ≈ trace rows, `phase_summaries` present, probe TPOT within 15 % of the session's first stage, Windows committed < physical.
+- [x] （contingency 條款）Failures: server not ready → re-run the chain (stages with manifests are skipped); shim died → the stage has 502s: quarantine the stage dir and re-run; quiet-gpu refused 5 times → wait 10 min and relaunch; suspect stage → quarantine to `runs-w3/quarantine/`, re-run at the end of the cell (max 2 rounds).
 
 ### Task B4: Wrap-up
 
-- [ ] `reproduce-lite` twice (hash-identical), ruff, pytest, audit; ADR 0013 W3 results; README status block; claims audit rows; plan run log; commit.
-- [ ] Control tower ledger and registry, memory snapshot, dashboard `<li>`; final report leads with the admission table.
+- [x] `reproduce-lite` twice (hash-identical), ruff, pytest, audit; ADR 0013 W3 results; README status block; claims audit rows; plan run log; commit.
+- [x] （儀表板已不存在，略）Control tower ledger and registry, memory snapshot, dashboard `<li>`; final report leads with the admission table.
 
 ## Run log (appended during execution)
 

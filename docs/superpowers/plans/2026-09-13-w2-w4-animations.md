@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: `FONT`, `BG`, `INK`, `MUTED`, `RED`, `GREEN`, `BLUE`, `AMBER`, `text(s, size=28, color=INK, weight="NORMAL") -> Text`, `bottom_note(lines: Sequence[str]) -> VGroup` (muted 16 pt lines stacked at the bottom edge), `source_card(lines: Sequence[str]) -> VGroup` (centred 24 pt lines, last one muted 28 pt), `number(value, decimals, size, color) -> DecimalNumber` (Text-rendered).
 
-- [ ] **Step 1: Write `scripts/manim/style.py`**
+- [x] **Step 1: Write `scripts/manim/style.py`**
 
 ```python
 """Shared look of the explainer animations: font, colours, text helpers (no LaTeX)."""
@@ -72,16 +72,16 @@ def source_card(lines: Sequence[str]) -> VGroup:
     return VGroup(*mobs).arrange(DOWN, buff=0.3)
 ```
 
-- [ ] **Step 2: Refactor `w3_admission.py`**
+- [x] **Step 2: Refactor `w3_admission.py`**
 
 Replace its `FONT`, `BG`, `INK`, `MUTED`, `RED`, `GREEN` constants and `_t` with `from style import FONT, BG, INK, MUTED, RED, GREEN, text as _t, source_card` (keep `COLORS`, `LABELS` local); build the end card with `source_card([...])` and the bottom note with `bottom_note([...])`. Behaviour unchanged.
 
-- [ ] **Step 3: Verify the W3 scene still imports and renders one frame**
+- [x] **Step 3: Verify the W3 scene still imports and renders one frame**
 
 Run: `uv run ruff format scripts/manim && uv run ruff check . && .venv-manim/Scripts/manim -ql -s scripts/manim/w3_admission.py W3AdmissionBurst --media_dir <scratchpad>/media`
 Expected: a PNG of the last frame (the source card) without errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/manim/style.py scripts/manim/w3_admission.py
@@ -104,7 +104,7 @@ GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@us
   - `KneeData(cells: dict[str, Cell], sensitivity_fp8: dict[tuple[float, float], float], rate_max: float)`
   - `load_knee(root: Path) -> KneeData`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 """The W2 knee animation's loader reads exactly the committed tables."""
@@ -159,9 +159,9 @@ def test_energy_quality_and_sensitivity(knee) -> None:
     assert len(s) == 9
 ```
 
-- [ ] **Step 2: Run it to verify it fails** — `uv run pytest -q tests/test_w2_anim_data.py` → `FileNotFoundError`.
+- [x] **Step 2: Run it to verify it fails** — `uv run pytest -q tests/test_w2_anim_data.py` → `FileNotFoundError`.
 
-- [ ] **Step 3: Write the loader**
+- [x] **Step 3: Write the loader**
 
 ```python
 """Everything the W2 knee scene draws, read once from analysis/tables (no manim import)."""
@@ -270,9 +270,9 @@ def load_knee(root: Path) -> KneeData:
     return KneeData(cells, sensitivity, rate_max)
 ```
 
-- [ ] **Step 4: Run the test to verify it passes** — `uv run ruff format scripts/manim/w2_data.py tests/test_w2_anim_data.py && uv run ruff check . && uv run pytest -q tests/test_w2_anim_data.py` → 2 passed.
+- [x] **Step 4: Run the test to verify it passes** — `uv run ruff format scripts/manim/w2_data.py tests/test_w2_anim_data.py && uv run ruff check . && uv run pytest -q tests/test_w2_anim_data.py` → 2 passed.
 
-- [ ] **Step 5: Commit** — `git add scripts/manim/w2_data.py tests/test_w2_anim_data.py` and commit as "scripts/manim/w2_data: loader for the W2 knee animation (curves via slo_lab.plots, r_SLO, r_sat, energy, TMMLU+, sensitivity); CI test pins it to the tables".
+- [x] **Step 5: Commit** — `git add scripts/manim/w2_data.py tests/test_w2_anim_data.py` and commit as "scripts/manim/w2_data: loader for the W2 knee animation (curves via slo_lab.plots, r_SLO, r_sat, energy, TMMLU+, sensitivity); CI test pins it to the tables".
 
 ---
 
@@ -289,7 +289,7 @@ def load_knee(root: Path) -> KneeData:
   - `SpecCell(family, name, label, acceptance, mean_acceptance_length, r_sat, base_r_sat, closed: dict[int, float | None], open: list[OpenPoint])`
   - `SpecData(cells: list[SpecCell])`, `load_specdec(root) -> SpecData`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 """The W4 spec-decode animation's loader reads exactly the committed tables."""
@@ -345,9 +345,9 @@ def test_open_loop_points_stop_at_half_of_the_base_r_sat(spec) -> None:
     assert eagle[2].p95_consistent is True
 ```
 
-- [ ] **Step 2: Run it to verify it fails.**
+- [x] **Step 2: Run it to verify it fails.**
 
-- [ ] **Step 3: Write the loader**
+- [x] **Step 3: Write the loader**
 
 ```python
 """Everything the W4 spec-decode scene draws, read once from analysis/tables (no manim import)."""
@@ -449,9 +449,9 @@ def load_specdec(root: Path) -> SpecData:
     return SpecData(cells)
 ```
 
-- [ ] **Step 4: Run the test to verify it passes.** If `fp8-ngram`'s open points differ (the table has exactly 4.02 / 10.04 / 20.09 below 0.5 × 40.17), print them and fix the expectation to the table.
+- [x] **Step 4: Run the test to verify it passes.** If `fp8-ngram`'s open points differ (the table has exactly 4.02 / 10.04 / 20.09 below 0.5 × 40.17), print them and fix the expectation to the table.
 
-- [ ] **Step 5: Commit** — "scripts/manim/w4_data: loader for the W4 spec-decode animation (acceptance, closed-loop rps ratios, paired open-loop TPOT diffs up to 0.5 x base r_sat); CI test pins it to the tables".
+- [x] **Step 5: Commit** — "scripts/manim/w4_data: loader for the W4 spec-decode animation (acceptance, closed-loop rps ratios, paired open-loop TPOT diffs up to 0.5 x base r_sat); CI test pins it to the tables".
 
 ---
 
@@ -460,7 +460,7 @@ def load_specdec(root: Path) -> SpecData:
 **Files:**
 - Create: `scripts/manim/w2_knee.py`
 
-- [ ] **Step 1: Write the scene**
+- [x] **Step 1: Write the scene**
 
 ```python
 """W2 explainer: attainment vs offered rate for four precisions, the FP8 knee is TPOT-bound,
@@ -753,9 +753,9 @@ class W2Knee(Scene):
         self.wait(3.5)
 ```
 
-- [ ] **Step 2: Low-quality render, inspect frames every 6 s, fix layout.** Run `-ql`, extract with `ffmpeg -vf fps=1/6`, Read the PNGs. Typical fixes: legend overlapping curves (move to the lower-right), table too wide (scale), note overlapping the axes.
+- [x] **Step 2: Low-quality render, inspect frames every 6 s, fix layout.** Run `-ql`, extract with `ffmpeg -vf fps=1/6`, Read the PNGs. Typical fixes: legend overlapping curves (move to the lower-right), table too wide (scale), note overlapping the axes.
 
-- [ ] **Step 3: Lint and commit** — "scripts/manim/w2_knee: W2 explainer scene (knee curves, TPOT-bound knee, sensitivity grid, scoreboard)".
+- [x] **Step 3: Lint and commit** — "scripts/manim/w2_knee: W2 explainer scene (knee curves, TPOT-bound knee, sensitivity grid, scoreboard)".
 
 ---
 
@@ -764,7 +764,7 @@ class W2Knee(Scene):
 **Files:**
 - Create: `scripts/manim/w4_specdec.py`
 
-- [ ] **Step 1: Write the scene**
+- [x] **Step 1: Write the scene**
 
 ```python
 """W4 explainer: acceptance, closed-loop throughput ratio by concurrency, paired open-loop
@@ -1010,19 +1010,19 @@ class W4Specdec(Scene):
         self.wait(3.5)
 ```
 
-- [ ] **Step 2: Low-quality render, inspect frames, fix layout.**
+- [x] **Step 2: Low-quality render, inspect frames, fix layout.**
 
-- [ ] **Step 3: Lint and commit** — "scripts/manim/w4_specdec: W4 explainer scene (acceptance, closed-loop ratio by concurrency, paired open-loop TPOT diffs, conclusion)".
+- [x] **Step 3: Lint and commit** — "scripts/manim/w4_specdec: W4 explainer scene (acceptance, closed-loop ratio by concurrency, paired open-loop TPOT diffs, conclusion)".
 
 ---
 
 ### Task 6: Render, GIFs, README and docs, CI
 
-- [ ] **Step 1: Render both at `-qh`, re-encode to 1080p30, build GIFs** (same ffmpeg commands as the W3 README; outputs `docs/media/w2-knee.{mp4,gif}`, `docs/media/w4-specdec.{mp4,gif}`); check sizes ≤ 8 MB.
-- [ ] **Step 2: README** — after the W2 paragraph ending "4090 不計 $／百萬 token（ADR 0010）。" insert the W2 GIF and a one-line caption; after the W4 paragraph ending "高負載點量不到（ADR 0016）。" insert the W4 GIF and caption (same wording pattern as the W3 caption).
-- [ ] **Step 3: `scripts/manim/README.md`** — list the three scenes and their check-lists; `evidence/README.md` sentence mentions three animations; HANDOFF row updated; W4 plan run log row.
-- [ ] **Step 4: Verify** — `uv run ruff check . && uv run ruff format --check . && uv run pytest -q` (exit codes), `uv run python scripts/redact.py audit .`, `make reproduce`; commit; push; `gh run watch`.
-- [ ] **Step 5: Control tower ledger line; memory.**
+- [x] **Step 1: Render both at `-qh`, re-encode to 1080p30, build GIFs** (same ffmpeg commands as the W3 README; outputs `docs/media/w2-knee.{mp4,gif}`, `docs/media/w4-specdec.{mp4,gif}`); check sizes ≤ 8 MB.
+- [x] **Step 2: README** — after the W2 paragraph ending "4090 不計 $／百萬 token（ADR 0010）。" insert the W2 GIF and a one-line caption; after the W4 paragraph ending "高負載點量不到（ADR 0016）。" insert the W4 GIF and caption (same wording pattern as the W3 caption).
+- [x] **Step 3: `scripts/manim/README.md`** — list the three scenes and their check-lists; `evidence/README.md` sentence mentions three animations; HANDOFF row updated; W4 plan run log row.
+- [x] **Step 4: Verify** — `uv run ruff check . && uv run ruff format --check . && uv run pytest -q` (exit codes), `uv run python scripts/redact.py audit .`, `make reproduce`; commit; push; `gh run watch`.
+- [x] **Step 5: Control tower ledger line; memory.**
 
 ## Self-review
 

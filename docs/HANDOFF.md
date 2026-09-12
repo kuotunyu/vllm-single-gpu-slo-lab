@@ -11,7 +11,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | 項目 | 位置 |
 |---|---|
 | 專案 repo（本機 git，remote `origin` 指向 GitHub） | `D:\AI-Portfolio\CC_github部隊\vllm-single-gpu-slo-lab` |
-| GitHub | <https://github.com/kuotunyu/vllm-single-gpu-slo-lab>（public，2026-09-12 23:53 首次推送，CI 全綠；About 與 topics 已設；contributors 只有 kuotunyu） |
+| GitHub | <https://github.com/kuotunyu/vllm-single-gpu-slo-lab>（public，2026-09-12 23:53 首次推送，CI 全綠；About 與 topics 已設；contributors 只有 kuotunyu；Release v1.0.0 於 2026-09-13） |
 | 量測環境 | WSL2 發行版 `Ubuntu-bench`，`~/vllm-slo-lab`：`.venv`（vLLM 0.28.0）、`.venv-slolab`（本 repo 的 editable install）、`.venv-loadgen`（inference-perf 0.6.1） |
 | 原始量測輸出（只在量測主機，repo 內有 gzip 副本與 sha256） | `~/vllm-slo-lab/runs-w2`（117 GB）、`runs-w3`（36 GB）、`runs-w4`（48 GB）、`runs-w3-c192`（8.5 GB）、`runs-w4-smoke`（0.3 GB）、`reparse-w2`（0.25 GB）；磁碟剩約 154 GB |
 | 控制塔（帳本、專案登記表） | `D:\AI-Portfolio\CC_github部隊\_portfolio_control`（本機；2026-09-12 晚已更新 W4–W6 的紀錄） |
@@ -33,6 +33,7 @@ W0–W6 全部完成：四種精度（W2）、三種流量控制策略（W3，�
 | W5 其餘 | 7 張 SVG 圖、model card、授權盤點、claims audit 1–22 列、run ledger（`analysis/ledger/runs.csv`，每段一列）都由 `reproduce-lite` 重建或已填 | — |
 | W6 發佈前檢查 | 見下節；乾淨 clone 的 CI 模擬（2026-09-12 21:44–21:55，commit `de7a685`）全過：sync、ruff、179 個測試、audit 乾淨、`make reproduce` 零 diff | — |
 | 解說動畫（2026-09-13） | 三支 Manim Community 動畫：W2 膝點、W3 admission、W4 speculative decoding（`docs/media/`，README 各段嵌入 GIF），示意用、不進 reproduce／CI；資料模組 `slo_lab.timeline` 與三個載入器測試在 CI；使用者要求不做標題卡與裝飾性特效 | 設計 `docs/superpowers/specs/2026-09-13-w3-admission-animation-design.md`、`2026-09-13-w2-w4-animations-design.md`；計畫 `docs/superpowers/plans/2026-09-13-w3-admission-animation.md`、`2026-09-13-w2-w4-animations.md` |
+| W6 收尾（2026-09-13） | 版本 1.0.0 與 GitHub Release v1.0.0（結案版）；LIBG README 分工段落草稿 `docs/libg-readme-paragraph.md`（規格 W6 交付物，依規格不推送到 LIBG，由其作者決定）；五份計畫的勾選框依實際執行補齊 | — |
 
 逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4 與 2026-09-12 的收尾：`2026-09-11-w4-specdec.md` 的 run log）。
 

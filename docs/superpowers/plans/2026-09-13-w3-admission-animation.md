@@ -36,7 +36,7 @@
   - `downsample(series, step_s, end_s, *, start_s=0.0) -> list[tuple[float, float]]`
   - `phases_of(manifest) -> list[Phase]`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 """Time-bucketed views of a replayed trace (slo_lab.timeline)."""
@@ -130,12 +130,12 @@ def test_phases_of_reads_the_manifest_trace() -> None:
     assert isinstance(Bucket(0.0, 10.0, 0, 0, 0, 0, ()), Bucket)
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run pytest -q tests/test_timeline.py`
 Expected: FAIL with `ModuleNotFoundError: No module named 'slo_lab.timeline'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```python
 """Time-bucketed views of a replayed trace, for figures and explainer animations.
@@ -286,12 +286,12 @@ def phases_of(manifest: dict[str, Any]) -> list[Phase]:
     ]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run ruff format src/slo_lab/timeline.py tests/test_timeline.py && uv run ruff check . && uv run pytest -q tests/test_timeline.py`
 Expected: 6 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/slo_lab/timeline.py tests/test_timeline.py
@@ -310,13 +310,13 @@ GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@us
 **Interfaces:**
 - Produces: `.venv-manim/Scripts/manim` and `.venv-manim/Scripts/python.exe` with `manim==0.21.0` and this repo installed editable (so the scene can import `slo_lab`).
 
-- [ ] **Step 1: Write `scripts/manim/requirements.txt`**
+- [x] **Step 1: Write `scripts/manim/requirements.txt`**
 
 ```
 manim==0.21.0
 ```
 
-- [ ] **Step 2: Add the ignores**
+- [x] **Step 2: Add the ignores**
 
 Append to `.gitignore` after `venv/`:
 
@@ -325,7 +325,7 @@ Append to `.gitignore` after `venv/`:
 media/
 ```
 
-- [ ] **Step 3: Create the environment (no network cost beyond the wheel download; free)**
+- [x] **Step 3: Create the environment (no network cost beyond the wheel download; free)**
 
 ```bash
 uv venv .venv-manim --python 3.12
@@ -335,7 +335,7 @@ uv pip install --python .venv-manim/Scripts/python.exe -r scripts/manim/requirem
 
 Expected: `Manim Community v0.21.0`.
 
-- [ ] **Step 4: Font check (scratch scene, not committed)**
+- [x] **Step 4: Font check (scratch scene, not committed)**
 
 Write `<scratchpad>/fontcheck.py`:
 
@@ -360,7 +360,7 @@ class FontCheck(Scene):
 Run: `.venv-manim/Scripts/manim -ql -s <scratchpad>/fontcheck.py FontCheck --media_dir <scratchpad>/media` and Read the PNG under `<scratchpad>/media/images/fontcheck/`.
 Expected: CJK glyphs rendered (not boxes). If boxes appear, change `FONT` in Task 4 to `"Noto Sans TC"` or the system default and note it in `scripts/manim/README.md`.
 
-- [ ] **Step 5: Write `scripts/manim/README.md`**
+- [x] **Step 5: Write `scripts/manim/README.md`**
 
 ```markdown
 # 解說動畫（Manim Community）
@@ -402,7 +402,7 @@ ffmpeg -y -i docs/media/w3-admission-burst.mp4 -i media/palette.png -filter_comp
 | 尾聲：突發段 TPOT p95 57.8 / 45.2 ms、突發段 attainment 0.007 / 0.491、整段 0.573 / 0.780、拒絕率 20.9 / 21.8 % | 同上與 `analysis/tables/w3-fp8-c192-admission/admission.json` |
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .gitignore scripts/manim/requirements.txt scripts/manim/README.md
@@ -425,7 +425,7 @@ GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@us
   - `ReplayData(lanes, phases, rate_rps, scoreboard, per_seed, coda, queue_max)`
   - `load_replay(root: Path, seed: int = 1) -> ReplayData`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 """The explainer animation's loader reads exactly the committed evidence and tables."""
@@ -478,12 +478,12 @@ def test_phases_rates_and_scoreboard_match_the_tables(replay) -> None:
     assert replay.coda["c192"]["attainment"] == pytest.approx(0.7804, abs=5e-4)
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest -q tests/test_w3_anim_data.py`
 Expected: FAIL (`FileNotFoundError` for `scripts/manim/w3_data.py`).
 
-- [ ] **Step 3: Write the loader**
+- [x] **Step 3: Write the loader**
 
 ```python
 """Everything the W3 explainer scene draws, computed once from the committed evidence.
@@ -604,12 +604,12 @@ _ = bisect_right  # keep the import explicit for readers extending queue_at to a
 
 (Remove the trailing `bisect_right` line and import if ruff flags it as unused; `queue_at` uses integer division, so it is not needed.)
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `uv run ruff format scripts/manim/w3_data.py tests/test_w3_anim_data.py && uv run ruff check . && uv run pytest -q tests/test_w3_anim_data.py`
 Expected: 2 passed (loading three 45k-record files takes a few seconds). If `per_seed["passthrough"]["time_to_recover_s"]` differs in order, print `replay.per_seed` and fix the expected list to the table's order (seeds 1, 2, 3 → 820, None, 745 per `analysis/tables/w3-fp8-admission/tables.md`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/manim/w3_data.py tests/test_w3_anim_data.py
@@ -627,7 +627,7 @@ GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@us
 - Consumes: `w3_data.load_replay`, `Lane`, `ReplayData`, `POLICIES`, `TRACE_END_S`; manim 0.21 (`Scene`, `ValueTracker`, `always_redraw`, `DecimalNumber`, `Integer`, `Text`, `Rectangle`, `NumberLine`, `Line`, `Dot`, `VGroup`, `Table`, `FadeIn`, `FadeOut`, `Write`, `Create`, `GrowFromEdge`, `linear`, `rate_functions`).
 - Produces: the scene class `W3AdmissionBurst` rendering ~75 s.
 
-- [ ] **Step 1: Write the scene**
+- [x] **Step 1: Write the scene**
 
 ```python
 """W3 explainer: one RTX 4090, a 1.5x five-minute burst, three admission policies, then
@@ -1076,16 +1076,16 @@ class W3AdmissionBurst(Scene):
         self.wait(3.2)
 ```
 
-- [ ] **Step 2: Low-quality render to check timing and layout**
+- [x] **Step 2: Low-quality render to check timing and layout**
 
 Run: `.venv-manim/Scripts/manim -ql --disable_caching scripts/manim/w3_admission.py W3AdmissionBurst`
 Expected: `media/videos/w3_admission/480p15/W3AdmissionBurst.mp4` written; no traceback. Then extract frames to inspect (Read the PNGs): `ffmpeg -y -i media/videos/w3_admission/480p15/W3AdmissionBurst.mp4 -vf "fps=1/8" <scratchpad>/frames/f%03d.png`. Check: labels not overlapping bars, readouts inside the frame, numbers legible, the cursor reaching 1500 s, the coda bars ending left/right of the 50 ms line as expected.
 
-- [ ] **Step 3: Fix layout issues found, re-render `-ql` until clean**
+- [x] **Step 3: Fix layout issues found, re-render `-ql` until clean**
 
 Typical fixes: move `LANE_Y`, `BAR_LEFT_X`, readout x (5.2), font sizes. Keep the timings.
 
-- [ ] **Step 4: Lint and commit the scene**
+- [x] **Step 4: Lint and commit the scene**
 
 Run: `uv run ruff format scripts/manim/w3_admission.py && uv run ruff check .` (ruff runs on the repo's own venv: the file imports manim, which ruff does not need to resolve).
 
@@ -1102,7 +1102,7 @@ GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@us
 - Create: `docs/media/w3-admission-burst.mp4`, `docs/media/w3-admission-burst.gif`
 - Modify: `README.md` (after the W3 補點 paragraph in the status block), `evidence/README.md` (append), `analysis/claims_audit.md` (preamble sentence), `docs/HANDOFF.md` (已完成 table row), `docs/superpowers/plans/2026-09-11-w4-specdec.md` (run-log row)
 
-- [ ] **Step 1: High-quality render and copy**
+- [x] **Step 1: High-quality render and copy**
 
 ```bash
 .venv-manim/Scripts/manim -qh --disable_caching scripts/manim/w3_admission.py W3AdmissionBurst
@@ -1113,7 +1113,7 @@ ffprobe -v error -show_entries format=duration,size -of default=nw=1 docs/media/
 
 Expected: duration 70–80 s, size under 15 MB.
 
-- [ ] **Step 2: GIF (two-pass palette), check size**
+- [x] **Step 2: GIF (two-pass palette), check size**
 
 ```bash
 ffmpeg -y -i docs/media/w3-admission-burst.mp4 -vf "fps=12,scale=640:-1:flags=lanczos,palettegen=max_colors=128" media/palette.png
@@ -1123,7 +1123,7 @@ ls -l docs/media/
 
 If the GIF is over 8 MB: re-run with `-ss 11 -t 42` on the input (the replay segment only) and say so in the README caption.
 
-- [ ] **Step 3: Docs**
+- [x] **Step 3: Docs**
 
 README, after the C = 192 補點 paragraph inside the status block, add:
 
@@ -1142,7 +1142,7 @@ README, after the C = 192 補點 paragraph inside the status block, add:
 
 W4 plan run log: a row for 2026-09-13 with the render facts (duration, sizes, tests 187).
 
-- [ ] **Step 4: Verify, commit, push, CI**
+- [x] **Step 4: Verify, commit, push, CI**
 
 ```bash
 uv run ruff check . && uv run ruff format --check . && uv run pytest -q && uv run python scripts/redact.py audit . && make reproduce
@@ -1154,7 +1154,7 @@ gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId') -
 
 Expected: all green; `make reproduce` zero diff (media is outside `evidence/` and `analysis/`).
 
-- [ ] **Step 5: Control tower ledger line** in `_portfolio_control/docs/inventory/2026-09-02-arsenal-v3-inventory.md` (§19 補記) and commit there.
+- [x] **Step 5: Control tower ledger line** in `_portfolio_control/docs/inventory/2026-09-02-arsenal-v3-inventory.md` (§19 補記) and commit there.
 
 ---
 

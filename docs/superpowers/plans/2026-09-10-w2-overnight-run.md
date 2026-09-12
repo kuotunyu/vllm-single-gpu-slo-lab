@@ -48,7 +48,7 @@ Paths: repo `D:\AI-Portfolio\CC_github部隊\vllm-single-gpu-slo-lab` = `/mnt/d/
 **Interfaces:**
 - Produces: a go/no-go decision and the baseline numbers for the report (idle VRAM, disk free, weights present).
 
-- [ ] **Step 1: Write the pre-flight script (WSL side)**
+- [x] **Step 1: Write the pre-flight script (WSL side)**
 
 ```bash
 #!/usr/bin/env bash
@@ -72,17 +72,17 @@ echo "== leftovers =="; pgrep -af "vllm serve|inference-perf|w2-|wsl/batch" | gr
 echo "== io pressure =="; head -1 /proc/pressure/io
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash "/mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab/scripts/wsl/preflight.sh" 2>&1 | tr -d '\0' | grep -v "systemd user session"`
 Expected: GPU ≤ 1,700 MiB used, `quiet-gpu` `"ok": true`, four `ok` weight lines, `vllm 0.28.0`, `slo_lab ok`, `inference-perf ok`, ≥ 150 GB free on `/home`, `19680 …full.jsonl`, leftovers `none`.
 
-- [ ] **Step 3: Windows-side baseline**
+- [x] **Step 3: Windows-side baseline**
 
 Run (PowerShell): `& "C:\Windows\System32\nvidia-smi.exe" --query-gpu=memory.used,memory.total --format=csv,noheader; (Get-Counter '\GPU Adapter Memory(*)\Total Committed').CounterSamples | ? { $_.CookedValue -gt 0 } | % { '{0:N0} MB committed' -f ($_.CookedValue/1MB) }`
 Expected: committed ≤ 2,500 MB (desktop only). If > 6,000 MB, something else holds VRAM: list it with the `GPU Process Memory` counter and tell the user before launching.
 
-- [ ] **Step 4: No-go rules**
+- [x] **Step 4: No-go rules**
 
 Do not launch if any of: a weight directory is MISSING (report which); `quiet-gpu` refuses (report reasons); free disk < 60 GB (each cell writes ~15 GB of raw loadgen JSON under `runs-w2`; delete `runs-w2/open-loop/fp8/seed-*/ol-rate-*/ipf/per_request_lifecycle_metrics.json` from the finished FP8 runs first — they are ignored files already summarised into `records.jsonl` with sha256 in the manifests); leftovers not `none` (kill with `scripts/wsl/stop-chain.sh`).
 
@@ -97,12 +97,12 @@ Do not launch if any of: a weight directory is MISSING (report which); `quiet-gp
 **Interfaces:**
 - Produces: background task ids `NIGHT_TASK` (chain) and `VRAM_TASK` (sampler); log at `$SP/w2-night.log`; sampler log at `$SP/win-vram.log`.
 
-- [ ] **Step 1: Dry-run the plan one more time**
+- [x] **Step 1: Dry-run the plan one more time**
 
 Run: `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- env DRY=1 bash "/mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab/scripts/wsl/w2-night.sh" 2>&1 | tr -d '\0' | grep -E "START|DRY: WARMUP" | head -8`
 Expected: `START awq` then a `DRY: WARMUP=100 MAX_NUM_SEQS=256 RUN_ROOT=…/closed-loop-cells batch.sh awq Qwen/Qwen3-8B-AWQ 1 '' cl:1:90 … cl:256:9000` line.
 
-- [ ] **Step 2: Launch the chain in the background**
+- [x] **Step 2: Launch the chain in the background**
 
 Run (Bash, `run_in_background: true`, timeout 600000):
 ```bash
@@ -110,7 +110,7 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash "/mnt/d/AI-Portfolio/CC_githu
 ```
 Record the task id as `NIGHT_TASK`. (Background tasks are not killed at the nominal timeout; the 2026-09-09 chains ran 4–7 h this way.)
 
-- [ ] **Step 3: Launch the Windows VRAM sampler**
+- [x] **Step 3: Launch the Windows VRAM sampler**
 
 If `$SP/win-vram-sampler.ps1` is missing, re-create it with this content (loop 1,200 × 30 s = 10 h; appends):
 ```powershell
@@ -133,12 +133,12 @@ for ($i = 0; $i -lt 1200; $i++) {
 Run (PowerShell, `run_in_background: true`): `& powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Users\3Hml\AppData\Local\Temp\claude\D--AI-Portfolio\2ca314bc-35ae-404a-8e70-998f59664031\scratchpad\win-vram-sampler.ps1"`
 Record the task id as `VRAM_TASK`. Re-launch it once after ~10 h (it stops itself).
 
-- [ ] **Step 4: Confirm the first server came up (≈ 4 min after launch)**
+- [x] **Step 4: Confirm the first server came up (≈ 4 min after launch)**
 
 Run: `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash "/mnt/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab/scripts/wsl/wait-ready.sh" /home/tun2404/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1/serve.log 2>&1 | tr -d '\0' | grep -v "systemd user session"`
 Expected: `READY after poll N`, `Loading weights took … seconds`, `GPU KV cache size: …` (AWQ at 0.82: expect ≈ 90,000 tokens or more). `SERVER_GONE` → go to Task 4 (failure playbook, case B).
 
-- [ ] **Step 5: Tell the user it started (one line)**
+- [x] **Step 5: Tell the user it started (one line)**
 
 Message: cell order, ETA table (AWQ ≈ 6.5 h, GPTQ ≈ 6.5 h, BF16 ≈ 5.5 h, contrast ≈ 2.7 h, crosscheck ≈ 0.5 h), that they can go to sleep.
 
@@ -153,17 +153,17 @@ Message: cell order, ETA table (AWQ ≈ 6.5 h, GPTQ ≈ 6.5 h, BF16 ≈ 5.5 h, c
 - Consumes: `runs-w2/closed-loop-cells/<cell>/seed-1/cl-conc-1/manifest.json`.
 - Produces: a clean/contaminated verdict for the cell's first point.
 
-- [ ] **Step 1: Read the first completed stage**
+- [x] **Step 1: Read the first completed stage**
 
 Run: `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash "$SP/wsl-warmup-read.sh" /home/tun2404/vllm-slo-lab/runs-w2/closed-loop-cells/awq/seed-1 2>&1 | tr -d '\0' | grep -v "systemd user session"`
 Expected for a clean 4-bit cell: `probe_tpot` 0.012–0.017, `W/util` ≥ 2.0, `win` ≈ 150–200 s, rps at c=1 ≈ 0.45–0.6.
 
-- [ ] **Step 2: Cross-check the Windows side**
+- [x] **Step 2: Cross-check the Windows side**
 
 Run: `tail -3 "$SP/win-vram.log" | tr -d '\r'`
 Expected: committed < 24,564 and no process other than `vmwp`/desktop apps holding > 1 GB. A `python`/`pythonw`/other compute process with ≥ 1 GB means another project is on the GPU: do not stop the chain (the detector will quarantine and re-run), but note the time window for the report.
 
-- [ ] **Step 3: Verdict**
+- [x] **Step 3: Verdict**
 
 If the probe TPOT is > 1.3 × the cell's own best (there is only one point yet: compare with the 4-bit expectation 12–17 ms; for BF16 22–30 ms) **and** committed > 24,564 → paging is back: stop the chain (`scripts/wsl/stop-chain.sh`), run the Windows `GPU Process Memory` counter to name the tenant, tell the user, and relaunch only after it is gone. Otherwise continue.
 
@@ -180,11 +180,11 @@ If the probe TPOT is > 1.3 × the cell's own best (there is only one point yet: 
 - Consumes: `[<cell>] CELL DONE` lines in `$SP/w2-night.log`; promoted evidence under `evidence/raw/w2/<cell>/{closed-loop/seed-1,open-loop/seed-{1,2,3},tmmluplus}`.
 - Produces: `analysis/tables/w2-<cell>-closed-loop/`, `analysis/tables/w2-<cell>-open-loop/`, one commit per cell, one interim message per cell.
 
-- [ ] **Step 1: Wait in ≤ 9.5-minute blocks**
+- [x] **Step 1: Wait in ≤ 9.5-minute blocks**
 
 Use `TaskOutput` on `NIGHT_TASK` with `block: true, timeout: 570000`. Between blocks, once per ~30 min, run the progress script for the cell currently running and `tail -1 "$SP/win-vram.log"`. Do not poll more often; nothing changes faster than a stage (5–12 min).
 
-- [ ] **Step 2: On `[<cell>] CELL DONE`, add the cell's tables to the index**
+- [x] **Step 2: On `[<cell>] CELL DONE`, add the cell's tables to the index**
 
 Edit `analysis/tables/index.json` — add, keeping the existing entries:
 ```json
@@ -193,7 +193,7 @@ Edit `analysis/tables/index.json` — add, keeping the existing entries:
 ```
 (same pattern with `gptq`, `bf16`, `fp8-mbt8192`; the contrast cell has open-loop seed 1 only.)
 
-- [ ] **Step 3: Rebuild tables, audit, test**
+- [x] **Step 3: Rebuild tables, audit, test**
 
 Run (repo root):
 ```bash
@@ -201,7 +201,7 @@ cd "/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab" && uv run --frozen 
 ```
 Expected: `tables rebuilt from evidence: … w2-<cell>-closed-loop, w2-<cell>-open-loop`, `audit-secrets: clean`, `109 passed` (or more). A `problem:` line means a records file with no window — inspect that stage before committing.
 
-- [ ] **Step 4: Extract the cell's headline numbers**
+- [x] **Step 4: Extract the cell's headline numbers**
 
 Run:
 ```bash
@@ -229,14 +229,14 @@ PY
 ```
 Expected: numbers, no exceptions. `cl_suspects`/`ol_suspects` non-empty after the chain's two re-run rounds → keep them excluded, mention in the report.
 
-- [ ] **Step 5: Commit the cell**
+- [x] **Step 5: Commit the cell**
 
 ```bash
 cd "/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab" && rm -f .git/index.lock && git add -A evidence/raw/w2 analysis/tables && GIT_ASK_YESNO=false git -c user.name=kuotunyu -c user.email=61350295+kuotunyu@users.noreply.github.com commit -q -m "evidence: <cell> closed-loop + open-loop x3 + TMMLU+ (r_sat <x> rps, r_SLO <y> rps, TMMLU+ <n>/600, full <m>/19680)" </dev/null 2>&1 | tail -1; git log --oneline -1
 ```
 Expected: a new commit hash.
 
-- [ ] **Step 6: Interim message to the user (one short paragraph per cell)**
+- [x] **Step 6: Interim message to the user (one short paragraph per cell)**
 
 Contents: r_sat, C, r_SLO, knee rates, TMMLU+ slices and full, any suspects/quarantine, wall time, whether the next cell started. Numbers in a 4-column table, nothing else.
 
@@ -256,29 +256,29 @@ sleep 4; echo "remaining:"; pgrep -af "w2-|wsl/batch|run-stage|inference-perf|vl
 nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader
 ```
 
-- [ ] **Case A — `NIGHT_TASK` completed early (exit code ≠ 0 or log ends before `NIGHT DONE`)**
+- [x] （contingency 條款）**Case A — `NIGHT_TASK` completed early (exit code ≠ 0 or log ends before `NIGHT DONE`)**
 
 Read the last 40 lines of `$SP/w2-night.log`. Whatever the cause, the fix is the same: run `scripts/wsl/stop-chain.sh`, confirm `remaining:` is empty, then relaunch Task 1 Step 2. The chain resumes (finished stages have manifests and are skipped; `w2-cell-chain.sh` recomputes r_sat from the finished closed-loop). Do not delete run directories.
 
-- [ ] **Case B — `SERVER_NOT_READY` / `SERVER_EXITED_EARLY` for a cell**
+- [x] （contingency 條款）**Case B — `SERVER_NOT_READY` / `SERVER_EXITED_EARLY` for a cell**
 
 Run: `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash "$SP/wsl-serve-details.sh" /home/tun2404/vllm-slo-lab/runs-w2/closed-loop-cells/<cell>/seed-1/serve.log` and grep the log for `CUDA out of memory|ValueError|Error`.
 - BF16 OOM or `KV cache` too small for `--max-num-seqs 40`: the cell's own chain line in `scripts/wsl/w2-night.sh` is `bash "$WSL/w2-cell-chain.sh" bf16 Qwen/Qwen3-8B 40 "$BF16"` — change **only** the max-num-seqs argument and the grid (`BF16="1 2 4 8 16 24"` with 24) and relaunch; record the change in ADR 0009 (Task 5). Never raise 0.82.
 - Any other cell failing to load: skip it by commenting out its line in `w2-night.sh`, relaunch, and report the error text verbatim.
 
-- [ ] **Case C — `QUIET_GPU_REFUSED` at a batch start**
+- [x] （contingency 條款）**Case C — `QUIET_GPU_REFUSED` at a batch start**
 
 Read `reasons` in the printed JSON. Memory > 3,072 MiB or utilization > 10 % means something else is on the card. Name it (Windows `GPU Process Memory` counter or `nvidia-smi.exe`), wait 10 minutes, retry once by relaunching Task 1 Step 2. If it persists, stop and report; do not lower the gate.
 
-- [ ] **Case D — suspects persist after the chain's two re-run rounds**
+- [x] （contingency 條款）**Case D — suspects persist after the chain's two re-run rounds**
 
 Leave them quarantined (`runs-w2/*/quarantine/<cell>/`); the analyzer already excludes them. Report the affected rates/concurrencies and the tenant seen in `win-vram.log` at those times. Do not hand-edit results.
 
-- [ ] **Case E — disk below 30 GB (`df -h /home`)**
+- [x] （contingency 條款）**Case E — disk below 30 GB (`df -h /home`)**
 
 Delete `runs-w2/*/<cell>/seed-*/*/ipf/per_request_lifecycle_metrics.json` for cells whose evidence is already promoted and committed (their `records.jsonl` and sha256 are in the repo). Nothing else.
 
-- [ ] **Case F — Windows sampler stopped (`VRAM_TASK` completed)**
+- [x] （contingency 條款）**Case F — Windows sampler stopped (`VRAM_TASK` completed)**
 
 Relaunch Task 1 Step 3 (append mode). Losing sampler coverage is acceptable; the manifests carry `host_before/after.windows_gpu_memory` regardless.
 
@@ -291,7 +291,7 @@ Relaunch Task 1 Step 3 (append mode). Losing sampler coverage is acceptable; the
 - Modify: `README.md` (status table), `analysis/claims_audit.md` (rows 6+), `analysis/tables/index.json` (contrast cell), `docs/runbook-wsl2.md` (W2 status paragraph), `analysis/preregistration.md` (per-cell `--max-num-seqs`)
 - Promote: `~/vllm-slo-lab/runs-w2/crosscheck/fp8/*.json` → `evidence/raw/w2/fp8/crosscheck/`
 
-- [ ] **Step 1: Promote the cross-check results**
+- [x] **Step 1: Promote the cross-check results**
 
 Run (script file):
 ```bash
@@ -310,7 +310,7 @@ PY
 ```
 Expected: `closed-c64.json`, `closed-c256.json`, `open-r21.83.json` plus `vllm.log`; c256 request throughput within ±10 % of the inference-perf r_sat (41.4 rps at 0.82); open 21.83 TTFT/TPOT p95 in the same buckets as the inference-perf 21.84 point (0.09 s / 24–25 ms).
 
-- [ ] **Step 2: Build the four-precision table**
+- [x] **Step 2: Build the four-precision table**
 
 Run:
 ```bash
@@ -339,19 +339,19 @@ PY
 ```
 Expected: five rows (contrast row has open-loop seed 1 only — say so in the ADR).
 
-- [ ] **Step 3: Write ADR 0009**
+- [x] **Step 3: Write ADR 0009**
 
 `docs/decisions/0009-w2-four-precisions.md` with: date, status, evidence paths, the Step 2 table, per-cell notes (BF16 grid cap and KV size from its `serve.log`, GPTQ third-party checkpoint claim ceiling, contrast cell finding: does 8192 move the TPOT knee?), the sensitivity grids (paste `sensitivity.markdown` per cell), suspects/quarantine log, tenant windows from `win-vram.log`, cross-check agreement, and what is still not measured (admission policies W3, spec-decode W4, cost table pending `config/cost.yaml`). Every number must be traceable to a table or manifest path.
 
-- [ ] **Step 4: README status table**
+- [x] **Step 4: README status table**
 
 Replace the FP8-only status block at the top of `README.md` with the four-precision table from Step 2 (same column set, Wh per M token instead of raw tok/Wh) and keep the claim-ceiling sentence: numbers hold for the 0.82 budget, WSL2, desktop-shared 4090; no other precision/host extrapolation. Update `analysis/claims_audit.md` with one row per new README number (evidence path, n, CI, ceiling, `make reproduce` check).
 
-- [ ] **Step 5: Freeze the remaining preregistration row**
+- [x] **Step 5: Freeze the remaining preregistration row**
 
 In `analysis/preregistration.md`, row `--max-num-seqs`: fill AWQ 256, GPTQ 256, BF16 40 (or the value actually used after Case B) and cite ADR 0009; drop the "例外一項" clause from the status line.
 
-- [ ] **Step 6: Reproduce, audit, test, commit**
+- [x] **Step 6: Reproduce, audit, test, commit**
 
 ```bash
 cd "/d/AI-Portfolio/CC_github部隊/vllm-single-gpu-slo-lab" && uv run --frozen slo-lab reproduce-lite --root . 2>&1 | grep -E "tables rebuilt|problem"; sha256sum analysis/tables/*/*.json analysis/tables/*/tables.md > "$TMP/h1.txt"; uv run --frozen slo-lab reproduce-lite --root . >/dev/null 2>&1; sha256sum analysis/tables/*/*.json analysis/tables/*/tables.md > "$TMP/h2.txt"; diff -q "$TMP/h1.txt" "$TMP/h2.txt" && echo deterministic; uv run --frozen ruff check src tests scripts | tail -1; uv run --frozen pytest -q | tail -1; uv run --frozen python scripts/redact.py audit . | tail -1
@@ -370,13 +370,13 @@ rm -f .git/index.lock && git add -A && GIT_ASK_YESNO=false git -c user.name=kuot
 - Modify: `C:\Users\3Hml\.claude\projects\D--AI-Portfolio\memory\portfolio-inventory-snapshot.md`
 - Modify + publish: `C:\Users\3Hml\.claude\projects\D--AI-Portfolio\2ca314bc-35ae-404a-8e70-998f59664031\tool-results\artifact-ca431bf0-1788377722-93d2.html` (url `<private dashboard artifact; link removed 2026-09-12, the artifact no longer resolves>`)
 
-- [ ] **Step 1: Ledger 補記** — one bullet: window used, cells done, headline table, suspects, tenant windows, lab commit hash, next steps (W3 admission trace, W4 spec-decode, cost table owner input, publish prep incl. the 117 MB+ evidence size decision). Registry row: status text → "W2 complete (four precisions)". Commit the control tower with the same author flags.
+- [x] **Step 1: Ledger 補記** — one bullet: window used, cells done, headline table, suspects, tenant windows, lab commit hash, next steps (W3 admission trace, W4 spec-decode, cost table owner input, publish prep incl. the 117 MB+ evidence size decision). Registry row: status text → "W2 complete (four precisions)". Commit the control tower with the same author flags.
 
-- [ ] **Step 2: Memory** — update `portfolio-inventory-snapshot.md` W2 line with the four-precision headline and the next-step list; no new memory file unless a new non-derivable fact appeared (e.g., a BF16 load limit).
+- [x] **Step 2: Memory** — update `portfolio-inventory-snapshot.md` W2 line with the four-precision headline and the next-step list; no new memory file unless a new non-derivable fact appeared (e.g., a BF16 load limit).
 
-- [ ] **Step 3: Dashboard** — add one `<li>` under the Phase 4 panel (after the "W2 FP8 全套" item) with the four-precision table's r_SLO / TMMLU+ per cell; `Artifact` publish with the url (read the live version first if the publish is refused).
+- [x] （私人儀表板 artifact 已不存在，略）**Step 3: Dashboard** — add one `<li>` under the Phase 4 panel (after the "W2 FP8 全套" item) with the four-precision table's r_SLO / TMMLU+ per cell; `Artifact` publish with the url (read the live version first if the publish is refused).
 
-- [ ] **Step 4: Final report to the user** — lead with the four-precision table; then what happened overnight (interruptions, suspects, tenants); then the two decisions they own next (W3 window; `config/cost.yaml` inputs). No em-dashes, numbers in the table only.
+- [x] **Step 4: Final report to the user** — lead with the four-precision table; then what happened overnight (interruptions, suspects, tenants); then the two decisions they own next (W3 window; `config/cost.yaml` inputs). No em-dashes, numbers in the table only.
 
 ---
 
