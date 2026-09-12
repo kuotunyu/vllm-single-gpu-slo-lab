@@ -7,7 +7,37 @@
 
 ## 結果表
 
-（量測完成後填入：每個 family 的 r_sat、r_sat 比、C、粗網格 r_SLO、接受率；closed-loop 逐 concurrency 的配對差；open-loop 逐 rate 的 attainment 與 TPOT p95 配對差與同號檢查。）
+### fp8 family：Qwen3-8B-FP8，n-gram 對 none（量測 04:20–09:09；表 `analysis/tables/w4-fp8-specdec/`）
+
+| cell | r_sat（closed-loop） | C | 粗網格 r_SLO | 接受率 | 平均接受長度 |
+|---|---|---|---|---|---|
+| fp8-none | 40.17 rps（c = 256，attainment 0.98，TPOT p95 46 ms） | 256 | 20.09 rps | — | — |
+| fp8-ngram | 26.67 rps（c = 128；c = 256 三個 session 都分頁，排除，見第 7 條） | 128 | 20.09 rps | 0.52 | 2.56 |
+
+closed-loop 配對（同 concurrency，seed 1）：
+
+| c | rps 比（ngram ÷ none） | TPOT p50 差 | TPOT p95 差 |
+|---|---|---|---|
+| 1 | **1.72** | −8.8 ms（20.3 → 11.5） | −2.8 ms |
+| 8 | 1.28 | −3.3 ms | +1.5 ms |
+| 32 | 1.17 | −1.6 ms | +4.1 ms |
+| 128 | **0.85**（31.4 → 26.7 rps） | +8.2 ms | +20.3 ms（29 → 49 ms） |
+| 256 | 排除（分頁；原始讀值 28.4 rps、attainment 0.22、TPOT p95 92 ms） | | |
+
+open-loop 配對（同 offered rate、同 seed，3 seeds 平均；括號內為三個 seed 是否同號）：
+
+| offered rps | attainment 差 | TPOT p50 差 | TPOT p95 差 | tok/Wh 比 |
+|---|---|---|---|---|
+| 4.02 | 0（兩者都 1.0） | −3.6 ms（同號） | **+1.7 ms**（同號） | 1.07 |
+| 10.04 | −0.001 | −3.5 ms（同號） | **+1.9 ms**（同號） | 1.04 |
+| 20.09 | −0.001 | −2.5 ms（同號） | **+3.8 ms**（同號） | 0.95 |
+| 30.13、36.15 | 排除（分頁）；原始讀值 attainment 0–0.08（none 0.77–0.90、0） | | | |
+
+讀法：n-gram 在單流快 1.7 倍、到 c = 32 仍有 17 % 的吞吐增益，但 c = 128 就反轉為 −15 %（每步多驗證 3 個草稿 token，批次一大就吃掉解碼步的餘裕）；穩態 Poisson 下同 rate 的 attainment 不變、TPOT 中位數降 2.5–3.6 ms、p95 卻升 1.7–3.8 ms，三個 seed 一致，也就是**n-gram 讓典型請求變快、尾端變慢**，在這組 SLO（p95 門檻）下容量沒有增加；30 rps 以上因記憶體超額而量不到。能耗每 token 在低負載略好（+7 %）、20 rps 略差（−5 %）。
+
+### q4b family：Qwen3-4B，EAGLE-3 與 n-gram 對 none
+
+（量測中，09:09 起；完成後填入。）
 
 ## 量測前與 smoke 就確定的事實
 
