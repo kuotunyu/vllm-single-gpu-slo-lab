@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,9 @@ REPO = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("w3_data", REPO / "scripts" / "manim" / "w3_data.py")
 assert _spec is not None and _spec.loader is not None
 w3_data = importlib.util.module_from_spec(_spec)
+# Registered before execution: its dataclasses resolve the module's postponed annotations
+# through sys.modules, which is None for an unregistered module.
+sys.modules["w3_data"] = w3_data
 _spec.loader.exec_module(w3_data)
 
 
