@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **狀態：W2 四精度與 W3 admission 完成（2026-09-11）；spec-decode（W4）未做。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
+> **狀態：W2 四精度、W3 admission、W4 speculative decoding 三軸完成（2026-09-12）。** W1 驗證清單結案（ADR 0002–0005）。W2 結果見 ADR 0009（單卡 RTX 4090、WSL2、vLLM 0.28.0、Qwen3-8B、`--gpu-memory-utilization 0.82`；證據與重建腳本都在 repo）：
 >
 > | 精度 | r_SLO（TTFT p95 ≤ 1 s ∧ TPOT p95 ≤ 50 ms） | r_sat | 單流 TPOT | 能耗 @ r_SLO | TMMLU+ 全集 | 對 BF16 配對差 |
 > |---|---|---|---|---|---|---|
@@ -23,6 +23,16 @@
 > | BF16（C = 40） | 0.47 | 0.87 | 0.86 |
 >
 > 原生排隊在突發後要 3.5–14 分鐘才恢復，FP8 的佇列等待讓 TTFT p95 到 268 s；兩種限流讓 attainment 提高約 0.4、突發後 10 s 內恢復，代價是拒絕 12–21 % 的請求。限流在突發段本身有沒有用取決於上限 C：BF16 的 C = 40 在突發下仍守得住 TPOT（突發段 0.69），FP8 由 closed-loop 推得的 C = 256 在突發下 TPOT p95 升到 57 ms（突發段 0.01–0.05）。
+>
+> **W4：speculative decoding**（ADR 0015 協定、ADR 0016 結果；同 family 的加速 cell 與 none cell 在相同 offered rate 與 seed 下配對，Shakespeare 自然文字 prompt，全部經 passthrough shim）：
+>
+> | cell | 接受率 | 單流 TPOT | rps 比：c = 8 / 32 / 128 / 256 | 同 rate 的 TPOT p95 差（低負載段） | r_sat |
+> |---|---|---|---|---|---|
+> | 8B FP8 + n-gram | 0.52 | 11.5 ms（none 20.3，1.72×） | 1.28 / 1.17 / 0.85 / 分頁 | +1.7 到 +3.8 ms（4 到 20 rps） | 26.7 rps（none 40.2） |
+> | 4B + EAGLE-3 | 0.27 | 7.4 ms（none 10.7，1.45×） | 1.45 / 1.20 / 0.66 / 0.60 | −2.2 到 −1.9 ms（5 到 12 rps）、+10 ms（24 rps） | 28.8 rps（none 47.6） |
+> | 4B + n-gram | 0.53 | 9.7 ms（none 10.7，1.12×） | 1.09 / 1.04 / 0.73 / 0.67 | +1.6 到 +4.1 ms（5 到 24 rps） | 32.1 rps（none 47.6） |
+>
+> 三個加速 cell 都是單流與小批次變快、c = 128 起吞吐反轉為 0.6 到 0.85 倍；穩態 Poisson 下同 rate 的 attainment 與粗網格 r_SLO 和 none 相同，TPOT 中位數降 0.6 到 4 ms、p95 除了 EAGLE-3 的 12 rps 以下之外都升高，三個 seed 同號：**典型請求變快、尾端變慢，在以 p95 定義的 SLO 下容量沒有增加**。8B 的 n-gram 在 256 並行時超出 0.82 記憶體預算而讓桌面分頁，高負載點量不到（ADR 0016）。
 
 ## 一句話
 
@@ -30,7 +40,7 @@
 
 ## 30 秒結論（目標讀者：台灣 LLM／AI infra 用人主管）
 
-*（下面是本專案**要證明**的事；截至 2026-09-11 完成四精度的容量、能耗與 TMMLU+ 全集（W2），admission 與 $/M token 未做，見上方狀態表。）*
+*（下面是本專案**要證明**的事；截至 2026-09-12 三個軸都已量完，見上方狀態表；$/M token 不做，改報實測能耗，ADR 0010。）*
 
 這個人把單張 GPU 上的 vLLM 當成一個必須守 SLO 的服務來量，而不是跑一次 throughput 截圖。同一條 Poisson trace、同一組 seed，報出每個精度在 SLO 下的容量與每百萬 token 能耗；證明 admission control（原生排隊 vs 硬上限 429 vs 有界佇列）在同一張卡上對 SLO attainment、goodput、拒絕率的三維取捨；能耗用實測 GPU 板卡功耗算，不用任何價格假設（ADR 0010）；量化品質用自跑的 TMMLU+ 而非過期 leaderboard；全部從 raw JSON 一鍵重建，且明寫哪些結論**不能**外推。
 
@@ -87,7 +97,8 @@
 | `slo_lab/redact.py` + `scripts/redact.py` | 去敏與 `make audit-secrets` 掃描（IP、私鑰、SSH 公鑰、RunPod key／host、HF token、email），含 gzip 檔與大檔（ADR 0011） | 動態組字串 + 掃描本 repo |
 | `scripts/compress_evidence.py` | 逐筆紀錄與 server log 以決定性 gzip 提交，讀取端以 `open_evidence_text` 透明解壓（ADR 0011） | 無損、決定性、壓縮前後讀出相同 |
 | `config/` | cost（placeholder；4090 不使用，ADR 0010）、engine 五 cell + common、admission 三策略、traffic 四份（含 `burst25` 與保留的 `cloud_2p5x`）、specdec 三份 | YAML 解析與內容 |
-| `evidence/metrics-names.txt` | 96 個 vLLM metric 名，2026-09-09 由 live `/metrics` 凍結 | — |
+| `evidence/metrics-names.txt` | 104 個 vLLM metric 名：96 個於 2026-09-09 由 live `/metrics` 凍結，8 個 spec-decode counter 於 2026-09-12 的 W4 smoke 補記 | — |
+| `evidence/raw/w4/` + `slo_lab/specdec_analysis.py` | W4 五個 cell 的 closed-loop 與 open-loop（3 seeds）證據、smoke、Windows 端顯存取樣；配對分析（同 family 對 none cell）與接受率；表 `analysis/tables/w4-*-specdec/`、圖 `evidence/plots/w4-*.svg` | 配對、缺基準、可疑段、決定性 |
 | `slo_lab/tmmluplus.py` + `scripts/tmmluplus_eval.py` | TMMLU+ 分層不重疊切片（3 × 200，seed 20260908，SHA-256 凍結於 `eval/tmmluplus/`）與離線評分（greedy、`/no_think`、Wilson CI） | 合成 CSV：不重疊、比例、決定性、雜湊 |
 | `evidence/raw/w1/` | W1 驗證證據：五 cell 載入矩陣、`vllm bench serve` 與 inference-perf smoke、shim 開銷四回合、TMMLU+ 20 題 dry run（ADR 0004、0005） | — |
 | `slo_lab/harness/` | `run-stage`：warm-up（TTFT／TPOT probe）→ NVML 功耗 1 s + `/metrics` 5 s 背景取樣 → inference-perf → `records.jsonl` → 量測窗（open／closed-loop 皆丟棄前 60 s）→ manifest（伺服器端 TTFT／queue／TPOT／e2e 直方圖差分、功耗窗與 tok/Wh、主機負載、I/O 壓力、raw sha256） | adapter、直方圖、窗、功耗窗 |
@@ -104,8 +115,8 @@
 
 ### 還沒有
 
-- **剩餘工作、時間與開工方式見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：W4 spec-decode 完整版（`fp8-none`、`fp8-ngram`、`q4b-none`、`q4b-eagle3`、`q4b-ngram`；協定 ADR 0015，driver、接受率指標、配對分析與 CPU 演練已完成）全做約 13 小時 GPU、刪減版約 9.4 小時，另有 FP8 突發安全上限補點 1.5 小時，時段待使用者安排；W5、W6 不用 GPU。
-- W4 的圖與 model card 的 W4 列（量測後補）；ledger 只有表頭。W2 attainment 對 rate 與 W3 佇列時間線的 SVG 已由 `reproduce-lite` 從證據重建（`evidence/plots/`，`slo_lab.plots`，無外部繪圖依賴）；model card 草稿在 `docs/model-card.md`。
+- **剩餘工作見 [`docs/HANDOFF.md`](docs/HANDOFF.md)**：FP8 突發安全上限補點（C = 192，1.5 小時 GPU，另排）；W5 的 W2 重解析與 W6 發佈前檢查不用 GPU。
+- ledger 只有表頭。圖（W2 attainment 對 rate、W3 佇列時間線、W4 TPOT 與 attainment 對 rate）由 `reproduce-lite` 從證據重建（`evidence/plots/`，`slo_lab.plots`，無外部繪圖依賴）；model card 在 `docs/model-card.md`。
 - `harness/run.py` 的 Python 編排仍由 `scripts/wsl/*.sh` 代行。
 - FP8 block kernel 的 4090 tuned config：W2 未產生，所有 FP8 數字都用 vLLM 預設 kernel config（server log 有警告，ADR 0009）。
 - A1（RunPod L4）已取消（ADR 0014）。

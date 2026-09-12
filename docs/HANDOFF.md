@@ -4,7 +4,7 @@
 
 ## 一句話現況
 
-W0–W3 已完成：四種精度的比較（W2）與三種流量控制策略的比較（W3）都有結果、證據與 ADR。剩下 W4（加速解碼）、一項 FP8 補充量測、W5（補分析與文件）、W6（寫作與發佈前檢查）。A1 雲端對照已取消。
+W0–W4 已完成：四種精度（W2）、三種流量控制策略（W3）、兩種加速解碼（W4，2026-09-12）都有結果、證據與 ADR。剩下一項 FP8 補充量測（可選）、W5 的 W2 重解析（工具已備）、W6（寫作與發佈前檢查）。A1 雲端對照已取消。
 
 ## 位置
 
@@ -27,8 +27,9 @@ W0–W3 已完成：四種精度的比較（W2）與三種流量控制策略的�
 | 範圍決定 | 4090 不計成本與電價，只報能耗；證據以 gzip 提交、不用 LFS | ADR 0010、0011 |
 | W3 admission | 1.5 倍 5 分鐘突發下整段 attainment：FP8 原生排隊 0.19、hard cap 0.57、有界佇列 0.59；BF16 0.47、0.87、0.86；FP8 由 closed-loop 推得的 C = 256 在突發下 TPOT 超標 | ADR 0012、0013 |
 | A1 取消 | 不做雲端第二種 GPU 的對照 | ADR 0014 |
+| W4 speculative decoding | 五個 cell：加速只在單流與小批次（1.12 到 1.72 倍），c = 128 起吞吐反轉為 0.6 到 0.85 倍；同 rate 的 attainment 與 r_SLO 不變、TPOT p95 升 1.6 到 10 ms（尾端變慢）；8B n-gram 在 256 並行時超出記憶體預算而分頁 | ADR 0015、0016 |
 
-逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`）。
+逐時紀錄在 `docs/superpowers/plans/`（W2：`2026-09-10-w2-overnight-run.md`，W3：`2026-09-11-w3-admission-trace.md`，W4：`2026-09-11-w4-specdec.md`）。
 
 ## 使用者的決定（2026-09-11）
 
@@ -40,14 +41,12 @@ W0–W3 已完成：四種精度的比較（W2）與三種流量控制策略的�
 
 ## 剩餘工作與時間
 
-先看 GPU 總預算（2026-09-11 晚間依 W2／W3 的每段實測重估；原估的 10 小時沒算進每段的 re-warm、inference-perf 收尾與每個 session 的啟動與 warm-up）：**全做約 14.5 小時（W4 五個 cell 約 13 小時 + FP8 補點 1.5 小時）；建議的刪減版約 11 小時（W4 約 9.4 小時 + 補點 1.5 小時）**。可以一晚做完，也可以拆成兩次。
+GPU 只剩一項可選的 FP8 補點（約 1.5 小時）；W4 實跑 12 小時 46 分（估 13 小時，含三個 session 的分頁重跑）。
 
 | 項目 | 需要 GPU | 預計時間 | 需要使用者做的事 |
 |---|---|---|---|
 | W4 開工前準備：計畫、程式、ADR 0015、CPU 演練 | 不用 | **已完成（2026-09-11）** | 無 |
-| W4 GPU smoke | 需要 | 約 20 分鐘 | 同一晚 |
-| W4 完整版：5 個 cell，每個約 2.5 小時 | 需要 | 約 12.6 小時 | 排一晚（或兩晚） |
-| W4 刪減版：拿掉 `q4b-ngram` 與 open-loop 的 0.1 × 點 | 需要 | 約 9 小時 | 一晚 |
+| W4 GPU smoke 與完整版 5 個 cell | 需要 | **已完成（2026-09-12 04:05–16:51，12 小時 46 分，ADR 0016）** | 無 |
 | FP8 突發安全上限補點 | 需要 | 約 1.5 小時 | 可併入同一晚，或另排 |
 | W5 補分析與文件 | 不用 | 約半天（我做） | 無 |
 | W6 寫作與發佈前檢查 | 不用 | 約半天（我做） | 決定是否公開 |
@@ -105,7 +104,7 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-bench -- bash <寫一個腳本檔，內容�
 3. claims audit 更新、`docs/model-card.md`、README 的敘事。
 4. 可選：每段紀錄數都比 trace 列數少 1 筆的原因（ADR 0013）。
 
-**W5 進度（2026-09-12 凌晨，W4 量測進行中順手做的）**：`docs/model-card.md` 草稿（缺 W4 列）；`docs/licences.md` 補齊 GPTQ 與 EAGLE-3 head 的授權（head 的 HF repo 內附 `License_AngelSlim_model_and_dataset.txt`，Apache-2.0）；`slo_lab.plots` 以純 Python 產生 SVG（W2 attainment 對 rate、W3 佇列時間線；W4 的圖在表存在時自動加），`reproduce-lite` 重建、`make reproduce` diff；W5 第 4 項查過 inference-perf 原始碼：trace 列數與請求數相同（`get_request_count` = 列數），少的那一筆發生在派發之後，未再追，影響 0.002 %。W5 第 1 項（重解析 W2）等 GPU 跑完再做，因為要讀 117 GB 原始檔，量測中會擾動磁碟。
+**W5 進度（2026-09-12 凌晨，W4 量測進行中順手做的）**：`docs/model-card.md` 草稿（缺 W4 列）；`docs/licences.md` 補齊 GPTQ 與 EAGLE-3 head 的授權（head 的 HF repo 內附 `License_AngelSlim_model_and_dataset.txt`，Apache-2.0）；`slo_lab.plots` 以純 Python 產生 SVG（W2 attainment 對 rate、W3 佇列時間線；W4 的圖在表存在時自動加），`reproduce-lite` 重建、`make reproduce` diff；W5 第 4 項查過 inference-perf 原始碼：trace 列數與請求數相同（`get_request_count` = 列數），少的那一筆發生在派發之後，未再追，影響 0.002 %。W5 第 1 項（重解析 W2）：`scripts/wsl/reparse-w2.sh` 在 W4 結束後啟動（讀 117 GB 原始檔，約 2 小時），結果與後續處置見本文件末尾的補記或 ADR。
 
 ### W6：寫作與發佈前檢查（不用 GPU）
 

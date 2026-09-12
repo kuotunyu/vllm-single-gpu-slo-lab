@@ -1,0 +1,1065 @@
+{
+  "families": {
+    "q4b": {
+      "base_cell": "q4b-none",
+      "cells": {
+        "q4b-eagle3": {
+          "specdec": "eagle3",
+          "is_baseline": false,
+          "r_sat_rps": 28.772527283797654,
+          "r_sat_is_lower_bound": true,
+          "r_sat_vs_base": 0.604207,
+          "capacity_C": 128,
+          "r_slo": 23.81,
+          "acceptance_rate_mean": 0.265416,
+          "mean_acceptance_length_mean": 1.796249,
+          "closed_paired": [
+            {
+              "concurrency": 1,
+              "seed": 1,
+              "acceptance_rate": 0.264438,
+              "mean_acceptance_length": 1.793315,
+              "tpot_p50_diff_s": -0.003356,
+              "tpot_p95_diff_s": -0.001546,
+              "ttft_p95_diff_s": 0.007116,
+              "rps_ratio": 1.456194,
+              "output_tok_per_s_ratio": 1.456194,
+              "tok_per_wh_ratio": 1.591224
+            },
+            {
+              "concurrency": 8,
+              "seed": 1,
+              "acceptance_rate": 0.26432,
+              "mean_acceptance_length": 1.79296,
+              "tpot_p50_diff_s": -0.003475,
+              "tpot_p95_diff_s": -0.001646,
+              "ttft_p95_diff_s": -0.01779,
+              "rps_ratio": 1.454924,
+              "output_tok_per_s_ratio": 1.454924,
+              "tok_per_wh_ratio": 1.239193
+            },
+            {
+              "concurrency": 32,
+              "seed": 1,
+              "acceptance_rate": 0.266904,
+              "mean_acceptance_length": 1.800711,
+              "tpot_p50_diff_s": -0.001511,
+              "tpot_p95_diff_s": 0.000431,
+              "ttft_p95_diff_s": -0.105719,
+              "rps_ratio": 1.201434,
+              "output_tok_per_s_ratio": 1.201434,
+              "tok_per_wh_ratio": 0.944184
+            },
+            {
+              "concurrency": 128,
+              "seed": 1,
+              "acceptance_rate": 0.265976,
+              "mean_acceptance_length": 1.797927,
+              "tpot_p50_diff_s": 0.013206,
+              "tpot_p95_diff_s": 0.020487,
+              "ttft_p95_diff_s": -0.139547,
+              "rps_ratio": 0.657137,
+              "output_tok_per_s_ratio": 0.657137,
+              "tok_per_wh_ratio": 0.644954
+            },
+            {
+              "concurrency": 256,
+              "seed": 1,
+              "acceptance_rate": 0.265153,
+              "mean_acceptance_length": 1.795458,
+              "tpot_p50_diff_s": 0.027723,
+              "tpot_p95_diff_s": 0.043228,
+              "ttft_p95_diff_s": -0.119659,
+              "rps_ratio": 0.604207,
+              "output_tok_per_s_ratio": 0.604207,
+              "tok_per_wh_ratio": 0.621491
+            }
+          ],
+          "open_paired": [
+            {
+              "offered_rps": 4.76,
+              "seed": 1,
+              "acceptance_rate": 0.265104,
+              "mean_acceptance_length": 1.795312,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.004002,
+              "tpot_p95_diff_s": -0.002206,
+              "ttft_p95_diff_s": 0.005819,
+              "rps_ratio": 0.98594,
+              "output_tok_per_s_ratio": 0.98594,
+              "tok_per_wh_ratio": 0.929059
+            },
+            {
+              "offered_rps": 4.76,
+              "seed": 2,
+              "acceptance_rate": 0.271869,
+              "mean_acceptance_length": 1.815607,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.00408,
+              "tpot_p95_diff_s": -0.002229,
+              "ttft_p95_diff_s": 0.006638,
+              "rps_ratio": 1.002584,
+              "output_tok_per_s_ratio": 1.002584,
+              "tok_per_wh_ratio": 0.968524
+            },
+            {
+              "offered_rps": 4.76,
+              "seed": 3,
+              "acceptance_rate": 0.26697,
+              "mean_acceptance_length": 1.800911,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.00404,
+              "tpot_p95_diff_s": -0.002179,
+              "ttft_p95_diff_s": 0.005609,
+              "rps_ratio": 1.023831,
+              "output_tok_per_s_ratio": 1.023831,
+              "tok_per_wh_ratio": 0.929528
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 1,
+              "acceptance_rate": 0.269447,
+              "mean_acceptance_length": 1.808341,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.004054,
+              "tpot_p95_diff_s": -0.001987,
+              "ttft_p95_diff_s": 0.010567,
+              "rps_ratio": 0.980399,
+              "output_tok_per_s_ratio": 0.980399,
+              "tok_per_wh_ratio": 0.893088
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 2,
+              "acceptance_rate": 0.263908,
+              "mean_acceptance_length": 1.791723,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.003897,
+              "tpot_p95_diff_s": -0.001823,
+              "ttft_p95_diff_s": 0.010633,
+              "rps_ratio": 1.014296,
+              "output_tok_per_s_ratio": 1.014296,
+              "tok_per_wh_ratio": 0.902042
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 3,
+              "acceptance_rate": 0.264545,
+              "mean_acceptance_length": 1.793636,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.003971,
+              "tpot_p95_diff_s": -0.001791,
+              "ttft_p95_diff_s": 0.011369,
+              "rps_ratio": 0.982328,
+              "output_tok_per_s_ratio": 0.982328,
+              "tok_per_wh_ratio": 0.872592
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 1,
+              "acceptance_rate": 0.266581,
+              "mean_acceptance_length": 1.799743,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.0024,
+              "tpot_p95_diff_s": 0.010444,
+              "ttft_p95_diff_s": 0.07536,
+              "rps_ratio": 0.996851,
+              "output_tok_per_s_ratio": 0.996851,
+              "tok_per_wh_ratio": 0.846903
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 2,
+              "acceptance_rate": 0.263244,
+              "mean_acceptance_length": 1.789733,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.000693,
+              "tpot_p95_diff_s": 0.007968,
+              "ttft_p95_diff_s": 0.060371,
+              "rps_ratio": 0.982031,
+              "output_tok_per_s_ratio": 0.982031,
+              "tok_per_wh_ratio": 0.860005
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 3,
+              "acceptance_rate": 0.263926,
+              "mean_acceptance_length": 1.791779,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.00247,
+              "tpot_p95_diff_s": 0.012192,
+              "ttft_p95_diff_s": 0.080594,
+              "rps_ratio": 0.99672,
+              "output_tok_per_s_ratio": 0.99672,
+              "tok_per_wh_ratio": 0.871241
+            },
+            {
+              "offered_rps": 35.71,
+              "seed": 1,
+              "acceptance_rate": 0.265112,
+              "mean_acceptance_length": 1.795335,
+              "attainment_diff": -0.975238,
+              "tpot_p50_diff_s": 0.039248,
+              "tpot_p95_diff_s": 0.035117,
+              "ttft_p95_diff_s": 67.642026,
+              "rps_ratio": 0.992095,
+              "output_tok_per_s_ratio": 0.992095,
+              "tok_per_wh_ratio": 0.776434
+            },
+            {
+              "offered_rps": 35.71,
+              "seed": 2,
+              "acceptance_rate": 0.264476,
+              "mean_acceptance_length": 1.793427,
+              "attainment_diff": -0.884258,
+              "tpot_p50_diff_s": 0.033406,
+              "tpot_p95_diff_s": 0.031326,
+              "ttft_p95_diff_s": 64.171007,
+              "rps_ratio": 1.010244,
+              "output_tok_per_s_ratio": 1.010244,
+              "tok_per_wh_ratio": 0.775069
+            },
+            {
+              "offered_rps": 35.71,
+              "seed": 3,
+              "acceptance_rate": 0.265278,
+              "mean_acceptance_length": 1.795835,
+              "attainment_diff": -0.865261,
+              "tpot_p50_diff_s": 0.033929,
+              "tpot_p95_diff_s": 0.030645,
+              "ttft_p95_diff_s": 68.181033,
+              "rps_ratio": 0.993362,
+              "output_tok_per_s_ratio": 0.993362,
+              "tok_per_wh_ratio": 0.762628
+            },
+            {
+              "offered_rps": 42.86,
+              "seed": 1,
+              "acceptance_rate": 0.265363,
+              "mean_acceptance_length": 1.79609,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.016502,
+              "tpot_p95_diff_s": 0.03365,
+              "ttft_p95_diff_s": 96.73881,
+              "rps_ratio": 1.011309,
+              "output_tok_per_s_ratio": 1.011309,
+              "tok_per_wh_ratio": 0.727598
+            },
+            {
+              "offered_rps": 42.86,
+              "seed": 2,
+              "acceptance_rate": 0.26359,
+              "mean_acceptance_length": 1.790769,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.014684,
+              "tpot_p95_diff_s": 0.031144,
+              "ttft_p95_diff_s": 96.876995,
+              "rps_ratio": 1.003501,
+              "output_tok_per_s_ratio": 1.003501,
+              "tok_per_wh_ratio": 0.740598
+            },
+            {
+              "offered_rps": 42.86,
+              "seed": 3,
+              "acceptance_rate": 0.262124,
+              "mean_acceptance_length": 1.786372,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": 0.014546,
+              "tpot_p95_diff_s": 0.031065,
+              "ttft_p95_diff_s": 93.698397,
+              "rps_ratio": 1.004287,
+              "output_tok_per_s_ratio": 1.004287,
+              "tok_per_wh_ratio": 0.73997
+            }
+          ],
+          "open_paired_by_rate": {
+            "4.76": {
+              "offered_rps": 4.76,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  -0.004002,
+                  -0.00408,
+                  -0.00404
+                ],
+                "mean": -0.004041,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  -0.002206,
+                  -0.002229,
+                  -0.002179
+                ],
+                "mean": -0.002205,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  0.005819,
+                  0.006638,
+                  0.005609
+                ],
+                "mean": 0.006022,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  0.98594,
+                  1.002584,
+                  1.023831
+                ],
+                "mean": 1.004118,
+                "consistent_sign": false
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  0.98594,
+                  1.002584,
+                  1.023831
+                ],
+                "mean": 1.004118,
+                "consistent_sign": false
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.929059,
+                  0.968524,
+                  0.929528
+                ],
+                "mean": 0.94237,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.267981
+            },
+            "11.9": {
+              "offered_rps": 11.9,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  -0.004054,
+                  -0.003897,
+                  -0.003971
+                ],
+                "mean": -0.003974,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  -0.001987,
+                  -0.001823,
+                  -0.001791
+                ],
+                "mean": -0.001867,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  0.010567,
+                  0.010633,
+                  0.011369
+                ],
+                "mean": 0.010856,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  0.980399,
+                  1.014296,
+                  0.982328
+                ],
+                "mean": 0.992341,
+                "consistent_sign": false
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  0.980399,
+                  1.014296,
+                  0.982328
+                ],
+                "mean": 0.992341,
+                "consistent_sign": false
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.893088,
+                  0.902042,
+                  0.872592
+                ],
+                "mean": 0.889241,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.265967
+            },
+            "23.81": {
+              "offered_rps": 23.81,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  0.0024,
+                  0.000693,
+                  0.00247
+                ],
+                "mean": 0.001854,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.010444,
+                  0.007968,
+                  0.012192
+                ],
+                "mean": 0.010201,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  0.07536,
+                  0.060371,
+                  0.080594
+                ],
+                "mean": 0.072108,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  0.996851,
+                  0.982031,
+                  0.99672
+                ],
+                "mean": 0.991867,
+                "consistent_sign": true
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  0.996851,
+                  0.982031,
+                  0.99672
+                ],
+                "mean": 0.991867,
+                "consistent_sign": true
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.846903,
+                  0.860005,
+                  0.871241
+                ],
+                "mean": 0.859383,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.264584
+            },
+            "35.71": {
+              "offered_rps": 35.71,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  -0.975238,
+                  -0.884258,
+                  -0.865261
+                ],
+                "mean": -0.908252,
+                "consistent_sign": true
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  0.039248,
+                  0.033406,
+                  0.033929
+                ],
+                "mean": 0.035528,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.035117,
+                  0.031326,
+                  0.030645
+                ],
+                "mean": 0.032363,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  67.642026,
+                  64.171007,
+                  68.181033
+                ],
+                "mean": 66.664689,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  0.992095,
+                  1.010244,
+                  0.993362
+                ],
+                "mean": 0.998567,
+                "consistent_sign": false
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  0.992095,
+                  1.010244,
+                  0.993362
+                ],
+                "mean": 0.998567,
+                "consistent_sign": false
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.776434,
+                  0.775069,
+                  0.762628
+                ],
+                "mean": 0.771377,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.264955
+            },
+            "42.86": {
+              "offered_rps": 42.86,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  0.016502,
+                  0.014684,
+                  0.014546
+                ],
+                "mean": 0.015244,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.03365,
+                  0.031144,
+                  0.031065
+                ],
+                "mean": 0.031953,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  96.73881,
+                  96.876995,
+                  93.698397
+                ],
+                "mean": 95.771401,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  1.011309,
+                  1.003501,
+                  1.004287
+                ],
+                "mean": 1.006366,
+                "consistent_sign": true
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  1.011309,
+                  1.003501,
+                  1.004287
+                ],
+                "mean": 1.006366,
+                "consistent_sign": true
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.727598,
+                  0.740598,
+                  0.73997
+                ],
+                "mean": 0.736055,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.263692
+            }
+          }
+        },
+        "q4b-ngram": {
+          "specdec": "ngram",
+          "is_baseline": false,
+          "r_sat_rps": 32.11696143999933,
+          "r_sat_is_lower_bound": true,
+          "r_sat_vs_base": 0.674438,
+          "capacity_C": 128,
+          "r_slo": 23.81,
+          "acceptance_rate_mean": 0.533204,
+          "mean_acceptance_length_mean": 2.598943,
+          "closed_paired": [
+            {
+              "concurrency": 1,
+              "seed": 1,
+              "acceptance_rate": 0.527181,
+              "mean_acceptance_length": 2.581122,
+              "tpot_p50_diff_s": -0.001082,
+              "tpot_p95_diff_s": 0.002598,
+              "ttft_p95_diff_s": 0.002958,
+              "rps_ratio": 1.117517,
+              "output_tok_per_s_ratio": 1.117517,
+              "tok_per_wh_ratio": 1.385605
+            },
+            {
+              "concurrency": 8,
+              "seed": 1,
+              "acceptance_rate": 0.531364,
+              "mean_acceptance_length": 2.593579,
+              "tpot_p50_diff_s": -0.00069,
+              "tpot_p95_diff_s": 0.003406,
+              "ttft_p95_diff_s": -0.028329,
+              "rps_ratio": 1.09158,
+              "output_tok_per_s_ratio": 1.09158,
+              "tok_per_wh_ratio": 1.204842
+            },
+            {
+              "concurrency": 32,
+              "seed": 1,
+              "acceptance_rate": 0.535421,
+              "mean_acceptance_length": 2.605626,
+              "tpot_p50_diff_s": 0.000341,
+              "tpot_p95_diff_s": 0.00471,
+              "ttft_p95_diff_s": -0.131362,
+              "rps_ratio": 1.037703,
+              "output_tok_per_s_ratio": 1.037703,
+              "tok_per_wh_ratio": 1.035625
+            },
+            {
+              "concurrency": 128,
+              "seed": 1,
+              "acceptance_rate": 0.534117,
+              "mean_acceptance_length": 2.601657,
+              "tpot_p50_diff_s": 0.010039,
+              "tpot_p95_diff_s": 0.021313,
+              "ttft_p95_diff_s": -0.231335,
+              "rps_ratio": 0.727536,
+              "output_tok_per_s_ratio": 0.727536,
+              "tok_per_wh_ratio": 0.780745
+            },
+            {
+              "concurrency": 256,
+              "seed": 1,
+              "acceptance_rate": 0.530388,
+              "mean_acceptance_length": 2.590432,
+              "tpot_p50_diff_s": 0.021196,
+              "tpot_p95_diff_s": 0.043651,
+              "ttft_p95_diff_s": -0.301515,
+              "rps_ratio": 0.674438,
+              "output_tok_per_s_ratio": 0.674438,
+              "tok_per_wh_ratio": 0.752886
+            }
+          ],
+          "open_paired": [
+            {
+              "offered_rps": 4.76,
+              "seed": 1,
+              "acceptance_rate": 0.540059,
+              "mean_acceptance_length": 2.619647,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.002264,
+              "tpot_p95_diff_s": 0.001551,
+              "ttft_p95_diff_s": -0.007138,
+              "rps_ratio": 1.009666,
+              "output_tok_per_s_ratio": 1.009666,
+              "tok_per_wh_ratio": 1.053512
+            },
+            {
+              "offered_rps": 4.76,
+              "seed": 2,
+              "acceptance_rate": 0.535478,
+              "mean_acceptance_length": 2.60577,
+              "attainment_diff": -0.000845,
+              "tpot_p50_diff_s": -0.002113,
+              "tpot_p95_diff_s": 0.001584,
+              "ttft_p95_diff_s": -0.006222,
+              "rps_ratio": 1.019811,
+              "output_tok_per_s_ratio": 1.019811,
+              "tok_per_wh_ratio": 1.083159
+            },
+            {
+              "offered_rps": 4.76,
+              "seed": 3,
+              "acceptance_rate": 0.533082,
+              "mean_acceptance_length": 2.598222,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.002065,
+              "tpot_p95_diff_s": 0.001574,
+              "ttft_p95_diff_s": -0.006964,
+              "rps_ratio": 1.027361,
+              "output_tok_per_s_ratio": 1.027361,
+              "tok_per_wh_ratio": 1.061523
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 1,
+              "acceptance_rate": 0.530179,
+              "mean_acceptance_length": 2.589802,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.002203,
+              "tpot_p95_diff_s": 0.001705,
+              "ttft_p95_diff_s": -0.007581,
+              "rps_ratio": 0.99755,
+              "output_tok_per_s_ratio": 0.99755,
+              "tok_per_wh_ratio": 1.026041
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 2,
+              "acceptance_rate": 0.5334,
+              "mean_acceptance_length": 2.599439,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.002154,
+              "tpot_p95_diff_s": 0.001853,
+              "ttft_p95_diff_s": -0.006716,
+              "rps_ratio": 1.012901,
+              "output_tok_per_s_ratio": 1.012901,
+              "tok_per_wh_ratio": 1.059068
+            },
+            {
+              "offered_rps": 11.9,
+              "seed": 3,
+              "acceptance_rate": 0.536206,
+              "mean_acceptance_length": 2.607997,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.00226,
+              "tpot_p95_diff_s": 0.001513,
+              "ttft_p95_diff_s": -0.007955,
+              "rps_ratio": 0.980249,
+              "output_tok_per_s_ratio": 0.980249,
+              "tok_per_wh_ratio": 1.036501
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 1,
+              "acceptance_rate": 0.533314,
+              "mean_acceptance_length": 2.599272,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.000743,
+              "tpot_p95_diff_s": 0.003868,
+              "ttft_p95_diff_s": -0.003407,
+              "rps_ratio": 1.00105,
+              "output_tok_per_s_ratio": 1.00105,
+              "tok_per_wh_ratio": 0.985524
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 2,
+              "acceptance_rate": 0.532385,
+              "mean_acceptance_length": 2.596476,
+              "attainment_diff": 0.0,
+              "tpot_p50_diff_s": -0.000736,
+              "tpot_p95_diff_s": 0.003993,
+              "ttft_p95_diff_s": -0.004111,
+              "rps_ratio": 1.012736,
+              "output_tok_per_s_ratio": 1.012736,
+              "tok_per_wh_ratio": 0.984751
+            },
+            {
+              "offered_rps": 23.81,
+              "seed": 3,
+              "acceptance_rate": 0.532284,
+              "mean_acceptance_length": 2.596164,
+              "attainment_diff": -0.003144,
+              "tpot_p50_diff_s": -0.000435,
+              "tpot_p95_diff_s": 0.004333,
+              "ttft_p95_diff_s": 0.000552,
+              "rps_ratio": 0.988605,
+              "output_tok_per_s_ratio": 0.988605,
+              "tok_per_wh_ratio": 0.977857
+            }
+          ],
+          "open_paired_by_rate": {
+            "4.76": {
+              "offered_rps": 4.76,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  -0.000845,
+                  0.0
+                ],
+                "mean": -0.000282,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  -0.002264,
+                  -0.002113,
+                  -0.002065
+                ],
+                "mean": -0.002147,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.001551,
+                  0.001584,
+                  0.001574
+                ],
+                "mean": 0.00157,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  -0.007138,
+                  -0.006222,
+                  -0.006964
+                ],
+                "mean": -0.006775,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  1.009666,
+                  1.019811,
+                  1.027361
+                ],
+                "mean": 1.018946,
+                "consistent_sign": true
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  1.009666,
+                  1.019811,
+                  1.027361
+                ],
+                "mean": 1.018946,
+                "consistent_sign": true
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  1.053512,
+                  1.083159,
+                  1.061523
+                ],
+                "mean": 1.066065,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.536206
+            },
+            "11.9": {
+              "offered_rps": 11.9,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  -0.002203,
+                  -0.002154,
+                  -0.00226
+                ],
+                "mean": -0.002206,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.001705,
+                  0.001853,
+                  0.001513
+                ],
+                "mean": 0.00169,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  -0.007581,
+                  -0.006716,
+                  -0.007955
+                ],
+                "mean": -0.007417,
+                "consistent_sign": true
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  0.99755,
+                  1.012901,
+                  0.980249
+                ],
+                "mean": 0.9969,
+                "consistent_sign": false
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  0.99755,
+                  1.012901,
+                  0.980249
+                ],
+                "mean": 0.9969,
+                "consistent_sign": false
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  1.026041,
+                  1.059068,
+                  1.036501
+                ],
+                "mean": 1.040537,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.533262
+            },
+            "23.81": {
+              "offered_rps": 23.81,
+              "seeds": [
+                1,
+                2,
+                3
+              ],
+              "attainment_diff": {
+                "per_seed": [
+                  0.0,
+                  0.0,
+                  -0.003144
+                ],
+                "mean": -0.001048,
+                "consistent_sign": false
+              },
+              "tpot_p50_diff_s": {
+                "per_seed": [
+                  -0.000743,
+                  -0.000736,
+                  -0.000435
+                ],
+                "mean": -0.000638,
+                "consistent_sign": true
+              },
+              "tpot_p95_diff_s": {
+                "per_seed": [
+                  0.003868,
+                  0.003993,
+                  0.004333
+                ],
+                "mean": 0.004065,
+                "consistent_sign": true
+              },
+              "ttft_p95_diff_s": {
+                "per_seed": [
+                  -0.003407,
+                  -0.004111,
+                  0.000552
+                ],
+                "mean": -0.002322,
+                "consistent_sign": false
+              },
+              "rps_ratio": {
+                "per_seed": [
+                  1.00105,
+                  1.012736,
+                  0.988605
+                ],
+                "mean": 1.000797,
+                "consistent_sign": false
+              },
+              "output_tok_per_s_ratio": {
+                "per_seed": [
+                  1.00105,
+                  1.012736,
+                  0.988605
+                ],
+                "mean": 1.000797,
+                "consistent_sign": false
+              },
+              "tok_per_wh_ratio": {
+                "per_seed": [
+                  0.985524,
+                  0.984751,
+                  0.977857
+                ],
+                "mean": 0.982711,
+                "consistent_sign": true
+              },
+              "acceptance_rate_mean": 0.532661
+            }
+          }
+        },
+        "q4b-none": {
+          "specdec": "none",
+          "is_baseline": true,
+          "r_sat_rps": 47.620351236188355,
+          "r_sat_is_lower_bound": true,
+          "r_sat_vs_base": null,
+          "capacity_C": 256,
+          "r_slo": 23.81,
+          "acceptance_rate_mean": null,
+          "mean_acceptance_length_mean": null,
+          "closed_paired": [],
+          "open_paired": [],
+          "open_paired_by_rate": {}
+        }
+      }
+    }
+  }
+}
