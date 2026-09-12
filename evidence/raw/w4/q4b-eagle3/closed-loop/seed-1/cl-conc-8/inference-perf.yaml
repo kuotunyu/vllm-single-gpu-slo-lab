@@ -1,0 +1,46 @@
+api:
+  type: completion
+  streaming: true
+data:
+  type: synthetic
+  input_distribution:
+    min: 108
+    max: 108
+    mean: 108
+    std_dev: 0
+    total_count: 1
+  output_distribution:
+    min: 132
+    max: 132
+    mean: 132
+    std_dev: 0
+    total_count: 1
+server:
+  type: vllm
+  model_name: Qwen/Qwen3-4B
+  base_url: http://127.0.0.1:8021
+  ignore_eos: true
+tokenizer:
+  pretrained_model_name_or_path: Qwen/Qwen3-4B
+report:
+  request_lifecycle:
+    summary: true
+    per_stage: true
+    per_request: true
+  prometheus: null
+  goodput:
+    constraints:
+      ttft: 1.0
+      tpot: 0.05
+storage:
+  local_storage:
+    path: ~/vllm-slo-lab/runs-w4/closed-loop-cells/q4b-eagle3/seed-1/cl-conc-8/ipf
+load:
+  type: concurrent
+  stages:
+  - num_requests: 2340
+    concurrency_level: 8
+  num_workers: 4
+  worker_max_concurrency: 4096
+  request_timeout: 300.0
+  base_seed: 1
