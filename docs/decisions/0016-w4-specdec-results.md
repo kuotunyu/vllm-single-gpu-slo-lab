@@ -35,9 +35,35 @@ open-loop 配對（同 offered rate、同 seed，3 seeds 平均；括號內為�
 
 讀法：n-gram 在單流快 1.7 倍、到 c = 32 仍有 17 % 的吞吐增益，但 c = 128 就反轉為 −15 %（每步多驗證 3 個草稿 token，批次一大就吃掉解碼步的餘裕）；穩態 Poisson 下同 rate 的 attainment 不變、TPOT 中位數降 2.5–3.6 ms、p95 卻升 1.7–3.8 ms，三個 seed 一致，也就是**n-gram 讓典型請求變快、尾端變慢**，在這組 SLO（p95 門檻）下容量沒有增加；30 rps 以上因記憶體超額而量不到。能耗每 token 在低負載略好（+7 %）、20 rps 略差（−5 %）。
 
-### q4b family：Qwen3-4B，EAGLE-3 與 n-gram 對 none
+### q4b family：Qwen3-4B，EAGLE-3 與 n-gram 對 none（量測 09:09 起；表 `analysis/tables/w4-q4b-specdec/`）
 
-（量測中，09:09 起；完成後填入。）
+| cell | r_sat（closed-loop） | C | 粗網格 r_SLO | 接受率 | 平均接受長度 |
+|---|---|---|---|---|---|
+| q4b-none | 47.62 rps（c = 256，attainment 0.985，TPOT p95 38.7 ms） | 256 | 23.81 rps | — | — |
+| q4b-eagle3 | 28.77 rps（c = 256，attainment 0.11；下界旗標，128 → 256 只增 5 %） | 128 | 23.81 rps | 0.27 | 1.80 |
+| q4b-ngram | 量測中（13:57 起），完成後補 | | | | |
+
+EAGLE-3 對 none 的 closed-loop 配對（同 concurrency，seed 1）：
+
+| c | rps 比 | TPOT p50 差 | TPOT p95 差 | tok/Wh 比 |
+|---|---|---|---|---|
+| 1 | **1.46**（0.70 → 1.02 rps） | −3.4 ms（10.7 → 7.4） | −1.5 ms | 1.59 |
+| 8 | 1.45 | −3.5 ms | −1.6 ms | 1.24 |
+| 32 | 1.20 | −1.5 ms | +0.4 ms | 0.94 |
+| 128 | **0.66**（41.7 → 27.4 rps） | +13.2 ms | +20.5 ms（22.4 → 42.9） | 0.64 |
+| 256 | **0.60**（47.6 → 28.8 rps） | +27.7 ms | +43.2 ms（38.7 → 82.0） | 0.62 |
+
+EAGLE-3 對 none 的 open-loop 配對（同 offered rate、同 seed，3 seeds 平均）：
+
+| offered rps | attainment 差 | TPOT p50 差 | TPOT p95 差 | TTFT p95 差 | tok/Wh 比 |
+|---|---|---|---|---|---|
+| 4.76 | 0（都 1.0） | −4.0 ms | **−2.2 ms**（同號） | +6 ms | 0.94 |
+| 11.90 | 0 | −4.0 ms | **−1.9 ms**（同號） | +11 ms | 0.89 |
+| 23.81 | 0 | +1.9 ms | **+10.2 ms**（同號，16.5 → 26.7 ms） | +72 ms | 0.86 |
+| 35.71 | **−0.91**（none 0.87–0.98，EAGLE-3 三個 seed 都 0） | +35.5 ms | +32.4 ms | +67 s（排隊） | 0.77 |
+| 42.86 | 0（都 0） | +15.2 ms | +32.0 ms | +96 s | 0.74 |
+
+讀法：EAGLE-3 在單流與小批次快 1.45 倍、c = 32 剩 1.2 倍，c = 128 起反轉為 0.66 倍、c = 256 為 0.60 倍，比 8B 的 n-gram 反轉得更早也更深（接受率只有 0.27，每步為 3 個草稿 token 付出的驗證成本大多白費）。穩態 Poisson 下：12 rps 以下 TPOT p95 低 2 ms（attainment 都是 1.0，SLO 容量沒有變），24 rps 時 p95 已高 10 ms，36 rps 時 none 還守得住 SLO（0.87–0.98）而 EAGLE-3 已完全過載（它的 r_sat 28.8 rps 低於 offered 35.7）。在這組 SLO 下，**EAGLE-3 沒有增加容量，反而把 4B 的服務上限從約 36 rps 砍到約 29 rps**；它的收益只在低負載的延遲，且每 token 能耗在所有 rate 都較差（0.74–0.94）。與 8B n-gram 的對照：n-gram 接受率高（0.52）所以 c = 32 仍有增益、c = 128 才反轉；EAGLE-3 接受率低（0.27）且多一個 draft head 的前向，c = 128 就掉到 0.66。
 
 ## 量測前與 smoke 就確定的事實
 
